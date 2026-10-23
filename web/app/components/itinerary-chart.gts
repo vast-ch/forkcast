@@ -11,7 +11,6 @@ import {
   fmtKm,
   fmtMm,
   fmtPct,
-  fmtShortDate,
   fmtTemp,
 } from 'forkcast/utils/format';
 
@@ -20,7 +19,7 @@ const TOP = 14; // room for the day numbers
 const TEMP_H = 110;
 const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
-const AXIS = 18;
+const BOTTOM = 4;
 const LEFT = 34;
 
 /** Left edge of the column of day index `i`. */
@@ -45,7 +44,6 @@ interface Bar {
   rainY: number;
   color: string;
   rainH: number;
-  label?: string;
   isHighlighted: boolean;
   monthStart: boolean;
 }
@@ -78,15 +76,11 @@ export default class ItineraryChart extends Component<{
   }
 
   get height() {
-    return TOP + TEMP_H + GAP + RAIN_H + AXIS;
+    return TOP + TEMP_H + GAP + RAIN_H + BOTTOM;
   }
 
   get rainTop() {
     return TOP + TEMP_H + GAP;
-  }
-
-  get axisY() {
-    return this.rainTop + RAIN_H + 13;
   }
 
   /** Horizontal lines with their axis labels: every 5° and the rain band's 0–100%. */
@@ -119,31 +113,11 @@ export default class ItineraryChart extends Component<{
         rainY: this.rainTop + RAIN_H - rainH,
         color: tempSwatch(day.weather.high, 'var(--wt-muted)'),
         rainH,
-        label:
-          i === 0 ||
-          day.date.getDate() === 1 ||
-          (day.n % 7 === 1 && day.n > 1 && !this.nearMonthStart(i))
-            ? fmtShortDate(day.date)
-            : undefined,
         isHighlighted: this.planner.highlightedDay === day.n,
         monthStart:
           prev !== undefined && prev.date.getMonth() !== day.date.getMonth(),
       };
     });
-  }
-
-  /** Is a 1 of the month within three days of day index `i`? Its label wins,
-   * so a weekly label next to it would overlap. */
-  nearMonthStart(i: number): boolean {
-    const days = this.args.trip.days;
-    for (
-      let k = Math.max(0, i - 3);
-      k <= Math.min(days.length - 1, i + 3);
-      k++
-    ) {
-      if (k !== i && days[k]!.date.getDate() === 1) return true;
-    }
-    return false;
   }
 
   get detail() {
@@ -318,13 +292,6 @@ export default class ItineraryChart extends Component<{
                   rx="1"
                 />
               {{/unless}}
-              {{#if b.label}}
-                <text
-                  x={{b.x}}
-                  y={{this.axisY}}
-                  class="wt-axis"
-                >{{b.label}}</text>
-              {{/if}}
             </g>
           {{/each}}
         </svg>
