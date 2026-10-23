@@ -13,7 +13,7 @@
 
 ### Fixed
 
-- When you point at the map, rain and rainy days are now for the week shown, like the temperatures. They used to be monthly figures under a weekly heading, so a week could show more than 7 rainy days.
+- Rain on the map is now given for the week shown, like the temperatures: in the readout when you point at the map, and in the legend ("Rain per week", "Days with 5 mm or more per week"). They used to be monthly figures under a weekly heading, so a week could show more than 7 rainy days.
 
 ## v0.2.0 - 2026-10-23
 

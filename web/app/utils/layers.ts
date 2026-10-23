@@ -92,8 +92,9 @@ export interface RainDot {
 }
 
 /**
- * Rain as dots, one per grid cell: area proportional to monthly rainfall
- * (or to the number of rain days), so it reads on top of the temperatures.
+ * Rain as dots, one per grid cell: area proportional to the rain (or the
+ * chance of a rainy day) at that time of year, so it reads on top of the
+ * temperatures. The legend gives the sizes as amounts in the week shown.
  */
 export function rainDots(
   grid: ClimateGrid,

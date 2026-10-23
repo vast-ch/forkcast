@@ -75,8 +75,8 @@ Under the map, one column per day: the day number on top, a bar from the night l
   (Web Mercator) is not, so the layer is rendered into a canvas row by row in
   Mercator coordinates rather than stretching an image; otherwise it would
   drift off the coastlines towards the poles.
-- **Rain layer:** one dot per grid cell, its area proportional to the month's
-  rain or rainy days, drawn as metre-sized circles on a canvas. When zoomed
+- **Rain layer:** one dot per grid cell, its area proportional to the rain or
+  rainy days at that time of year (the legend gives them for the week shown), drawn as metre-sized circles on a canvas. When zoomed
   out, neighbouring cells are merged into one dot so they stay readable
   instead of turning into a striped pattern.
 - The map shows **cell averages**; the altitude correction only applies to

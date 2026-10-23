@@ -1,21 +1,22 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type PlannerService from 'forkcast/services/planner';
-import { TEMP_STOPS } from 'forkcast/utils/climate';
+import { DAYS_PER_MONTH, TEMP_STOPS } from 'forkcast/utils/climate';
 import { css } from 'forkcast/utils/format';
 
+/** The legend's sample dots, as amounts in the week shown. */
 const DOT_STEPS = {
   mm: [
-    { label: '25', value: 25 },
-    { label: '75', value: 75 },
-    { label: '150', value: 150 },
-    { label: '250 mm', value: 250 },
+    { label: '5', value: 5 },
+    { label: '15', value: 15 },
+    { label: '30', value: 30 },
+    { label: '60 mm', value: 60 },
   ],
   days: [
+    { label: '0.5', value: 0.5 },
+    { label: '1', value: 1 },
     { label: '2', value: 2 },
-    { label: '5', value: 5 },
-    { label: '10', value: 10 },
-    { label: '20 days', value: 20 },
+    { label: '5 days', value: 5 },
   ],
 };
 
@@ -38,11 +39,17 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
     }));
   }
 
+  /** Sized like the map's dots, which scale with the rate (a dot is full at
+   * 250 mm or 20 rainy days in an average month; see rainDots). */
   get dots() {
     const full = this.planner.rainMetric === 'mm' ? 250 : 20;
+    const toMonth = DAYS_PER_MONTH / this.planner.weekSlot.days;
     return DOT_STEPS[this.planner.rainMetric].map((d) => ({
       ...d,
-      size: Math.max(3, 18 * Math.sqrt(d.value / full)),
+      size: Math.max(
+        3,
+        18 * Math.sqrt(Math.min(1, (d.value * toMonth) / full)),
+      ),
     }));
   }
 
@@ -54,8 +61,8 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
 
   get rainLabel() {
     return this.planner.rainMetric === 'mm'
-      ? 'Rain per month'
-      : `Days with ${this.planner.rainThreshold} mm or more per month`;
+      ? 'Rain per week'
+      : `Days with ${this.planner.rainThreshold} mm or more per week`;
   }
 
   <template>

@@ -51,8 +51,8 @@ export default class Help extends Component {
             Colour shows the average
             <strong>day high</strong>
             (or
-            <strong>night low</strong>) for the chosen month. Dots show rain on
-            top of it: the dot's area grows with the month's rainfall, or with
+            <strong>night low</strong>) for the chosen week. Dots show rain on
+            top of it: the dot's area grows with the week's rainfall, or with
             the number of rainy days if you switch to that. When you zoom out,
             neighbouring dots merge into one showing their average, so they stay
             readable. Forkcast opens on Europe and the current week (drag the
