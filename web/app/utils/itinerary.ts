@@ -9,6 +9,8 @@ export interface TripSettings {
   /** First day of the trip, ISO date (yyyy-mm-dd) */
   start: string;
   kmPerDay: number;
+  /** Average riding speed, km/h */
+  speed: number;
   /** Riding days in a row… */
   rideDays: number;
   /** …followed by this many rest days, then the pattern repeats. 0 means no rest days. */
@@ -32,6 +34,8 @@ export interface TripDay {
   weather: DayClimate;
   /** Low at the overnight stop */
   nightLow: number;
+  /** Hours in the saddle at the average speed (0 on rest days) */
+  ridingHours: number;
   /** Hours from sunrise where the day starts to sunset where it ends (24 under the midnight sun, 0 in the polar night) */
   daylight: number;
 }
@@ -94,6 +98,7 @@ export function planTrip(
       fromKm: km,
       toKm: to,
       distance: to - km,
+      ridingHours: (to - km) / settings.speed,
       climb: isRest ? 0 : climbBetween(route.points, km, to),
       sleep,
       weather,

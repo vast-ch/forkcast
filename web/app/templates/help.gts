@@ -223,7 +223,9 @@ export default class Help extends Component {
             The trip starts on your start date and covers the route at your km
             per day. Ride days and rest days form a repeating pattern: ride 5,
             rest 2 means five riding days, two rest days, then again. A trip
-            never ends on a rest day.
+            never ends on a rest day. Your average speed (21km/h unless you
+            change it) turns each day's distance into time in the saddle, not
+            counting breaks, so you can compare it with the daylight.
           </p>
           <ul>
             <li>A riding day's

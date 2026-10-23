@@ -136,6 +136,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
     const p = this.planner;
     return [
       { key: 'km', label: 'km per day', value: p.kmPerDay },
+      { key: 'speed', label: 'Avg speed (km/h)', value: p.speed },
       { key: 'ride', label: 'Ride days', value: p.rideDays },
       { key: 'rest', label: 'Rest days', value: p.restDays },
     ].map((f) => ({
@@ -356,8 +357,8 @@ export default class SidePanel extends Component<SidePanelSignature> {
         >
           {{#if this.showSettings}}
             <h2 id="h-trip" class="wt-h2">Trip</h2>
-            <div class="grid grid-cols-3 gap-2">
-              <div class="col-span-3">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="col-span-2">
                 <Input
                   @label="Start"
                   @type="date"

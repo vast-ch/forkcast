@@ -6,6 +6,7 @@ import { isMissing } from 'forkcast/utils/helpers';
 import {
   css,
   fmtDaylight,
+  fmtHours,
   fmtDayTitle,
   fmtKm,
   fmtMm,
@@ -93,6 +94,8 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                 <dd>{{fmtPct this.route.weather.rainChance}}</dd>
                 <dt>Rain, average</dt>
                 <dd>{{fmtMm this.route.weather.rainMm}} / day</dd>
+                <dt>Riding time</dt>
+                <dd>{{fmtHours this.route.day.ridingHours}}</dd>
                 <dt>Daylight</dt>
                 <dd>{{fmtDaylight this.route.day.daylight}}</dd>
                 {{#if this.route.point.ele}}

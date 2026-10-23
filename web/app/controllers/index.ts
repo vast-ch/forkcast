@@ -20,6 +20,7 @@ export default class IndexController extends Controller {
   @tracked route = DEFAULTS.route;
   @tracked start = DEFAULTS.start;
   @tracked km = DEFAULTS.km;
+  @tracked speed = DEFAULTS.speed;
   @tracked ride = DEFAULTS.ride;
   @tracked rest = DEFAULTS.rest;
   @tracked reverse = DEFAULTS.reverse;

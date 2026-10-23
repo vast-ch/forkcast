@@ -11,6 +11,7 @@ import {
   fmtDate,
   fmtDaylight,
   fmtDayTitle,
+  fmtHours,
   fmtKm,
   fmtMm,
   fmtMonth,
@@ -208,7 +209,7 @@ export default class ItineraryChart extends Component<{
     if (d.isRest) return 'Rest day';
     return `${fmtKm(d.distance)} · km ${Math.round(d.fromKm)}–${Math.round(d.toKm)}${
       d.climb !== null ? ` · ${Math.round(d.climb)}m climbing` : ''
-    }`;
+    } · ${fmtHours(d.ridingHours)} riding`;
   }
 
   select = (day: TripDay) => this.planner.toggleDay(day);

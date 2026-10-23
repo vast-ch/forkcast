@@ -175,6 +175,14 @@ export default class PlannerService extends Service {
     this.write('km', v);
   }
 
+  /** Average riding speed, km/h */
+  get speed(): number {
+    return this.limited('speed');
+  }
+  set speed(v: number) {
+    this.write('speed', v);
+  }
+
   get rideDays(): number {
     return this.limited('ride');
   }
@@ -339,6 +347,7 @@ export default class PlannerService extends Service {
     return planTrip(route, climate, {
       start: this.start,
       kmPerDay: this.kmPerDay,
+      speed: this.speed,
       rideDays: this.rideDays,
       restDays: this.restDays,
       rainThreshold: this.rainThreshold,

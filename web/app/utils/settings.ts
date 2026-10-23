@@ -29,6 +29,8 @@ export const DEFAULTS = {
   /** First day of the trip; today by default */
   start: isoToday(),
   km: 80,
+  /** Average riding speed, km/h, for each day's time in the saddle */
+  speed: 21,
   ride: 5,
   rest: 1,
   reverse: false,
@@ -45,6 +47,7 @@ export type SettingKey = keyof typeof DEFAULTS;
 /** Allowed values of the numeric trip settings, for the URL and the inputs alike. */
 export const LIMITS = {
   km: { min: 5, max: 400, step: 5, isInteger: false },
+  speed: { min: 5, max: 50, step: 0.5, isInteger: false },
   ride: { min: 1, max: 60, step: 1, isInteger: true },
   rest: { min: 0, max: 30, step: 1, isInteger: true },
 } as const;
