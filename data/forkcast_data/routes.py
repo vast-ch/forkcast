@@ -8,7 +8,9 @@
 
 - download (`brouter`): geocodes the hand-made routes' stops (geocode.py)
   and fetches every leg from BRouter into cache/brouter/, one file per leg.
-- build (`routes`): reads only cached files, never the network.
+- build (`routes`): reads only cached files, never the network. Besides one
+  file per route it writes overview.json, every route simplified to ~1 km, so
+  the app can draw all of them on the map cheaply.
 
 Usage: uv run python -m forkcast_data download brouter | build routes [--fresh]
 """
@@ -157,9 +159,32 @@ def build_route(route, geo):
     }
 
 
+OVERVIEW_M = 1000  # simplification for the map's overview of all routes
+
+
+def write_overview(index) -> None:
+    """out/routes/overview.json: every preset route simplified to ~1 km, for drawing
+    all of them on the map without downloading each full track."""
+    routes = []
+    for meta in index:
+        r = json.loads((OUT_DIR / f"{meta['id']}.json").read_text())
+        pts = [[la, lo, None] for la, lo in zip(r["lat"], r["lon"])]
+        keep = simplify_indices(pts, OVERVIEW_M)
+        routes.append({
+            "id": r["id"],
+            "continent": r["continent"],
+            "color": r["color"],
+            "lat": [round(r["lat"][i], 3) for i in keep],
+            "lon": [round(r["lon"][i], 3) for i in keep],
+        })
+    path = OUT_DIR / "overview.json"
+    path.write_text(json.dumps({"routes": routes}, separators=(",", ":")))
+    log(f"  wrote overview of {len(routes)} routes ({path.stat().st_size / 1e3:.0f} kB)")
+
+
 def outputs() -> list[Path]:
     ids = [r["id"] for r in ROUTES] + [f"ev{c[0]}" for c in eurovelo.CATALOG]
-    return [OUT_DIR / f"{i}.json" for i in ids] + [OUT_DIR / "index.json"]
+    return [OUT_DIR / f"{i}.json" for i in ids] + [OUT_DIR / "index.json", OUT_DIR / "overview.json"]
 
 
 def build(fresh: bool = False) -> None:
@@ -184,6 +209,7 @@ def build(fresh: bool = False) -> None:
     log("EuroVelo (official GPX tracks)")
     index += eurovelo.build(simplify_indices, OUT_DIR)
     (OUT_DIR / "index.json").write_text(json.dumps({"routes": index}, separators=(",", ":"), ensure_ascii=False))
+    write_overview(index)
     stamp.done()
     total = sum(f.stat().st_size for f in OUT_DIR.glob("*.json"))
     log(f"  wrote {OUT_DIR.relative_to(pipeline.ROOT)} ({len(index)} routes, {total / 1e6:.1f} MB)")
