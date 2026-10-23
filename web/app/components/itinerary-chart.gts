@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
+import { modifier } from 'ember-modifier';
 import type PlannerService from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
 import { tempSwatch } from 'forkcast/utils/climate';
@@ -25,6 +26,18 @@ const LEFT = 34;
 
 /** Left edge of the column of day index `i`. */
 const colX = (i: number) => LEFT + i * COL;
+
+/** Keeps day `n`'s column in view however it was picked (chart, map, week slider). */
+const scrollToDay = modifier<{
+  Element: HTMLElement;
+  Args: { Positional: [number | undefined] };
+}>((el, [n]) => {
+  if (!n) return;
+  const x = colX(n - 1);
+  if (x < el.scrollLeft + LEFT) el.scrollLeft = x - LEFT;
+  else if (x + COL > el.scrollLeft + el.clientWidth)
+    el.scrollLeft = x + COL - el.clientWidth + 8;
+});
 
 /** The day a key moves to from day `now` (1-based) of `last`. */
 const KEY_STEPS: Record<string, (now: number, last: number) => number> = {
@@ -173,14 +186,7 @@ export default class ItineraryChart extends Component<{
     e.preventDefault();
     const n = step(this.planner.highlightedDay ?? 0, days.length);
     const day = days[Math.min(days.length, Math.max(1, n)) - 1];
-    if (!day) return;
-    this.planner.highlightDay(day);
-    // Keep the day's column in view.
-    const el = e.currentTarget as HTMLElement;
-    const x = colX(day.n - 1);
-    if (x < el.scrollLeft + LEFT) el.scrollLeft = x - LEFT;
-    else if (x + COL > el.scrollLeft + el.clientWidth)
-      el.scrollLeft = x + COL - el.clientWidth + 8;
+    if (day) this.planner.highlightDay(day);
   };
 
   half = COL / 2;
@@ -228,6 +234,7 @@ export default class ItineraryChart extends Component<{
         aria-valuenow={{this.planner.highlightedDay}}
         aria-valuetext={{this.valueText}}
         {{on "keydown" this.onKey}}
+        {{scrollToDay this.planner.highlightedDay}}
       >
         <svg
           width={{this.width}}

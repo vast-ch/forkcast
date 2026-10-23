@@ -227,6 +227,19 @@ export default class PlannerService extends Service {
 
   // --- Trip days --------------------------------------------------------------
 
+  /**
+   * Show a quarter-month on the map (from the week slider) and keep the day
+   * chart in step: the selected day stays if it falls in that week, otherwise
+   * the trip's first day in it is selected, or none if the trip isn't there.
+   */
+  selectWeek(w: number): void {
+    this.week = w;
+    const days = this.trip?.days ?? [];
+    const inWeek = (d: TripDay) => weekOfDate(d.date) === this.week;
+    if (days.some((d) => d.n === this.highlightedDay && inWeek(d))) return;
+    this.highlightedDay = days.find(inWeek)?.n;
+  }
+
   /** Highlight a trip day and show its week on the map. */
   highlightDay(day: TripDay): void {
     this.highlightedDay = day.n;
