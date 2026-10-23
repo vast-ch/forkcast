@@ -55,11 +55,12 @@ export default class Help extends Component {
             top of it: the dot's area grows with the month's rainfall, or with
             the number of rainy days if you switch to that. When you zoom out,
             neighbouring dots merge into one showing their average, so they stay
-            readable. Forkcast opens on Europe; the other continents are drawn
-            as light shapes, and clicking one loads its climate (a one-off
-            download of 1–5 MB). Point at the map to read the averages for that
-            spot; point at your route to see the day you would be there and the
-            weather expected on that date.
+            readable. Forkcast opens on Europe and the current month; the other
+            continents are drawn as light shapes, and clicking one adds its
+            climate (a one-off download of 1–5 MB). You can show several at
+            once, for a trip that crosses from one into another. Point at the
+            map to read the averages for that spot; point at your route to see
+            the day you would be there and the weather expected on that date.
           </p>
         </section>
 

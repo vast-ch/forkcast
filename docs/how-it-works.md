@@ -22,7 +22,9 @@ split by continent and kept compact.
 ## What gets downloaded, and when
 
 1. **On start:** the code, `manifest.json` (the continents and their preset routes, a few kB), `world.json` (one outline per continent, ~120 kB) and Europe's climate grid and borders (1.2 MB gzipped). The app opens straight on the planner; there is no separate start page.
-2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.7 to 4.8 MB gzipped. The other continents are drawn from `world.json` as light, clickable shapes until then.
+2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.7 to 4.8 MB gzipped, added to what is already shown. Continents not shown yet are drawn from `world.json` as light, clickable shapes.
+
+Continents add up rather than replace each other, because a trip can cross from one to another (Europe into Asia, say). They are all cut from the same worldwide grid, so where two overlap their values are identical: `ClimateSet` in `web/app/utils/climate.ts` answers each point from the first loaded continent that covers it, and the map draws overlapping cells only once (rain dots are grouped on the worldwide grid so the patterns line up).
 3. **When a route is picked:** that route's track (`routes/<id>.json`).
 
 Every data file is imported through `web/app/utils/assets.ts`, so the
@@ -36,7 +38,7 @@ immutable` and `index.html` with `no-cache`.
 
 Every setting (continent, month, layers, rainy-day threshold, route, start date, km per day, ride/rest pattern, direction, highlighted day) is a query parameter of the app's single planner route (`/`). `web/app/controllers/index.ts` declares them with
 their defaults (`web/app/utils/settings.ts`); Ember writes a parameter to the
-URL only while it differs from its default. Your own drawn or imported route is in the URL too, polyline-encoded with elevation and simplified to at most 600 points. The continent is a query parameter rather than a path (`/?continent=asia`, left out for Europe): changing it re-runs the route's model hook, which loads that continent's data.
+URL only while it differs from its default. Your own drawn or imported route is in the URL too, polyline-encoded with elevation and simplified to at most 600 points. The shown continents are a query parameter rather than a path (`/?continents=europe,asia`, left out when it is just Europe): changing it re-runs the route's model hook, which loads what is missing. The map month defaults to the current month.
 
 **Why:** a bookmark or a shared link reopens exactly the same plan, reloads
 lose nothing, and there is no account or storage to manage. Defaults are left

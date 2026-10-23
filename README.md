@@ -2,7 +2,7 @@
 
 What the weather usually does along your bike route, day by day.
 
-Forkcast puts 15 years of climate records on a map, one continent at a time (it opens on Europe; click another continent on the map to load it): average day highs or night lows as colour, and rain (mm, or rainy days over 1, 5 or 10 mm) as dots on top, for any month. The in-app help page (`/help`) explains the numbers. Pick a route (all 17 EuroVelo routes and a demo route Interlaken – Málaga are built in, or draw your own, or import a GPX), set a start date, how far you ride per day, and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat), and it lays out the trip day by day with the expected high, night low and chance of rain for where you will be on each date.
+Forkcast puts 15 years of climate records on a map, one continent at a time (it opens on Europe; click other continents on the map to add them): average day highs or night lows as colour, and rain (mm, or rainy days over 1, 5 or 10 mm) as dots on top, for any month. The in-app help page (`/help`) explains the numbers. Pick a route (all 17 EuroVelo routes and a demo route Interlaken – Málaga are built in, or draw your own, or import a GPX), set a start date, how far you ride per day, and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat), and it lays out the trip day by day with the expected high, night low and chance of rain for where you will be on each date.
 
 How the app works and why it is built this way: [docs/how-it-works.md](docs/how-it-works.md). How the data is made: [data/README.md](data/README.md).
 
