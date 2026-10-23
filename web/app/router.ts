@@ -8,4 +8,6 @@ export default class Router extends EmberRouter {
 
 Router.map(function () {
   this.route('help');
+  // Anything else (old /europe links, typos) opens the planner.
+  this.route('not-found', { path: '/*path' });
 });
