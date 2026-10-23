@@ -11,6 +11,10 @@ import { temperatureRaster, rainDots } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
 import { tempColor } from 'forkcast/utils/climate';
 
+/** Ring around each night's stop: a vivid purple that stands out on every
+ * temperature colour (it glows a little, see .wt-stop in app.css). */
+const STOP_RING = '#a020f0';
+
 interface MapState {
   /** Quarter-month shown, 0–47, and its position in the year */
   week: number;
@@ -355,8 +359,9 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           const hasRestNext = trip.days[d.n]?.isRest === true;
           const m = L.circleMarker([d.sleep.lat, d.sleep.lon], {
             radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
-            color: isHi ? '#111' : '#fff',
-            weight: isHi ? 3 : 1.5,
+            color: isHi ? '#111' : STOP_RING,
+            weight: isHi ? 3 : 2,
+            className: isHi ? 'wt-stop is-active' : 'wt-stop',
             fillColor: Number.isNaN(d.weather.high)
               ? '#888'
               : tempColor(d.weather.high),

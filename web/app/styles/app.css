@@ -193,6 +193,14 @@ body {
   color: var(--wt-accent);
   font-weight: 500;
 }
+/* Night stops on the route: a soft purple glow around the ring. */
+.wt-stop {
+  filter: drop-shadow(0 0 2px rgb(160 32 240 / 0.9));
+}
+.wt-stop.is-active {
+  filter: drop-shadow(0 0 3px rgb(255 255 255 / 0.9));
+}
+
 .wt-h2 {
   font-family: var(--wt-font-display);
   font-weight: 700;

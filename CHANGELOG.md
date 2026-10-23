@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The overnight stops along your route have a glowing purple ring, so they stand out on every temperature colour.
+
 ## v0.2.0 - 2026-10-23
 
 ### Added
