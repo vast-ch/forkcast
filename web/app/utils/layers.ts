@@ -84,6 +84,9 @@ export function temperatureRaster(
   };
 }
 
+/** A rain dot fills its cell at this much in an average month (mm, or rainy days). */
+export const DOT_FULL = { mm: 250, days: 20 } as const;
+
 export interface RainDot {
   lat: number;
   lon: number;
@@ -107,8 +110,7 @@ export function rainDots(
   /** Grids drawn before this one: their area is left to them. */
   earlier: ClimateGrid[] = [],
 ): RainDot[] {
-  // A dot fills its block at 250 mm/month or 20 rainy days.
-  const full = metric === 'mm' ? 250 : 20;
+  const full = DOT_FULL[metric];
   const cellM = (grid.step * Math.PI * 6371000) / 180;
   // Rates at this moment, scaled to an average month.
   const value = (row: number, col: number) =>

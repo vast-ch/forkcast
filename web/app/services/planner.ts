@@ -227,17 +227,21 @@ export default class PlannerService extends Service {
 
   // --- Trip days --------------------------------------------------------------
 
+  /** Does a trip day fall in the quarter-month shown on the map? */
+  private inMapWeek = (d: TripDay): boolean => weekOfDate(d.date) === this.week;
+
   /**
    * Show a quarter-month on the map (from the week slider) and keep the day
    * chart in step: the selected day stays if it falls in that week, otherwise
-   * the trip's first day in it is selected, or none if the trip isn't there.
+   * the trip's first day in it is selected. A week the trip doesn't reach
+   * selects no day; the chart shows it as `offTrip`.
    */
   selectWeek(w: number): void {
     this.week = w;
     const days = this.trip?.days ?? [];
-    const inWeek = (d: TripDay) => weekOfDate(d.date) === this.week;
-    if (days.some((d) => d.n === this.highlightedDay && inWeek(d))) return;
-    this.highlightedDay = days.find(inWeek)?.n;
+    const selected = days.find((d) => d.n === this.highlightedDay);
+    if (selected && this.inMapWeek(selected)) return;
+    this.highlightedDay = days.find(this.inMapWeek)?.n;
   }
 
   /**
@@ -250,8 +254,8 @@ export default class PlannerService extends Service {
     const first = days?.[0];
     const last = days?.[days.length - 1];
     if (!days || !first || !last) return undefined;
+    if (days.some(this.inMapWeek)) return undefined;
     const w = this.week;
-    if (days.some((d) => weekOfDate(d.date) === w)) return undefined;
     const n = WEEKS.length;
     const toStart = (weekOfDate(first.date) - w + n) % n;
     const fromEnd = (w - weekOfDate(last.date) + n) % n;

@@ -31,6 +31,9 @@ const LEFT = 34;
 /** Left edge of column `c`. */
 const colX = (c: number) => LEFT + c * COL;
 
+/** SVG transform that turns text at (x, y) to read upwards. */
+const upright = (x: number, y: number) => `rotate(-90 ${x} ${y})`;
+
 /** Keeps the selected column in view however it was picked (chart, map, week slider). */
 const scrollToColumn = modifier<{
   Element: HTMLElement;
@@ -113,7 +116,7 @@ export default class ItineraryChart extends Component<{
         cx,
         y,
         label: side === 'before' ? 'Before' : 'After',
-        transform: `rotate(-90 ${cx} ${y})`,
+        transform: upright(cx, y),
         isActive: this.planner.offTrip === side,
       };
     });
@@ -146,7 +149,7 @@ export default class ItineraryChart extends Component<{
         name: b.monthStart,
         x: b.x,
         y,
-        transform: `rotate(-90 ${b.x} ${y})`,
+        transform: upright(b.x, y),
       }));
   }
 

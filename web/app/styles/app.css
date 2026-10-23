@@ -26,6 +26,7 @@
   --wt-sun: #f2b632;
   /* The selected day, on the map and in the chart (ROUTE_ACCENT in wheel-map.gts) */
   --wt-pick: #a020f0;
+  --wt-pick-wash: color-mix(in srgb, var(--wt-pick) 14%, transparent);
   --wt-font-display:
     "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --wt-font-body:
@@ -201,7 +202,9 @@ body {
 /* Night stops and the highlighted day's stretch: a soft purple glow. */
 .wt-stop,
 .wt-day-stretch {
-  filter: drop-shadow(0 0 2px rgb(160 32 240 / 0.9));
+  filter: drop-shadow(
+    0 0 2px color-mix(in srgb, var(--wt-pick) 90%, transparent)
+  );
 }
 .wt-stop.is-active {
   filter: drop-shadow(0 0 3px rgb(255 255 255 / 0.9));
@@ -627,7 +630,10 @@ body {
   font-size: 10px;
   fill: var(--wt-muted);
 }
-.wt-day-num {
+/* Small chart labels: day numbers, parking columns, month names. */
+.wt-day-num,
+.wt-park-label,
+.wt-month-name {
   font-family: var(--wt-font-data);
   font-size: 9px;
   fill: var(--wt-muted);
@@ -650,7 +656,7 @@ body {
 }
 /* After the rest-day shading, so a selected rest day shows as selected. */
 .wt-day.is-active .wt-day-hit {
-  fill: rgb(160 32 240 / 14%);
+  fill: var(--wt-pick-wash);
 }
 .wt-temp-bar {
   stroke: rgb(0 0 0 / 18%);
@@ -679,13 +685,8 @@ body {
   stroke: var(--wt-line);
   stroke-dasharray: 3 3;
 }
-.wt-park-label {
-  font-family: var(--wt-font-data);
-  font-size: 9px;
-  fill: var(--wt-muted);
-}
 .wt-park.is-active .wt-park-slot {
-  fill: rgb(160 32 240 / 14%);
+  fill: var(--wt-pick-wash);
   stroke: var(--wt-pick);
 }
 .wt-park.is-active .wt-park-label {
@@ -694,9 +695,6 @@ body {
 }
 /* Written along the month line; the halo keeps it readable over the bars. */
 .wt-month-name {
-  font-family: var(--wt-font-data);
-  font-size: 9px;
-  fill: var(--wt-muted);
   stroke: var(--wt-paper);
   stroke-width: 3px;
   paint-order: stroke;

@@ -3,6 +3,7 @@ import { service } from '@ember/service';
 import type PlannerService from 'forkcast/services/planner';
 import { DAYS_PER_MONTH, TEMP_STOPS } from 'forkcast/utils/climate';
 import { css } from 'forkcast/utils/format';
+import { DOT_FULL } from 'forkcast/utils/layers';
 
 /** The legend's sample dots, as amounts in the week shown. */
 const DOT_STEPS = {
@@ -39,10 +40,9 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
     }));
   }
 
-  /** Sized like the map's dots, which scale with the rate (a dot is full at
-   * 250 mm or 20 rainy days in an average month; see rainDots). */
+  /** Sized like the map's dots, which scale with the rate (see rainDots). */
   get dots() {
-    const full = this.planner.rainMetric === 'mm' ? 250 : 20;
+    const full = DOT_FULL[this.planner.rainMetric];
     const toMonth = DAYS_PER_MONTH / this.planner.weekSlot.days;
     return DOT_STEPS[this.planner.rainMetric].map((d) => ({
       ...d,
