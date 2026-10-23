@@ -1,5 +1,5 @@
-import Application from 'wheelther/app';
-import config from 'wheelther/config/environment';
+import Application from 'forkcast/app';
+import config from 'forkcast/config/environment';
 import * as QUnit from 'qunit';
 import { setApplication } from '@ember/test-helpers';
 import { setup } from 'qunit-dom';

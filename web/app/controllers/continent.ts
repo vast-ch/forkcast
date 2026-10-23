@@ -1,6 +1,6 @@
 import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
-import { DEFAULTS, SETTING_KEYS } from 'wheelther/utils/settings';
+import { DEFAULTS, SETTING_KEYS } from 'forkcast/utils/settings';
 
 /**
  * Holds every setting as a query parameter. Ember writes a parameter to the URL

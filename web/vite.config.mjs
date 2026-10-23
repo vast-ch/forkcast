@@ -18,7 +18,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 4200,
-    allowedHosts: ['ui.wheelther.orb.local'],
+    allowedHosts: ['ui.forkcast.orb.local'],
     hmr: hmrClientConfig(),
   },
   plugins: [

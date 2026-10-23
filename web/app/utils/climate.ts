@@ -1,5 +1,5 @@
 // Climate normals on a regular lat/lon grid, one file per continent (built by
-// data/wheelther_data/era5land.py, or climate.py for the older CRU grid).
+// data/forkcast_data/era5land.py, or climate.py for the older CRU grid).
 
 /** How a stored byte maps to a value (ERA5-Land grids). */
 export type Encoding =

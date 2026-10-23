@@ -7,7 +7,7 @@ WORKDIR /data
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project
-COPY wheelther_data/ wheelther_data/
+COPY forkcast_data/ forkcast_data/
 COPY build.sh ./
 ENTRYPOINT ["./build.sh"]
 CMD ["all"]

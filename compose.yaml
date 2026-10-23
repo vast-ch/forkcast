@@ -1,7 +1,9 @@
-# Wheelther monorepo.
-#   docker compose up ui                  dev server with hot reload (https://ui.wheelther.orb.local)
+# Forkcast monorepo.
+#   docker compose up ui                  dev server with hot reload (https://ui.forkcast.orb.local)
 #   docker compose run --rm data          rebuild all data into data/out (or: data climate|routes|basemap)
-#   docker compose --profile prod up --build web   production image (nginx) at https://web.wheelther.orb.local
+#   docker compose --profile prod up --build web   production image (nginx) at https://web.forkcast.orb.local
+name: forkcast
+
 services:
   ui:
     build:
@@ -12,14 +14,14 @@ services:
     expose:
       - 4200
     environment:
-      - APP_URL=https://ui.wheelther.orb.local
+      - APP_URL=https://ui.forkcast.orb.local
     volumes:
       - ./web:/app
       - /app/node_modules
       # The app imports the built data from /data-out (hashed asset URLs).
       - ./data/out:/app/data-out:ro
     labels:
-      - dev.orbstack.domains=ui.wheelther.orb.local
+      - dev.orbstack.domains=ui.forkcast.orb.local
       - dev.orbstack.http-port=4200
 
   data:
@@ -29,7 +31,7 @@ services:
     volumes:
       - ./data/out:/data/out
       - ./data/cache:/data/cache
-      - ./data/wheelther_data:/data/wheelther_data
+      - ./data/forkcast_data:/data/forkcast_data
 
   web:
     build:
@@ -40,5 +42,5 @@ services:
     expose:
       - 80
     labels:
-      - dev.orbstack.domains=web.wheelther.orb.local
+      - dev.orbstack.domains=web.forkcast.orb.local
       - dev.orbstack.http-port=80

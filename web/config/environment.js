@@ -2,7 +2,7 @@
 
 module.exports = function (environment) {
   const ENV = {
-    modulePrefix: 'wheelther',
+    modulePrefix: 'forkcast',
     environment,
     rootURL: '/',
     locationType: 'history',

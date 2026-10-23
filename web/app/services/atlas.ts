@@ -1,14 +1,14 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { TrackedMap } from 'tracked-built-ins';
-import ClimateGrid, { type ClimateHeader } from 'wheelther/utils/climate';
-import { fetchBuffer, fetchJson } from 'wheelther/utils/assets';
+import ClimateGrid, { type ClimateHeader } from 'forkcast/utils/climate';
+import { fetchBuffer, fetchJson } from 'forkcast/utils/assets';
 import {
   routeFromJson,
   type Route,
   type RouteJson,
   type RouteMeta,
-} from 'wheelther/utils/route';
+} from 'forkcast/utils/route';
 
 export type CountriesJson = GeoJSON.FeatureCollection<GeoJSON.MultiPolygon>;
 

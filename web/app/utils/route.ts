@@ -202,7 +202,7 @@ export function toGpx(route: Route): string {
     )
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Wheelther" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Forkcast" xmlns="http://www.topografix.com/GPX/1/1">
   <trk>
     <name>${esc(route.name)}</name>
     <trkseg>

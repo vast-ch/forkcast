@@ -4,12 +4,12 @@ import Modifier from 'ember-modifier';
 import { registerDestructor } from '@ember/destroyable';
 import L from 'leaflet';
 import type Owner from '@ember/owner';
-import type AtlasService from 'wheelther/services/atlas';
-import type PlannerService from 'wheelther/services/planner';
-import { dayAtKm, type Trip } from 'wheelther/utils/itinerary';
-import { temperatureRaster, rainDots } from 'wheelther/utils/layers';
-import { pointAt, type Route } from 'wheelther/utils/route';
-import { MONTHS, tempColor } from 'wheelther/utils/climate';
+import type AtlasService from 'forkcast/services/atlas';
+import type PlannerService from 'forkcast/services/planner';
+import { dayAtKm, type Trip } from 'forkcast/utils/itinerary';
+import { temperatureRaster, rainDots } from 'forkcast/utils/layers';
+import { pointAt, type Route } from 'forkcast/utils/route';
+import { MONTHS, tempColor } from 'forkcast/utils/climate';
 
 interface MapState {
   month: number;

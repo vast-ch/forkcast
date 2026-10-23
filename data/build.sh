@@ -14,12 +14,12 @@ climate() {
       [ -s "cache/cru/$f" ] || curl -sSf -o "cache/cru/$f" "$CRU_DIR/$v/$f"
     done
   done
-  uv run python -m wheelther_data.climate cache/cru --from 2011 --to 2025
+  uv run python -m forkcast_data.climate cache/cru --from 2011 --to 2025
 }
-routes() { uv run python -m wheelther_data.routes; }
-download() { uv run python -m wheelther_data.eurovelo download; }
-basemap() { uv run python -m wheelther_data.basemap; }
-manifest() { uv run python -m wheelther_data.manifest; }
+routes() { uv run python -m forkcast_data.routes; }
+download() { uv run python -m forkcast_data.eurovelo download; }
+basemap() { uv run python -m forkcast_data.basemap; }
+manifest() { uv run python -m forkcast_data.manifest; }
 
 case "${1:-all}" in
   all) basemap; routes; climate; manifest ;;

@@ -4,8 +4,8 @@
   "compilerOptions": {
     "allowJs": true,
     "paths": {
-      "wheelther/tests/*": ["./tests/*"],
-      "wheelther/*": ["./app/*"],
+      "forkcast/tests/*": ["./tests/*"],
+      "forkcast/*": ["./app/*"],
       "*": ["./types/*"]
     },
     "types": [

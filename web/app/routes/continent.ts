@@ -2,10 +2,10 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import type RouterService from '@ember/routing/router-service';
 import type Transition from '@ember/routing/transition';
-import type AtlasService from 'wheelther/services/atlas';
-import type PlannerService from 'wheelther/services/planner';
-import type ContinentController from 'wheelther/controllers/continent';
-import { SETTING_KEYS } from 'wheelther/utils/settings';
+import type AtlasService from 'forkcast/services/atlas';
+import type PlannerService from 'forkcast/services/planner';
+import type ContinentController from 'forkcast/controllers/continent';
+import { SETTING_KEYS } from 'forkcast/utils/settings';
 
 /** Settings change the URL in place, without piling up browser history. */
 const QUERY_PARAMS = Object.fromEntries(

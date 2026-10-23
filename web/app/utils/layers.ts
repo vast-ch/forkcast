@@ -4,7 +4,7 @@
 
 import type ClimateGrid from './climate';
 import { tempRgb } from './climate';
-import type { RainMetric, TempMetric } from 'wheelther/services/planner';
+import type { RainMetric, TempMetric } from 'forkcast/services/planner';
 
 const R = 6378137;
 const toY = (lat: number) =>

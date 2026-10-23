@@ -1,11 +1,11 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import type PlannerService from 'wheelther/services/planner';
-import SidePanel from 'wheelther/components/side-panel';
-import WheelMap from 'wheelther/components/wheel-map';
-import HoverCard from 'wheelther/components/hover-card';
-import Legend from 'wheelther/components/legend';
-import ItineraryChart from 'wheelther/components/itinerary-chart';
+import type PlannerService from 'forkcast/services/planner';
+import SidePanel from 'forkcast/components/side-panel';
+import WheelMap from 'forkcast/components/wheel-map';
+import HoverCard from 'forkcast/components/hover-card';
+import Legend from 'forkcast/components/legend';
+import ItineraryChart from 'forkcast/components/itinerary-chart';
 
 export default class ContinentTemplate extends Component {
   @service declare planner: PlannerService;

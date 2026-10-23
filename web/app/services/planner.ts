@@ -2,9 +2,9 @@ import Service, { service } from '@ember/service';
 import { cached, tracked } from '@glimmer/tracking';
 import { TrackedArray } from 'tracked-built-ins';
 import type AtlasService from './atlas';
-import type ContinentController from 'wheelther/controllers/continent';
-import type { DayClimate, RainThreshold } from 'wheelther/utils/climate';
-import { planTrip, type Trip, type TripDay } from 'wheelther/utils/itinerary';
+import type ContinentController from 'forkcast/controllers/continent';
+import type { DayClimate, RainThreshold } from 'forkcast/utils/climate';
+import { planTrip, type Trip, type TripDay } from 'forkcast/utils/itinerary';
 import {
   decodeTrack,
   encodeTrack,
@@ -12,12 +12,12 @@ import {
   withDistances,
   type Route,
   type RoutePoint,
-} from 'wheelther/utils/route';
+} from 'forkcast/utils/route';
 import {
   DEFAULTS,
   OWN_ROUTE_ID,
   type SettingKey,
-} from 'wheelther/utils/settings';
+} from 'forkcast/utils/settings';
 
 export type TempMetric = 'high' | 'low';
 export type RainMetric = 'mm' | 'days';

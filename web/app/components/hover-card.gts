@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import type PlannerService from 'wheelther/services/planner';
-import { MONTHS, tempColor } from 'wheelther/utils/climate';
+import type PlannerService from 'forkcast/services/planner';
+import { MONTHS, tempColor } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
@@ -9,7 +9,7 @@ import {
   fmtMm,
   fmtPct,
   fmtTemp,
-} from 'wheelther/utils/format';
+} from 'forkcast/utils/format';
 
 const round = (n: number | null | undefined) =>
   n === null || n === undefined || Number.isNaN(n) ? '–' : Math.round(n);

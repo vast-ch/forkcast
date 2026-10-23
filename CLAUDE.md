@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Wheelther monorepo: `web/` (Ember app) and `data/` (Python data builders). See README.md for what it does and how to run it.
+Forkcast monorepo: `web/` (Ember app) and `data/` (Python data builders). See README.md for what it does and how to run it.
 
 ## Commands
 
@@ -23,9 +23,9 @@ Wheelther monorepo: `web/` (Ember app) and `data/` (Python data builders). See R
 
 ## Data
 
-- EuroVelo routes: `data/wheelther_data/eurovelo.py` (catalogue, GPX → route, variant/gap handling). Raw tracks in `data/eurovelo/` (ODbL; the attribution notice must stay in the help page and map attribution). Refresh with `build.sh download`.
-- Hand-made routes are the town lists in `data/wheelther_data/anchors.py` (the first is the app's default). Coordinates come from `geocoded.json`; after adding stops run `uv run python -m wheelther_data.geocode` (Nominatim, only looks up missing ones), then the `routes` step.
-- Continents (ids, names, bounding boxes) are in `data/wheelther_data/continents.py`; climate, borders and the manifest are built per continent from them.
+- EuroVelo routes: `data/forkcast_data/eurovelo.py` (catalogue, GPX → route, variant/gap handling). Raw tracks in `data/eurovelo/` (ODbL; the attribution notice must stay in the help page and map attribution). Refresh with `build.sh download`.
+- Hand-made routes are the town lists in `data/forkcast_data/anchors.py` (the first is the app's default). Coordinates come from `geocoded.json`; after adding stops run `uv run python -m forkcast_data.geocode` (Nominatim, only looks up missing ones), then the `routes` step.
+- Continents (ids, names, bounding boxes) are in `data/forkcast_data/continents.py`; climate, borders and the manifest are built per continent from them.
 - Climate: CRU TS file paths are pinned in `data/build.sh` (version 4.10, 2011–2025).
 
 ## Commits and changelog

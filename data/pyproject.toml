@@ -1,7 +1,7 @@
 [project]
-name = "wheelther-data"
+name = "forkcast-data"
 version = "0.1.0"
-description = "Builds Wheelther's climate grid, preset routes and basemap"
+description = "Builds Forkcast's climate grid, preset routes and basemap"
 requires-python = ">=3.12"
 dependencies = [
     "xarray",

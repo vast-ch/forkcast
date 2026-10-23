@@ -1,8 +1,8 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import type PlannerService from 'wheelther/services/planner';
-import { TEMP_STOPS } from 'wheelther/utils/climate';
-import { css } from 'wheelther/utils/format';
+import type PlannerService from 'forkcast/services/planner';
+import { TEMP_STOPS } from 'forkcast/utils/climate';
+import { css } from 'forkcast/utils/format';
 
 const DOT_STEPS = {
   mm: [
