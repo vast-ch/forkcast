@@ -21,6 +21,7 @@
 - The link to the help page is now a question-mark icon in the top corner.
 - On phones, the trip summary under the day chart no longer repeats a "Trip" heading.
 - The "Ride 5 days, rest 1 day, repeat" line under the trip settings is gone; the ride and rest fields say it already.
+- The trip summary is tidier: one number per item, with riding and rest days and the date of the coldest night as items of their own.
 - Draw a route, Import GPX and Export GPX now look the same.
 - Days are simply the route cut into equal stretches of your daily distance; the nearby town names are gone.
 - Your own route is now kept in the page address instead of in the browser, one at a time. Drawing or importing a new one replaces it.

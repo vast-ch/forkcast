@@ -119,11 +119,9 @@ export default class SidePanel extends Component<SidePanelSignature> {
       rest: t.restDays,
       end: fmtDate(t.end),
       avgHigh: fmtTemp(t.avgHigh),
-      coldest: t.coldestNight
-        ? `${fmtTemp(t.coldestNight.nightLow)} on ${fmtShortDate(t.coldestNight.date)}`
-        : '–',
+      coldest: t.coldestNight ? fmtTemp(t.coldestNight.nightLow) : '–',
+      coldestOn: t.coldestNight ? fmtShortDate(t.coldestNight.date) : '–',
       rainy: Math.round(t.rainyDays),
-      rainyPct: fmtPct(t.rainyDays / (t.ridingDays || 1)),
     };
   }
 
@@ -548,21 +546,18 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
           {{#if this.showOverview}}{{#if this.summary}}
               <dl class="wt-summary">
-                <div><dt>Days</dt><dd>{{this.summary.days}}</dd><dd
-                    class="wt-muted text-xs"
-                  >{{this.summary.riding}}
-                    riding,
-                    {{this.summary.rest}}
-                    rest</dd></div>
+                <div><dt>Days</dt><dd>{{this.summary.days}}</dd></div>
                 <div><dt>Arrive</dt><dd>{{this.summary.end}}</dd></div>
-                <div><dt>Average high</dt><dd>{{this.summary.avgHigh}}</dd><dd
-                    class="wt-muted text-xs"
-                  >on riding days</dd></div>
+                <div><dt>Riding days</dt><dd>{{this.summary.riding}}</dd></div>
+                <div><dt>Rest days</dt><dd>{{this.summary.rest}}</dd></div>
+                <div><dt>Average high</dt><dd
+                  >{{this.summary.avgHigh}}</dd></div>
                 <div><dt>Rainy riding days</dt><dd
-                  >{{this.summary.rainy}}</dd><dd class="wt-muted text-xs">about
-                    {{this.summary.rainyPct}}</dd></div>
-                <div class="col-span-2"><dt>Coldest night</dt><dd
+                  >{{this.summary.rainy}}</dd></div>
+                <div><dt>Coldest night</dt><dd
                   >{{this.summary.coldest}}</dd></div>
+                <div><dt>Coldest night on</dt><dd
+                  >{{this.summary.coldestOn}}</dd></div>
               </dl>
             {{/if}}{{/if}}
         </section>
