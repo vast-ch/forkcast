@@ -11,9 +11,10 @@ import { temperatureRaster, rainDots } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
 import { climateOn, tempColor } from 'forkcast/utils/climate';
 
-/** Ring around each night's stop: a vivid purple that stands out on every
- * temperature colour (it glows a little, see .wt-stop in app.css). */
-const STOP_RING = '#a020f0';
+/** The night stops' rings and the highlighted day's stretch: a vivid purple
+ * that stands out on every temperature colour (it glows a little, see
+ * .wt-stop and .wt-day-stretch in app.css). */
+const ROUTE_ACCENT = '#a020f0';
 
 interface MapState {
   /** Quarter-month shown, 0–47, and its position in the year */
@@ -359,7 +360,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           const hasRestNext = trip.days[d.n]?.isRest === true;
           const m = L.circleMarker([d.sleep.lat, d.sleep.lon], {
             radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
-            color: isHi ? '#111' : STOP_RING,
+            color: isHi ? '#111' : ROUTE_ACCENT,
             weight: isHi ? 3 : 2,
             className: isHi ? 'wt-stop is-active' : 'wt-stop',
             fillColor: Number.isNaN(d.weather.high)
@@ -392,7 +393,13 @@ class LeafletModifier extends Modifier<LeafletSignature> {
                 ...seg.map((p) => [p.lat, p.lon] as [number, number]),
                 [b.lat, b.lon],
               ],
-              { color: '#111', weight: 6, opacity: 0.85, interactive: false },
+              {
+                color: ROUTE_ACCENT,
+                weight: 6,
+                opacity: 0.95,
+                interactive: false,
+                className: 'wt-day-stretch',
+              },
             ).addTo(group);
           }
         }
