@@ -74,10 +74,10 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
         <div class="min-w-0">
           <p class="wt-eyebrow">{{this.tempLabel}}</p>
           <div
-            class="relative mt-1.5 h-2.5 w-48 rounded-sm"
+            class="relative mt-1.5 h-2.5 w-60 rounded-sm"
             style={{css "background: " this.gradient}}
           ></div>
-          <div class="relative h-4 w-48 tabular-nums">
+          <div class="relative h-4 w-60 tabular-nums">
             {{#each this.ticks as |tick|}}
               <span
                 class="wt-tick"
