@@ -9,7 +9,7 @@
 Every BRouter response is cached in cache/brouter/, so re-running only
 fetches legs that changed.
 
-Usage: uv run python -m wheelther_data.routes
+Usage: uv run python -m forkcast_data.routes
 """
 
 import hashlib
@@ -27,7 +27,7 @@ CACHE = ROOT / "cache" / "brouter"
 GEOCODED = Path(__file__).with_name("geocoded.json")
 OUT_DIR = ROOT / "out" / "routes"
 BROUTER = "https://brouter.de/brouter"
-UA = "wheelther-build/0.1 (https://github.com/vast-ch/wheelther)"
+UA = "forkcast-build/0.1 (https://github.com/vast-ch/forkcast)"
 SIMPLIFY_M = 40  # Douglas-Peucker tolerance
 
 

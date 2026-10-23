@@ -1,7 +1,7 @@
 """Resolve route stops to coordinates with Nominatim; results are kept in geocoded.json.
 
 Only stops missing from geocoded.json are looked up (1 request per second).
-Usage: uv run python -m wheelther_data.geocode
+Usage: uv run python -m forkcast_data.geocode
 """
 
 import json
@@ -13,7 +13,7 @@ from pathlib import Path
 from .anchors import ROUTES
 
 CACHE = Path(__file__).with_name("geocoded.json")
-UA = "wheelther-build/0.1 (https://github.com/vast-ch/wheelther)"
+UA = "forkcast-build/0.1 (https://github.com/vast-ch/forkcast)"
 
 
 def main():

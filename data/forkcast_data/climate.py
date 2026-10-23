@@ -11,7 +11,7 @@ variables in the order above, rows from north to south. Each value is
 round(value * scale[variable]); -32768 means no data (sea).
 
 Usage:
-  uv run python -m wheelther_data.climate <dir with cru_ts*.dat.nc.gz> [--from 2011] [--to 2025]
+  uv run python -m forkcast_data.climate <dir with cru_ts*.dat.nc.gz> [--from 2011] [--to 2025]
 """
 
 import argparse

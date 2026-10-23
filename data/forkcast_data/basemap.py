@@ -7,7 +7,7 @@
 The app draws its own basemap from this file, so it needs no tile server.
 Source: world-atlas (Natural Earth, public domain), TopoJSON decoded here.
 
-Usage: uv run python -m wheelther_data.basemap
+Usage: uv run python -m forkcast_data.basemap
 """
 
 import json
@@ -73,7 +73,7 @@ def in_bbox(r, bbox):
 
 
 def main():
-    req = urllib.request.Request(URL, headers={"User-Agent": "wheelther-build/0.1"})
+    req = urllib.request.Request(URL, headers={"User-Agent": "forkcast-build/0.1"})
     with urllib.request.urlopen(req, timeout=60) as r:
         topo = json.load(r)
     arcs = decode_arcs(topo)
@@ -100,7 +100,7 @@ def main():
 
 def world():
     """One SVG path per continent, equirectangular: x = lon + 180, y = 90 - lat."""
-    req = urllib.request.Request(WORLD_URL, headers={"User-Agent": "wheelther-build/0.1"})
+    req = urllib.request.Request(WORLD_URL, headers={"User-Agent": "forkcast-build/0.1"})
     with urllib.request.urlopen(req, timeout=60) as r:
         gj = json.load(r)
     paths = {}

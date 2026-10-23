@@ -3,7 +3,7 @@
 Lists each continent with its bounding box, its download size (climate grid +
 borders, before compression) and the preset routes on it.
 
-Usage: uv run python -m wheelther_data.manifest
+Usage: uv run python -m forkcast_data.manifest
 """
 
 import gzip

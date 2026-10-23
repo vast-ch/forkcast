@@ -7,8 +7,8 @@ straight line: over the sea it is a ferry (not counted as riding), over land an
 unmapped stretch (counted, and flagged).
 
 Usage:
-  uv run python -m wheelther_data.eurovelo download   # refresh eurovelo/*.gpx.gz
-  (route building is called from wheelther_data.routes)
+  uv run python -m forkcast_data.eurovelo download   # refresh eurovelo/*.gpx.gz
+  (route building is called from forkcast_data.routes)
 """
 
 import gzip
@@ -314,7 +314,7 @@ def download():
     for number, _name, gpx_id, _color in CATALOG:
         req = urllib.request.Request(
             f"https://en.eurovelo.com/route/get-gpx/{gpx_id}",
-            headers={"User-Agent": "wheelther-build/0.1 (https://github.com/vast-ch/wheelther)"},
+            headers={"User-Agent": "forkcast-build/0.1 (https://github.com/vast-ch/forkcast)"},
         )
         with urllib.request.urlopen(req, timeout=600) as r:
             body = r.read()
