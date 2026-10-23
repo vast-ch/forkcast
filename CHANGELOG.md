@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.4.0 - 2026-10-23
+
 ### Changed
 
 - Moving the week on the map now moves the day chart with it: it picks your trip's first day in that week. A week outside the trip is shown in a "Before" or "After" column at either end of the chart, whichever end of the trip it is nearer to.
