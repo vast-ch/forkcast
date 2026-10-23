@@ -247,13 +247,14 @@ export default class PlannerService extends Service {
   /**
    * Where the map's week lies when the trip has no day in it: before the trip
    * or after it, whichever end is nearer in the year. Undefined while the week
-   * is inside the trip (or there is no trip).
+   * is inside the trip, while a day is selected (a link can name a day from
+   * another week), or when there is no trip.
    */
   get offTrip(): 'before' | 'after' | undefined {
     const days = this.trip?.days;
     const first = days?.[0];
     const last = days?.[days.length - 1];
-    if (!days || !first || !last) return undefined;
+    if (!days || !first || !last || this.highlightedDay) return undefined;
     if (days.some(this.inMapWeek)) return undefined;
     const w = this.week;
     const n = WEEKS.length;
