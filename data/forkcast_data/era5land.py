@@ -24,12 +24,18 @@ and the same for tmn with the coldest hour. ERA5-Land keeps the fine detail
 (coasts, valleys), CRU sets the level. Where CRU has no cell (small islands,
 coast) the offset is taken from the nearest cells that have one.
 
+Altitude: each cell's mean height (from ERA5-Land's own terrain, averaged
+from 0.1° to the 0.25° cells) is stored too. The app shifts temperatures by
+−6.5 °C per 1,000 m between a route point and its cell (the standard lapse
+rate), so a valley town or a pass gets its own temperature, not the cell's.
+
 Output per continent: out/<continent>/climate.bin and climate.json. The grid is
 0.25°. Values are one byte each (uint8, 255 = no data), laid out
-[layer][month][row][col]:
+[layer][month][row][col], followed by the static layers [row][col]:
   tmx, tmn   value = byte / 2 - 64            (0.5 °C steps, -64 … +63 °C)
   pre        value = (byte / 8) ** 2          (fine for dry months, up to ~1000 mm)
   r1/r5/r10  value = byte / 8                 (1/8 day steps)
+  elev       value = byte × 40 m              (static; 0 … 10,160 m, below sea level as 0)
 
 Usage: uv run python -m forkcast_data build climate [--fresh]
 """
@@ -57,7 +63,9 @@ ENCODING = {
     "r1": {"kind": "linear", "scale": 8, "offset": 0},
     "r5": {"kind": "linear", "scale": 8, "offset": 0},
     "r10": {"kind": "linear", "scale": 8, "offset": 0},
+    "elev": {"kind": "linear", "scale": 0.025, "offset": 0},
 }
+STATIC = ["elev"]
 SOURCE = "ERA5-Land (Copernicus Climate Change Service), highs and lows calibrated with CRU TS 4.10"
 
 
@@ -197,6 +205,30 @@ def calibrate(fine: np.ndarray, lats: np.ndarray, lons: np.ndarray, cru_da, name
     return out
 
 
+def cell_elevation(lats: np.ndarray, lons: np.ndarray) -> np.ndarray:
+    """Mean terrain height (m) of each 0.25° cell, from ERA5-Land's 0.1° orography."""
+    import xarray as xr
+
+    with xr.open_dataset(dl.orography_file()) as ds:
+        z = ds["z"].squeeze(drop=True)
+        z = z.rename({d: {"latitude": "lat", "longitude": "lon"}.get(d, d) for d in z.dims})
+        h = (z / 9.80665).values.astype(np.float64)
+        zlat = z.lat.values
+        zlon = ((z.lon.values + 180) % 360) - 180
+    # Each 0.1° point goes to the nearest 0.25° cell centre.
+    iy = np.round((lats[0] - zlat) / 0.25).astype(int)
+    ix = np.round((zlon - lons[0]) / 0.25).astype(int)
+    oky = (iy >= 0) & (iy < len(lats))
+    okx = (ix >= 0) & (ix < len(lons))
+    total = np.zeros((len(lats), len(lons)))
+    count = np.zeros((len(lats), len(lons)))
+    yy, xx = np.meshgrid(iy[oky], ix[okx], indexing="ij")
+    np.add.at(total, (yy, xx), h[np.ix_(oky, okx)])
+    np.add.at(count, (yy, xx), 1)
+    with np.errstate(invalid="ignore"):
+        return total / count
+
+
 def encode(name: str, v: np.ndarray) -> np.ndarray:
     e = ENCODING[name]
     if e["kind"] == "sqrt":
@@ -214,7 +246,7 @@ def outputs() -> list[Path]:
 def inputs(y0: int, y1: int) -> list[Path]:
     files = [dl.rain_file(y) for y in range(y0, y1 + 1)] + [_next_january(y1)]
     files += [dl.temperature_file(y) for y in range(y0, y1 + 1)]
-    return files + [cru.climatology_file(y0, y1)]
+    return files + [cru.climatology_file(y0, y1), dl.orography_file()]
 
 
 def build(y0: int, y1: int, fresh: bool = False) -> None:
@@ -228,7 +260,7 @@ def build(y0: int, y1: int, fresh: bool = False) -> None:
     if missing := stamp.missing_inputs():
         raise SystemExit(
             f"Missing climate inputs ({missing[0].name}, …). Run: download era5land-rain, "
-            "download era5land-temperature, download cru, build cru"
+            "download era5land-temperature, download orography, download cru, build cru"
         )
     clim, (lats, lons), land = rain(y0, y1)
     tmax, tmin = hourly_extremes(y0, y1)
@@ -237,14 +269,16 @@ def build(y0: int, y1: int, fresh: bool = False) -> None:
         clim["tmn"] = calibrate(tmin, lats, lons, c["tmn"].load(), "lows")
     for k in ("tmx", "tmn"):
         clim[k][:, ~land] = np.nan
+    elev = np.clip(cell_elevation(lats, lons), 0, None)
     for c in CONTINENTS:
         x0, ya, x1, yb = c["bbox"]
         rows = np.where((lats >= ya) & (lats <= yb))[0]
         cols = np.where((lons >= x0) & (lons <= x1))[0]
         data = np.stack([encode(k, clim[k][:, rows][:, :, cols]) for k in LAYERS])
+        static = np.stack([encode("elev", np.where(land, elev, np.nan)[rows][:, cols])])
         d = OUT / c["id"]
         d.mkdir(parents=True, exist_ok=True)
-        (d / "climate.bin").write_bytes(data.tobytes())
+        (d / "climate.bin").write_bytes(data.tobytes() + static.tobytes())
         header = {
             "source": SOURCE,
             "years": [y0, y1],
@@ -255,9 +289,10 @@ def build(y0: int, y1: int, fresh: bool = False) -> None:
             "rows": int(len(rows)),
             "dtype": "u8",
             "vars": LAYERS,
+            "static": STATIC,
             "encoding": ENCODING,
             "nodata": NODATA,
         }
         (d / "climate.json").write_text(json.dumps(header, separators=(",", ":")))
-        log(f"  {c['id']:14} {len(cols)}x{len(rows)} cells, {data.nbytes / 1e6:.1f} MB")
+        log(f"  {c['id']:14} {len(cols)}x{len(rows)} cells, {(data.nbytes + static.nbytes) / 1e6:.1f} MB")
     stamp.done()

@@ -10,6 +10,7 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     cru                   CRU TS 4.10 monthly grids (calibrates highs and lows)
     era5land-rain         ERA5-Land daily rain totals (Copernicus CDS key needed)
     era5land-temperature  ERA5-Land monthly temperature by hour of day (CDS key needed)
+    orography             ERA5-Land terrain height (for the altitude correction)
     eurovelo              official EuroVelo GPX tracks
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
@@ -44,6 +45,7 @@ DOWNLOADS = {
     "cru": lambda a: cru.download(a.fresh),
     "era5land-rain": lambda a: era5land_download.rain(_years(a), a.fresh),
     "era5land-temperature": lambda a: era5land_download.temperature(_years(a), a.fresh),
+    "orography": lambda a: era5land_download.orography(a.fresh),
     "eurovelo": lambda a: eurovelo.download(a.fresh),
     "brouter": lambda a: routes.download(a.fresh),
     "borders": lambda a: basemap.download(a.fresh),
@@ -72,6 +74,7 @@ def status(a) -> None:
         "cru": cru.files(),
         "era5land-rain": [era5land_download.rain_file(i) for i in y] + [era5land_download.rain_last_day(y[-1] + 1)],
         "era5land-temperature": [era5land_download.temperature_file(i) for i in y],
+        "orography": [era5land_download.orography_file()],
         "eurovelo": [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG],
         "borders": [basemap.DIR / n for n in basemap.SOURCES],
     }

@@ -14,7 +14,11 @@ grid (regridded by the CDS) for the world without Antarctica.
   year (cache/era5land/t2m-hourly-<year>.nc, 12 months × 24 hours). The daily
   maximum and minimum are derived from it in era5land.py.
 
-Usage: uv run python -m forkcast_data download era5land-rain|era5land-temperature [--fresh]
+- orography: ERA5-Land's surface geopotential (its model terrain) at 0.1°,
+  published by ECMWF (cache/era5land/orography-0.1.nc, 52 MB, no key needed).
+  Used to store each cell's mean height, for the altitude correction.
+
+Usage: uv run python -m forkcast_data download era5land-rain|era5land-temperature|orography [--fresh]
 """
 
 from __future__ import annotations
@@ -129,3 +133,27 @@ def temperature(years: range, fresh: bool = False) -> None:
                 fresh,
             )
         )
+
+
+OROGRAPHY_URL = "https://confluence.ecmwf.int/download/attachments/140385202/geo_1279l4_0.1x0.1.grib2_v4_unpack.nc"
+
+
+def orography_file() -> Path:
+    return DIR / "orography-0.1.nc"
+
+
+def _check_orography(path: Path) -> None:
+    import xarray as xr
+
+    with xr.open_dataset(path) as ds:
+        z = ds["z"]
+        if z.sizes.get("latitude", 0) < 1800 or z.sizes.get("longitude", 0) < 3600:
+            raise ValueError("not the global 0.1° grid")
+        if not float(z.max()) > 50000:  # Himalaya ≈ 8 km × 9.8 m/s²
+            raise ValueError("no mountains in the terrain file")
+
+
+def orography(fresh: bool = False) -> None:
+    from .pipeline import http_get
+
+    log("  " + ensure(orography_file(), lambda to: http_get(OROGRAPHY_URL, to), _check_orography, fresh))
