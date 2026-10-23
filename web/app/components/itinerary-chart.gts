@@ -114,7 +114,9 @@ export default class ItineraryChart extends Component<{
         color: tempSwatch(day.weather.high, 'var(--wt-muted)'),
         rainH,
         label:
-          i === 0 || day.date.getDate() === 1 || (day.n % 7 === 1 && day.n > 1)
+          i === 0 ||
+          day.date.getDate() === 1 ||
+          (day.n % 7 === 1 && day.n > 1 && !this.nearMonthStart(i))
             ? fmtShortDate(day.date)
             : undefined,
         isHighlighted: this.planner.highlightedDay === day.n,
@@ -124,6 +126,20 @@ export default class ItineraryChart extends Component<{
           prev.date.getMonth() !== day.date.getMonth(),
       };
     });
+  }
+
+  /** Is a 1 of the month within three days of day index `i`? Its label wins,
+   * so a weekly label next to it would overlap. */
+  nearMonthStart(i: number): boolean {
+    const days = this.args.trip.days;
+    for (
+      let k = Math.max(0, i - 3);
+      k <= Math.min(days.length - 1, i + 3);
+      k++
+    ) {
+      if (k !== i && days[k]!.date.getDate() === 1) return true;
+    }
+    return false;
   }
 
   get detail() {
