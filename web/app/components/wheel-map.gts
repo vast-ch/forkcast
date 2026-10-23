@@ -389,6 +389,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
                 point.lat,
                 point.lon,
                 this.planner.rainThreshold,
+                point.ele,
               )
             : undefined,
         };

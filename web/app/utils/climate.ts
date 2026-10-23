@@ -18,6 +18,8 @@ export interface ClimateHeader {
   /** "u8": one byte per value with `encoding`; otherwise int16 with `scale` (CRU) */
   dtype?: 'u8';
   vars: ClimateVar[];
+  /** Layers without months, stored after the monthly ones (u8 grids). */
+  static?: ClimateVar[];
   scale?: Partial<Record<ClimateVar, number>>;
   encoding?: Partial<Record<ClimateVar, Encoding>>;
   nodata: number;
@@ -27,7 +29,11 @@ export interface ClimateHeader {
  * tmx/tmn: mean daily max/min °C; pre: mm per month;
  * wet: days ≥ 0.1 mm (CRU); r1/r5/r10: days ≥ 1/5/10 mm (ERA5-Land).
  */
-export type ClimateVar = 'tmx' | 'tmn' | 'pre' | 'wet' | 'r1' | 'r5' | 'r10';
+export type ClimateVar =
+  'tmx' | 'tmn' | 'pre' | 'wet' | 'r1' | 'r5' | 'r10' | 'elev';
+
+/** Standard lapse rate: air cools about 6.5 °C per 1,000 m of height. */
+export const LAPSE_RATE = 0.0065;
 
 /** Expected weather for one place on one day of the year. */
 export interface DayClimate {
@@ -43,6 +49,8 @@ export interface DayClimate {
   monthRainMm: number;
   /** Rainy days in the month, at the chosen threshold */
   monthWetDays: number;
+  /** °C added to high and low for the point's height versus its grid cell (0 if unknown) */
+  altitudeShift: number;
 }
 
 /** Rain thresholds offered for counting a day as rainy, mm. */
@@ -109,6 +117,8 @@ export default class ClimateGrid {
 
   /** True when the grid has counted rainy days (ERA5-Land), not just CRU wet days. */
   readonly hasRainyDayCounts: boolean;
+  /** True when the grid knows each cell's mean height, for altitude correction. */
+  readonly hasElevation: boolean;
 
   /**
    * @param header grid geometry and how values are stored
@@ -139,8 +149,20 @@ export default class ClimateGrid {
         return out;
       });
     });
+    (header.static ?? []).forEach((v, si) => {
+      const decode = decoder(header, v);
+      const out = new Float32Array(cells);
+      const off = (header.vars.length * 12 + si) * cells;
+      for (let i = 0; i < cells; i++) {
+        const x = raw[off + i]!;
+        out[i] = x === header.nodata ? Number.NaN : decode(x);
+      }
+      // The same values for every month, so sample() works unchanged.
+      data[v] = Array.from({ length: 12 }, () => out);
+    });
     this.data = data;
     this.hasRainyDayCounts = header.vars.includes('r5');
+    this.hasElevation = (header.static ?? []).includes('elev');
   }
 
   get bounds(): [[number, number], [number, number]] {
@@ -207,25 +229,41 @@ export default class ClimateGrid {
   }
 
   /** Monthly normals at a point (month 0..11); rainy days counted from `threshold` mm. */
+  /**
+   * Monthly normals at a point (month 0..11); rainy days counted from
+   * `threshold` mm. With `ele` (m) and a grid that knows its cells' heights,
+   * high and low are shifted by the lapse rate for the height difference.
+   */
   month(
     month: number,
     lat: number,
     lon: number,
     threshold: number,
+    ele?: number | null,
   ): DayClimate {
     const days = DAYS_IN_MONTH[month]!;
+    const shift = this.altitudeShift(lat, lon, ele);
     const pre = this.sample('pre', month, lat, lon);
     const rainy = this.hasRainyDayCounts
       ? this.sample(countVar(threshold), month, lat, lon)
       : rainyDays(pre, this.sample('wet', month, lat, lon), threshold);
     return {
-      high: this.sample('tmx', month, lat, lon),
-      low: this.sample('tmn', month, lat, lon),
+      high: this.sample('tmx', month, lat, lon) + shift,
+      low: this.sample('tmn', month, lat, lon) + shift,
       rainMm: pre / days,
       rainChance: Number.isNaN(pre) ? Number.NaN : Math.min(1, rainy / days),
       monthRainMm: pre,
       monthWetDays: Number.isNaN(pre) ? Number.NaN : rainy,
+      altitudeShift: shift,
     };
+  }
+
+  /** °C to add for a point at `ele` m compared with its grid cell's mean height. */
+  altitudeShift(lat: number, lon: number, ele?: number | null): number {
+    if (!this.hasElevation || ele === null || ele === undefined) return 0;
+    const cell = this.sample('elev', 0, lat, lon);
+    if (Number.isNaN(cell)) return 0;
+    return -LAPSE_RATE * (ele - cell);
   }
 
   /** Rainy days in a month for one grid cell. */
@@ -248,7 +286,13 @@ export default class ClimateGrid {
    * mid-month and interpolated linearly in between, so 31 Jan is about halfway
    * between January and February.
    */
-  on(date: Date, lat: number, lon: number, threshold: number): DayClimate {
+  on(
+    date: Date,
+    lat: number,
+    lon: number,
+    threshold: number,
+    ele?: number | null,
+  ): DayClimate {
     const m = date.getMonth();
     const mid = DAYS_IN_MONTH[m]! / 2;
     const day = date.getDate() - 0.5;
@@ -261,8 +305,8 @@ export default class ClimateGrid {
       m2 = (m + 1) % 12;
       t = (day - mid) / ((DAYS_IN_MONTH[m]! + DAYS_IN_MONTH[m2]!) / 2);
     }
-    const a = this.month(m, lat, lon, threshold);
-    const b = this.month(m2, lat, lon, threshold);
+    const a = this.month(m, lat, lon, threshold, ele);
+    const b = this.month(m2, lat, lon, threshold, ele);
     const mix = (x: number, y: number) => x + (y - x) * t;
     return {
       high: mix(a.high, b.high),
@@ -271,6 +315,7 @@ export default class ClimateGrid {
       rainChance: mix(a.rainChance, b.rainChance),
       monthRainMm: a.monthRainMm,
       monthWetDays: a.monthWetDays,
+      altitudeShift: a.altitudeShift,
     };
   }
 }

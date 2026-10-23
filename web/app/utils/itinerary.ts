@@ -86,6 +86,7 @@ export function planTrip(
         here.lat,
         here.lon,
         settings.rainThreshold,
+        here.ele,
       );
       days.push({
         n,
@@ -113,9 +114,20 @@ export function planTrip(
       distance: to - km,
       climb: climbBetween(route.points, km, to),
       sleep,
-      weather: climate.on(date, mid.lat, mid.lon, settings.rainThreshold),
-      nightLow: climate.on(date, sleep.lat, sleep.lon, settings.rainThreshold)
-        .low,
+      weather: climate.on(
+        date,
+        mid.lat,
+        mid.lon,
+        settings.rainThreshold,
+        mid.ele,
+      ),
+      nightLow: climate.on(
+        date,
+        sleep.lat,
+        sleep.lon,
+        settings.rainThreshold,
+        sleep.ele,
+      ).low,
     });
     km = to;
   }
