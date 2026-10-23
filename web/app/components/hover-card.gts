@@ -108,7 +108,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <dt>Rain</dt>
             <dd>{{fmtMm this.hover.month.monthRainMm}} / month</dd>
             <dt>Rainy days (≥ {{this.planner.rainThreshold}} mm)</dt>
-            <dd>{{round this.hover.month.monthWetDays}}</dd>
+            <dd>{{round this.hover.month.monthWetDays}} / month</dd>
           </dl>
         {{else}}
           <p class="wt-eyebrow">{{this.coords}}</p>

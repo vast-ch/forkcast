@@ -60,9 +60,10 @@ export default class Help extends Component {
             about a week, at a time); the other continents are drawn as light
             shapes, and clicking one adds its climate (a one-off download of 1–5
             MB). You can show several at once, for a trip that crosses from one
-            into another. Point at the map to read the averages for that spot;
-            point at your route to see the day you would be there and the
-            weather expected on that date.
+            into another. Point at the map to read the averages for that spot
+            (rain and rainy days are given for a whole month at that time of
+            year, like the dots); point at your route to see the day you would
+            be there and the weather expected on that date.
           </p>
         </section>
 

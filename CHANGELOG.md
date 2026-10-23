@@ -10,6 +10,10 @@
 - Clicking an overnight stop on the map now also moves the map to that day's week, as picking the day in the chart or the list already did.
 - The overnight stops along your route have a glowing purple ring, and the stretch of the day you pick on the map is the same purple, so both stand out on every temperature colour.
 
+### Fixed
+
+- When you point at the map, the rainy days now say "/ month", like the rain above them: they are counted for a whole month at that time of year, not for the week shown.
+
 ## v0.2.0 - 2026-10-23
 
 ### Added
