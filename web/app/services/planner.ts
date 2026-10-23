@@ -1,43 +1,28 @@
 import Service, { service } from '@ember/service';
-import type Owner from '@ember/owner';
 import { cached, tracked } from '@glimmer/tracking';
 import { TrackedArray } from 'tracked-built-ins';
 import type AtlasService from './atlas';
+import type ContinentController from 'wheelther/controllers/continent';
 import type { DayClimate, RainThreshold } from 'wheelther/utils/climate';
 import { planTrip, type Trip, type TripDay } from 'wheelther/utils/itinerary';
 import {
+  decodeTrack,
+  encodeTrack,
   reversed,
   withDistances,
   type Route,
   type RoutePoint,
 } from 'wheelther/utils/route';
+import {
+  DEFAULTS,
+  OWN_ROUTE_ID,
+  type SettingKey,
+} from 'wheelther/utils/settings';
 
 export type TempMetric = 'high' | 'low';
 export type RainMetric = 'mm' | 'days';
 
-const STORAGE_KEY = 'wheelther:v3';
-const CUSTOM_COLORS = ['#0f7b8a', '#b5179e', '#2a9d3f', '#c2410c', '#1d4ed8'];
-
-interface Stored {
-  month?: number;
-  showTemp?: boolean;
-  showRain?: boolean;
-  tempMetric?: TempMetric;
-  rainMetric?: RainMetric;
-  rainThreshold?: RainThreshold;
-  routeId?: string;
-  start?: string;
-  kmPerDay?: number;
-  rideDays?: number;
-  restDays?: number;
-  isReversed?: boolean;
-  custom?: {
-    id: string;
-    name: string;
-    color: string;
-    coords: [number, number, number | null][];
-  }[];
-}
+const OWN_COLOR = '#b5179e';
 
 /** What is under the mouse pointer on the map. */
 export interface Hover {
@@ -53,148 +38,177 @@ export interface Hover {
   };
 }
 
-function load(): Stored {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Stored;
-  } catch {
-    return {};
-  }
+export interface RouteChoice {
+  id: string;
+  name: string;
+  group: string;
+  km: number;
+  color: string;
 }
 
-/** The coming 1 January (today, if it is 1 January). */
-function nextJanuary(): string {
-  const now = new Date();
-  const isNewYearsDay = now.getMonth() === 0 && now.getDate() === 1;
-  return `${isNewYearsDay ? now.getFullYear() : now.getFullYear() + 1}-01-01`;
-}
-
+/**
+ * All planner state. Settings are stored in the continent controller's query
+ * parameters (so they live in the URL); everything else here is transient.
+ */
 export default class PlannerService extends Service {
   @service declare atlas: AtlasService;
 
-  // Map layers
-  @tracked month: number;
-  @tracked showTemp: boolean;
-  @tracked showRain: boolean;
-  @tracked tempMetric: TempMetric;
-  @tracked rainMetric: RainMetric;
-  /** mm of rain from which a day counts as rainy */
-  @tracked rainThreshold: RainThreshold;
+  /** Set by the continent route; undefined outside it. */
+  @tracked qp?: ContinentController;
 
-  // Trip
-  @tracked routeId: string;
-  @tracked start: string;
-  @tracked kmPerDay: number;
-  @tracked rideDays: number;
-  @tracked restDays: number;
-  @tracked isReversed: boolean;
-  custom: TrackedArray<Route>;
-
-  // Interaction
+  // Interaction (not in the URL)
   @tracked hover?: Hover;
-  @tracked highlightedDay?: number;
   @tracked isDrawing = false;
   drawn = new TrackedArray<{ lat: number; lon: number }>();
 
-  constructor(owner: Owner) {
-    super(owner);
-    const s = load();
-    this.month = s.month ?? 0;
-    this.showTemp = s.showTemp ?? true;
-    this.showRain = s.showRain ?? true;
-    this.tempMetric = s.tempMetric ?? 'high';
-    this.rainMetric = s.rainMetric ?? 'mm';
-    this.rainThreshold = s.rainThreshold ?? 5;
-    this.routeId = s.routeId ?? 'interlaken-malaga';
-    this.start = s.start ?? nextJanuary();
-    this.kmPerDay = s.kmPerDay ?? 80;
-    this.rideDays = s.rideDays ?? 5;
-    this.restDays = s.restDays ?? 1;
-    this.isReversed = s.isReversed ?? false;
-    this.custom = new TrackedArray(
-      (s.custom ?? [])
-        .map((r) => ({
-          id: r.id,
-          name: r.name,
-          color: r.color,
-          group: 'Yours',
-          isPreset: false,
-          towns: [],
-          points: withDistances(
-            r.coords.map(([lat, lon, ele]) => ({ lat, lon, ele })),
-          ),
-          km: 0,
-        }))
-        .map((r) => ({ ...r, km: r.points[r.points.length - 1]?.km ?? 0 })),
-    );
+  private read<K extends SettingKey>(key: K): (typeof DEFAULTS)[K] {
+    return this.qp ? this.qp[key] : DEFAULTS[key];
   }
 
-  save(): void {
-    const s: Stored = {
-      month: this.month,
-      showTemp: this.showTemp,
-      showRain: this.showRain,
-      tempMetric: this.tempMetric,
-      rainMetric: this.rainMetric,
-      rainThreshold: this.rainThreshold,
-      routeId: this.routeId,
-      start: this.start,
-      kmPerDay: this.kmPerDay,
-      rideDays: this.rideDays,
-      restDays: this.restDays,
-      isReversed: this.isReversed,
-      custom: this.custom.map((r) => ({
-        id: r.id,
-        name: r.name,
-        color: r.color,
-        coords: r.points.map((p) => [
-          Math.round(p.lat * 1e5) / 1e5,
-          Math.round(p.lon * 1e5) / 1e5,
-          p.ele === null ? null : Math.round(p.ele),
-        ]),
-      })),
-    };
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-    } catch {
-      // Storage can be unavailable (private window); settings just won't persist.
-    }
+  private write<K extends SettingKey>(
+    key: K,
+    value: (typeof DEFAULTS)[K],
+  ): void {
+    if (this.qp)
+      (this.qp as unknown as Record<SettingKey, unknown>)[key] = value;
   }
 
+  /** Map month, 0–11 */
+  get month(): number {
+    return Math.min(11, Math.max(0, Number(this.read('month')) - 1 || 0));
+  }
+  set month(m: number) {
+    this.write('month', m + 1);
+  }
+
+  get tempMetric(): TempMetric {
+    return this.read('temp') === 'low' ? 'low' : 'high';
+  }
+  set tempMetric(v: TempMetric) {
+    this.write('temp', v);
+  }
+
+  get showTemp(): boolean {
+    return this.read('heat');
+  }
+  set showTemp(v: boolean) {
+    this.write('heat', v);
+  }
+
+  get showRain(): boolean {
+    return this.read('rain');
+  }
+  set showRain(v: boolean) {
+    this.write('rain', v);
+  }
+
+  get rainMetric(): RainMetric {
+    return this.read('dots') === 'days' ? 'days' : 'mm';
+  }
+  set rainMetric(v: RainMetric) {
+    this.write('dots', v);
+  }
+
+  get rainThreshold(): RainThreshold {
+    const v = Number(this.read('rainy'));
+    return v === 1 || v === 10 ? v : 5;
+  }
+  set rainThreshold(v: RainThreshold) {
+    this.write('rainy', v);
+  }
+
+  get start(): string {
+    const v = this.read('start');
+    return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : DEFAULTS.start;
+  }
+  set start(v: string) {
+    this.write('start', v);
+  }
+
+  get kmPerDay(): number {
+    const v = Number(this.read('km'));
+    return v >= 5 && v <= 400 ? v : DEFAULTS.km;
+  }
+  set kmPerDay(v: number) {
+    this.write('km', v);
+  }
+
+  get rideDays(): number {
+    const v = Number(this.read('ride'));
+    return Number.isInteger(v) && v >= 1 && v <= 60 ? v : DEFAULTS.ride;
+  }
+  set rideDays(v: number) {
+    this.write('ride', v);
+  }
+
+  get restDays(): number {
+    const v = Number(this.read('rest'));
+    return Number.isInteger(v) && v >= 0 && v <= 30 ? v : DEFAULTS.rest;
+  }
+  set restDays(v: number) {
+    this.write('rest', v);
+  }
+
+  get isReversed(): boolean {
+    return this.read('reverse');
+  }
+  set isReversed(v: boolean) {
+    this.write('reverse', v);
+  }
+
+  get highlightedDay(): number | undefined {
+    return Number(this.read('day')) || undefined;
+  }
+  set highlightedDay(n: number | undefined) {
+    this.write('day', n ?? 0);
+  }
+
+  /** Generic setter used by the UI. */
   set<K extends keyof this>(key: K, value: this[K]): void {
     this[key] = value;
-    this.save();
   }
 
-  /** Everything the route picker offers: preset metadata plus your own routes. */
+  // --- Routes ---------------------------------------------------------------
+
+  /** Your own route, decoded from the URL. */
   @cached
-  get choices(): {
-    id: string;
-    name: string;
-    group: string;
-    km: number;
-    color: string;
-  }[] {
-    return [...this.atlas.presets, ...this.custom];
+  get ownRoute(): Route | undefined {
+    const track = this.read('track');
+    if (!track) return undefined;
+    const coords = decodeTrack(track);
+    if (coords.length < 2) return undefined;
+    const points = withDistances(coords);
+    return {
+      id: OWN_ROUTE_ID,
+      name: this.read('name') || 'My route',
+      group: 'Yours',
+      color: OWN_COLOR,
+      isPreset: false,
+      points,
+      km: points[points.length - 1]!.km,
+    };
   }
 
-  /** The selected route as stored (always in its original direction), once its track is loaded. */
+  /** Everything the route picker offers on this continent. */
+  @cached
+  get choices(): RouteChoice[] {
+    const own = this.ownRoute;
+    return own ? [...this.atlas.presets, own] : this.atlas.presets;
+  }
+
+  /** The selected route id, falling back to the continent's first preset. */
+  get routeId(): string {
+    const id = this.read('route');
+    if (id && this.choices.some((r) => r.id === id)) return id;
+    return this.atlas.presets[0]?.id ?? (this.ownRoute ? OWN_ROUTE_ID : '');
+  }
+
+  /** The selected route in its original direction, once its track is loaded. */
   @cached
   get baseRoute(): Route | undefined {
-    return (
-      this.custom.find((r) => r.id === this.routeId) ??
-      this.atlas.tracks.get(this.routeId)
-    );
-  }
-
-  /** Select a route, loading its track if it is a preset. */
-  async selectRoute(id: string): Promise<void> {
-    const known = this.choices.some((r) => r.id === id);
-    this.routeId = known ? id : (this.atlas.presets[0]?.id ?? '');
-    this.highlightedDay = undefined;
-    this.save();
-    if (!this.custom.some((r) => r.id === this.routeId)) {
-      await this.atlas.loadRoute(this.routeId);
-    }
+    const id = this.routeId;
+    if (id === OWN_ROUTE_ID) return this.ownRoute;
+    return this.atlas.tracks.get(id);
   }
 
   /** The selected route in riding direction. */
@@ -218,35 +232,41 @@ export default class PlannerService extends Service {
     });
   }
 
-  addRoute(
-    name: string,
-    coords: { lat: number; lon: number; ele?: number | null }[],
-  ): Route {
-    const points = withDistances(coords);
-    const route: Route = {
-      id: `custom-${Date.now().toString(36)}`,
-      name,
-      color: CUSTOM_COLORS[this.custom.length % CUSTOM_COLORS.length]!,
-      group: 'Yours',
-      isPreset: false,
-      points,
-      towns: [],
-      km: points[points.length - 1]?.km ?? 0,
-    };
-    this.custom.push(route);
-    this.routeId = route.id;
-    this.isReversed = false;
-    this.save();
-    return route;
+  /** Select a route, loading its track if it is a preset. */
+  async selectRoute(id: string): Promise<void> {
+    const isDefault = id === (this.atlas.presets[0]?.id ?? '');
+    this.write('route', isDefault ? '' : id);
+    this.write('day', 0);
+    await this.loadSelected();
   }
 
-  deleteRoute(id: string): void {
-    const i = this.custom.findIndex((r) => r.id === id);
-    if (i >= 0) this.custom.splice(i, 1);
-    this.save();
-    if (this.routeId === id)
-      void this.selectRoute(this.atlas.presets[0]?.id ?? '');
+  /** Make sure the selected preset's track is loaded. */
+  async loadSelected(): Promise<void> {
+    const id = this.routeId;
+    if (id && id !== OWN_ROUTE_ID) await this.atlas.loadRoute(id);
   }
+
+  /** Make a drawn or imported track your route (replacing the previous one). */
+  setOwnRoute(
+    name: string,
+    coords: { lat: number; lon: number; ele?: number | null }[],
+  ): void {
+    this.write('track', encodeTrack(coords));
+    this.write('name', name);
+    this.write('route', OWN_ROUTE_ID);
+    this.write('reverse', false);
+    this.write('day', 0);
+  }
+
+  deleteOwnRoute(): void {
+    this.write('track', '');
+    this.write('name', '');
+    this.write('route', '');
+    this.write('day', 0);
+    void this.loadSelected();
+  }
+
+  // --- Drawing ----------------------------------------------------------------
 
   startDrawing(): void {
     this.drawn.splice(0, this.drawn.length);
@@ -268,9 +288,7 @@ export default class PlannerService extends Service {
 
   finishDrawing(name: string): void {
     if (this.drawn.length >= 2) {
-      this.addRoute(name || `My route ${this.custom.length + 1}`, [
-        ...this.drawn,
-      ]);
+      this.setOwnRoute(name || 'My route', [...this.drawn]);
     }
     this.cancelDrawing();
   }

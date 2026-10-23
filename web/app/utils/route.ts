@@ -8,13 +8,6 @@ export interface RoutePoint {
   km: number;
 }
 
-export interface Town {
-  name: string;
-  km: number;
-  lat: number;
-  lon: number;
-}
-
 export interface Route {
   id: string;
   name: string;
@@ -27,7 +20,6 @@ export interface Route {
   isPreset: boolean;
   url?: string;
   points: RoutePoint[];
-  towns: Town[];
   /** Total riding distance, km (ferry legs excluded) */
   km: number;
 }
@@ -37,6 +29,7 @@ export interface RouteMeta {
   id: string;
   name: string;
   group: string;
+  continent: string;
   color: string;
   url: string;
   km: number;
@@ -50,7 +43,6 @@ export interface RouteJson extends RouteMeta {
   ele: (number | null)[];
   km_at: number[];
   ferry: number[];
-  towns: Town[];
 }
 
 export function routeFromJson(r: RouteJson): Route {
@@ -63,7 +55,6 @@ export function routeFromJson(r: RouteJson): Route {
     source: r.source,
     isPreset: true,
     km: r.km,
-    towns: r.towns,
     points: r.lat.map((lat, i) => ({
       lat,
       lon: r.lon[i]!,
@@ -156,20 +147,6 @@ export function climbBetween(
   return up;
 }
 
-/** Closest town at or before `km` (towns are only known for preset routes). */
-export function townNear(route: Route, km: number): string | undefined {
-  let best: Town | undefined;
-  let bestD = Infinity;
-  for (const t of route.towns) {
-    const d = Math.abs(t.km - km);
-    if (d < bestD) {
-      bestD = d;
-      best = t;
-    }
-  }
-  return best && bestD < 40 ? best.name : undefined;
-}
-
 /** Same route walked backwards: distances measured from the other end. */
 export function reversed(route: Route): Route {
   const total = route.points[route.points.length - 1]?.km ?? 0;
@@ -178,7 +155,6 @@ export function reversed(route: Route): Route {
     points: [...route.points]
       .reverse()
       .map((p) => ({ ...p, km: total - p.km })),
-    towns: [...route.towns].reverse().map((t) => ({ ...t, km: total - t.km })),
   };
 }
 
@@ -235,4 +211,130 @@ ${pts}
   </trk>
 </gpx>
 `;
+}
+
+// --- Own routes in the URL ----------------------------------------------------
+// A drawn or imported route is kept in the address bar so a bookmark or reload
+// brings it back. Coordinates use the Google polyline encoding (1e-5 degrees),
+// with elevation in whole metres as a third value when the track has it. A "3"
+// or "2" prefix says which. Long tracks are simplified to MAX_URL_POINTS first.
+
+const MAX_URL_POINTS = 600;
+
+function encodeValue(v: number, out: string[]): void {
+  let n = v < 0 ? ~(v << 1) : v << 1;
+  while (n >= 0x20) {
+    out.push(String.fromCharCode((0x20 | (n & 0x1f)) + 63));
+    n >>= 5;
+  }
+  out.push(String.fromCharCode(n + 63));
+}
+
+export function encodeTrack(
+  coords: { lat: number; lon: number; ele?: number | null }[],
+): string {
+  const pts = simplifyToCount(coords, MAX_URL_POINTS);
+  const hasEle = pts.every((p) => p.ele !== null && p.ele !== undefined);
+  const out: string[] = [hasEle ? '3' : '2'];
+  let pLat = 0;
+  let pLon = 0;
+  let pEle = 0;
+  for (const p of pts) {
+    const lat = Math.round(p.lat * 1e5);
+    const lon = Math.round(p.lon * 1e5);
+    encodeValue(lat - pLat, out);
+    encodeValue(lon - pLon, out);
+    pLat = lat;
+    pLon = lon;
+    if (hasEle) {
+      const ele = Math.round(p.ele!);
+      encodeValue(ele - pEle, out);
+      pEle = ele;
+    }
+  }
+  return out.join('');
+}
+
+export function decodeTrack(
+  s: string,
+): { lat: number; lon: number; ele: number | null }[] {
+  const dims = s[0] === '3' ? 3 : 2;
+  const vals = [0, 0, 0];
+  const out: { lat: number; lon: number; ele: number | null }[] = [];
+  let i = 1;
+  let d = 0;
+  while (i < s.length) {
+    let shift = 0;
+    let result = 0;
+    let b: number;
+    do {
+      b = s.charCodeAt(i++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20 && i < s.length);
+    vals[d]! += result & 1 ? ~(result >> 1) : result >> 1;
+    d++;
+    if (d === dims) {
+      out.push({
+        lat: vals[0]! / 1e5,
+        lon: vals[1]! / 1e5,
+        ele: dims === 3 ? vals[2]! : null,
+      });
+      d = 0;
+    }
+  }
+  return out;
+}
+
+/** Douglas-Peucker with a growing tolerance until at most `max` points remain. */
+function simplifyToCount<T extends { lat: number; lon: number }>(
+  pts: T[],
+  max: number,
+): T[] {
+  if (pts.length <= max) return pts;
+  let tol = 10;
+  let out = pts;
+  while (out.length > max) {
+    out = simplify(pts, tol);
+    tol *= 1.5;
+  }
+  return out;
+}
+
+function simplify<T extends { lat: number; lon: number }>(
+  pts: T[],
+  tolM: number,
+): T[] {
+  const lat0 =
+    (pts.reduce((s, p) => s + p.lat, 0) / pts.length) * (Math.PI / 180);
+  const xy = pts.map((p) => [
+    p.lon * (Math.PI / 180) * Math.cos(lat0) * 6371000,
+    p.lat * (Math.PI / 180) * 6371000,
+  ]);
+  const keep = new Uint8Array(pts.length);
+  keep[0] = keep[pts.length - 1] = 1;
+  const stack: [number, number][] = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [i, j] = stack.pop()!;
+    const [x1, y1] = xy[i]!;
+    const [x2, y2] = xy[j]!;
+    const dx = x2! - x1!;
+    const dy = y2! - y1!;
+    const norm = Math.hypot(dx, dy) || 1e-9;
+    let best = 0;
+    let idx = -1;
+    for (let k = i + 1; k < j; k++) {
+      const [x, y] = xy[k]!;
+      const dist = Math.abs(dy * x! - dx * y! + x2! * y1! - y2! * x1!) / norm;
+      if (dist > best) {
+        best = dist;
+        idx = k;
+      }
+    }
+    if (best > tolM && idx > 0) {
+      keep[idx] = 1;
+      stack.push([i, idx], [idx, j]);
+    }
+  }
+  return pts.filter((_, i) => keep[i]);
 }
