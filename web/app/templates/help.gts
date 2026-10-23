@@ -240,6 +240,13 @@ export default class Help extends Component {
             <li><strong>Climbing</strong>
               adds up every ascent along the day's stretch, from the route's
               elevation data.</li>
+            <li><strong>Daylight</strong>
+              runs from sunrise where the day starts to sunset where it ends,
+              worked out from the sun's position (within a minute or two of
+              published tables). Riding west makes a day a few minutes longer.
+              In the far north it can be the midnight sun or the polar night. It
+              is sunrise to sunset; it's usually light enough to ride about half
+              an hour before and after.</li>
           </ul>
           <p>
             In the chart, each bar runs from the night low to the day high and

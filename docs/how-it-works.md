@@ -126,6 +126,7 @@ Under the map, one column per day: the day number on top, a bar from the night l
   where you spend most of the riding hours. **The night low** is taken at the
   end of the stretch, where you sleep, because that is the night you feel.
 - **Climbing** sums every ascent along the stretch from the track's elevation.
+- **Daylight** (`web/app/utils/sun.ts`) is sunrise at the start of the stretch to sunset at its end, from the sunrise equation NOAA's solar calculator uses (within a minute or two). Both are absolute times, so the difference needs no time zones, which is why the app shows the duration rather than clock times: those would need each place's time zone (Spain, for one, keeps Central European time west of Greenwich). Midnight sun counts as 24 h, polar night as none.
 - **Rainy riding days** is the sum of the daily chances: an expected number,
   not a forecast.
 

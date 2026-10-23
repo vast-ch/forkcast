@@ -5,6 +5,7 @@ import { tempSwatch } from 'forkcast/utils/climate';
 import { isMissing } from 'forkcast/utils/helpers';
 import {
   css,
+  fmtDaylight,
   fmtDayTitle,
   fmtKm,
   fmtMm,
@@ -92,6 +93,8 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                 <dd>{{fmtPct this.route.weather.rainChance}}</dd>
                 <dt>Rain, average</dt>
                 <dd>{{fmtMm this.route.weather.rainMm}} / day</dd>
+                <dt>Daylight</dt>
+                <dd>{{fmtDaylight this.route.day.daylight}}</dd>
                 {{#if this.route.point.ele}}
                   <dt>Altitude</dt>
                   <dd>{{round this.route.point.ele}} m</dd>

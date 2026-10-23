@@ -27,6 +27,14 @@ export const fmtDate = (d: Date): string =>
 export const fmtShortDate = (d: Date): string =>
   d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
+/** Hours of daylight: "10 h 41 min"; the polar extremes are named. */
+export const fmtDaylight = (h: number): string => {
+  if (h >= 24) return '24 h (midnight sun)';
+  if (h <= 0) return 'None (polar night)';
+  const mins = Math.round(h * 60);
+  return `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`;
+};
+
 /** The month's full name, e.g. "November". */
 export const fmtMonth = (d: Date): string =>
   d.toLocaleDateString(undefined, { month: 'long' });

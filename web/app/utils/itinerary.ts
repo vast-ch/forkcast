@@ -3,6 +3,7 @@
 
 import { climateOn, type ClimateSource, type DayClimate } from './climate';
 import { climbBetween, pointAt, type Route, type RoutePoint } from './route';
+import { daylightHours } from './sun';
 
 export interface TripSettings {
   /** First day of the trip, ISO date (yyyy-mm-dd) */
@@ -31,6 +32,8 @@ export interface TripDay {
   weather: DayClimate;
   /** Low at the overnight stop */
   nightLow: number;
+  /** Hours from sunrise where the day starts to sunset where it ends (24 under the midnight sun, 0 in the polar night) */
+  daylight: number;
 }
 
 export interface Trip {
@@ -80,6 +83,7 @@ export function planTrip(
     n++;
     // A rest day is a day that ends where it started.
     const to = isRest ? km : Math.min(total, km + perDay);
+    const here = pointAt(route.points, km);
     const mid = pointAt(route.points, (km + to) / 2);
     const sleep = pointAt(route.points, to);
     const weather = climateOn(climate, date, mid, settings.rainThreshold);
@@ -96,6 +100,7 @@ export function planTrip(
       nightLow: isRest
         ? weather.low
         : climateOn(climate, date, sleep, settings.rainThreshold).low,
+      daylight: daylightHours(date, here, sleep),
     });
     km = to;
   }

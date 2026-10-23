@@ -9,6 +9,7 @@ import { tempSwatch } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
+  fmtDaylight,
   fmtDayTitle,
   fmtKm,
   fmtMm,
@@ -219,7 +220,7 @@ export default class ItineraryChart extends Component<{
       return `${this.planner.weekSlot.label}: ${this.offTripNote}`;
     if (!d) return 'No day selected';
     const w = d.weather;
-    return `${this.detailTitle}, ${this.detailRoute}, high ${fmtTemp(w.high)}, night ${fmtTemp(d.nightLow)}, rain chance ${fmtPct(w.rainChance)}`;
+    return `${this.detailTitle}, ${this.detailRoute}, high ${fmtTemp(w.high)}, night ${fmtTemp(d.nightLow)}, rain chance ${fmtPct(w.rainChance)}, daylight ${fmtDaylight(d.daylight)}`;
   }
 
   /** Arrow keys step through the days (Home and End jump to the ends). */
@@ -261,6 +262,9 @@ export default class ItineraryChart extends Component<{
                 }}</dd></div>
             <div><dt>Avg rain</dt><dd>{{fmtMm
                   this.detail.weather.rainMm
+                }}</dd></div>
+            <div><dt>Daylight</dt><dd>{{fmtDaylight
+                  this.detail.daylight
                 }}</dd></div>
           </dl>
         {{else if this.offTripNote}}
