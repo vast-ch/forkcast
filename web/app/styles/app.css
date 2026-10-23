@@ -324,88 +324,76 @@ body {
   border: 1px solid rgb(255 255 255 / 60%);
 }
 
-/* Time-of-year carousel: one row of months, each with four quarter-month
-   segments; scrolls sideways, the chosen month stays centred. */
-.wt-carousel {
-  display: flex;
-  align-items: stretch;
-  gap: 0.25rem;
+/* Time-of-year slider: 48 quarter-month steps, the chosen one named above
+   the thumb, month names below the track. */
+.wt-range-wrap {
+  position: relative;
+  padding: 1.4rem 0.5rem 1.1rem;
 }
-.wt-carousel-step {
-  flex: none;
-  width: 1.75rem;
-  border: 1px solid var(--wt-line);
-  border-radius: 6px;
-  background: #fff;
-  font-size: 1.1rem;
-  line-height: 1;
-  color: var(--wt-ink);
-  cursor: pointer;
+/* Both scales are inset by the padding plus half the thumb, so 0 % and
+   100 % sit on the thumb's centre at either end. */
+.wt-range-scale {
+  position: absolute;
+  inset-inline: 1rem;
+  height: 1rem;
 }
-.wt-carousel-step:hover {
-  border-color: var(--wt-ink);
+.wt-range-scale.is-top {
+  top: 0;
 }
-.wt-carousel-step:focus-visible {
-  outline: 2px solid var(--wt-accent);
-  outline-offset: 1px;
+.wt-range-scale.is-bottom {
+  bottom: 0;
 }
-.wt-months {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  border: 1px solid var(--wt-line);
-  border-radius: 6px;
+.wt-range-scale > span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
-.wt-months::-webkit-scrollbar {
-  display: none;
-}
-.wt-month {
-  flex: none;
-  width: 4.25rem;
-  scroll-snap-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.25rem;
-  padding: 0.3rem 0.35rem 0.35rem;
-  border-right: 1px solid var(--wt-line);
-  background: #fff;
-}
-.wt-month:last-child {
-  border-right: 0;
-}
-.wt-month.is-active {
-  background: var(--wt-accent-soft);
-}
-.wt-month-name {
+.wt-range-value {
   font-size: 0.8rem;
-  font-weight: 500;
-  text-align: center;
+  font-weight: 600;
+  color: var(--wt-ink);
 }
-.wt-weeks {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 2px;
+.wt-range-month {
+  font-size: 0.7rem;
+  color: var(--wt-muted);
 }
-.wt-week {
-  height: 0.7rem;
-  border: 0;
-  border-radius: 2px;
-  background: var(--wt-line);
+.wt-range {
+  width: 100%;
   cursor: pointer;
+  background: transparent;
 }
-.wt-week:hover {
-  background: #9fb3c4;
+.wt-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--wt-line);
 }
-.wt-week.is-active {
+.wt-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--wt-line);
+}
+.wt-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: -5px;
+  border-radius: 999px;
   background: var(--wt-ink);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--wt-ink);
 }
-.wt-week:focus-visible {
+.wt-range::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--wt-ink);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--wt-ink);
+}
+.wt-range:focus-visible {
   outline: 2px solid var(--wt-accent);
-  outline-offset: 1px;
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 .wt-month-name:focus-visible,
 .wt-route:focus-visible,

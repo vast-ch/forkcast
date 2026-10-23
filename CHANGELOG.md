@@ -14,7 +14,7 @@
 
 ### Changed
 
-- The weather now changes smoothly through the year instead of jumping from one month to the next: every day of your trip gets its own value, and the map shows any week. Choose the week in a strip of months that scrolls sideways, each month with four segments. The smoothing softens very sudden seasonal changes, like the start of a monsoon; the help page explains this trade-off.
+- The weather now changes smoothly through the year instead of jumping from one month to the next: every day of your trip gets its own value, and the map shows any week. Choose the week with a slider: drag it through the year, or step a week at a time with the arrow keys. The smoothing softens very sudden seasonal changes, like the start of a monsoon; the help page explains this trade-off.
 - On phones, Forkcast now has its own layout: the map first, then your trip day by day, with every setting in a Settings drawer. Tapping the route picks that day, and drawing a route works with a small toolbar on the map.
 - The rain bars under the day chart are now labelled: they show the chance of a rainy day (over your chosen amount), on a 0–100 % scale.
 - "Ride it the other way" is now a small button with up-down arrows next to the route picker.
