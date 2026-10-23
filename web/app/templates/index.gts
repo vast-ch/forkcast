@@ -4,6 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { LinkTo } from '@ember/routing';
 import { on } from '@ember/modifier';
 import { Drawer } from 'frontile/overlays';
+import Question from 'ember-phosphor-icons/components/ph-question';
 import SlidersHorizontal from 'ember-phosphor-icons/components/ph-sliders-horizontal';
 import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
@@ -56,7 +57,12 @@ export default class IndexTemplate extends Component {
           <LinkTo @route="index" aria-label="Forkcast home" class="min-w-0">
             <Logo class="wt-logo-small" />
           </LinkTo>
-          <LinkTo @route="help" class="wt-help-link">Help</LinkTo>
+          <LinkTo
+            @route="help"
+            class="wt-icon-link"
+            aria-label="How it works"
+            title="How it works"
+          ><Question class="size-6" aria-hidden="true" /></LinkTo>
           <button
             type="button"
             class="wt-btn is-primary"

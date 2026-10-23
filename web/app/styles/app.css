@@ -681,6 +681,20 @@ body {
 }
 
 /* Help page: one readable column, scrolls on its own (the app shell is fixed height). */
+.wt-icon-link {
+  display: inline-flex;
+  padding: 0.25rem;
+  border-radius: 999px;
+  color: var(--wt-accent);
+}
+.wt-icon-link:hover {
+  color: var(--wt-ink);
+  background: var(--wt-accent-soft);
+}
+.wt-icon-link:focus-visible {
+  outline: 2px solid var(--wt-accent);
+  outline-offset: 1px;
+}
 .wt-help-link {
   font-size: 0.85rem;
   font-weight: 500;

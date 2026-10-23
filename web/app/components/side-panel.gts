@@ -23,6 +23,7 @@ import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
 import type { TripDay } from 'forkcast/utils/itinerary';
 import Logo from 'forkcast/components/logo';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
+import Question from 'ember-phosphor-icons/components/ph-question';
 
 interface SidePanelSignature {
   Args: {
@@ -256,7 +257,12 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 @route="index"
                 aria-label="Forkcast home"
               ><Logo /></LinkTo></h1>
-            <LinkTo @route="help" class="wt-help-link">How it works</LinkTo>
+            <LinkTo
+              @route="help"
+              class="wt-icon-link"
+              aria-label="How it works"
+              title="How it works"
+            ><Question class="size-5" aria-hidden="true" /></LinkTo>
           </div>
         </header>
       {{/if}}
