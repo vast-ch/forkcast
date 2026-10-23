@@ -6,6 +6,10 @@
 
 - Each day shows its hours of daylight, from sunrise where you start to sunset where you stop, when you pick it in the chart or point at it on the route. In the far north it says when it's the midnight sun or the polar night.
 
+### Changed
+
+- Units sit right next to their numbers (80km, 4.9mm, 657m, 9h 42min), and temperatures say °C so there's no doubt about the scale.
+
 ## v0.4.0 - 2026-10-23
 
 ### Changed

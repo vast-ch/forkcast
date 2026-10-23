@@ -57,7 +57,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
   get altitudeNote() {
     const shift = this.route?.weather?.altitudeShift ?? 0;
     if (Math.abs(shift) < 0.5) return '';
-    return `${shift > 0 ? '+' : '−'}${Math.abs(shift).toFixed(1)}°`;
+    return `${shift > 0 ? '+' : '−'}${Math.abs(shift).toFixed(1)}°C`;
   }
 
   get dayTitle() {
@@ -97,7 +97,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                 <dd>{{fmtDaylight this.route.day.daylight}}</dd>
                 {{#if this.route.point.ele}}
                   <dt>Altitude</dt>
-                  <dd>{{round this.route.point.ele}} m</dd>
+                  <dd>{{round this.route.point.ele}}m</dd>
                 {{/if}}
                 {{#if this.altitudeNote}}
                   <dt>For altitude</dt>
@@ -126,7 +126,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <dd>{{fmtTemp this.hover.climate.low}}</dd>
             <dt>Rain</dt>
             <dd>{{this.weekRain}}</dd>
-            <dt>Rainy days (≥ {{this.planner.rainThreshold}} mm)</dt>
+            <dt>Rainy days (≥{{this.planner.rainThreshold}}mm)</dt>
             <dd>{{this.weekRainyDays}}</dd>
           </dl>
         {{else}}

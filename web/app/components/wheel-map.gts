@@ -237,7 +237,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             weight: 1,
           })
             .bindTooltip(
-              `${c.name}: click to add its climate (${mb} MB)`,
+              `${c.name}: click to add its climate (${mb}MB)`,
               STICKY_TIP,
             )
             .on(

@@ -24,7 +24,7 @@ const TEMP_H = 110;
 const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
 const BOTTOM = 4;
-const LEFT = 34;
+const LEFT = 42; // room for the axis labels (-10°C)
 
 // Columns: 0 is the "before the trip" parking column, 1 … N are the days
 // (day n in column n), N + 1 is "after the trip".
@@ -159,7 +159,7 @@ export default class ItineraryChart extends Component<{
     const [lo, hi] = this.range;
     const out = [];
     for (let t = lo; t <= hi; t += 5) {
-      out.push({ label: `${t}°`, y: this.y(t), isZero: t === 0 });
+      out.push({ label: `${t}°C`, y: this.y(t), isZero: t === 0 });
     }
     for (const f of [1, 0.5, 0]) {
       const y = this.rainTop + RAIN_H * (1 - f);
@@ -207,7 +207,7 @@ export default class ItineraryChart extends Component<{
     if (!d) return '';
     if (d.isRest) return 'Rest day';
     return `${fmtKm(d.distance)} · km ${Math.round(d.fromKm)}–${Math.round(d.toKm)}${
-      d.climb !== null ? ` · ${Math.round(d.climb)} m climbing` : ''
+      d.climb !== null ? ` · ${Math.round(d.climb)}m climbing` : ''
     }`;
   }
 
@@ -239,6 +239,8 @@ export default class ItineraryChart extends Component<{
   barW = COL - 6;
   colW = COL;
   left = LEFT;
+  /** Right edge of the axis labels. */
+  axisX = LEFT - 6;
   firstDayX = colX(1);
 
   <template>
@@ -306,7 +308,7 @@ export default class ItineraryChart extends Component<{
               class={{if g.isZero "wt-grid-zero" "wt-grid"}}
             />
             <text
-              x="28"
+              x={{this.axisX}}
               y={{g.y}}
               dy="3.5"
               text-anchor="end"
@@ -318,7 +320,7 @@ export default class ItineraryChart extends Component<{
             y={{this.rainTop}}
             dy="-5"
             class="wt-axis wt-axis-title"
-          >Chance of a rainy day (over {{this.planner.rainThreshold}} mm)</text>
+          >Chance of a rainy day (over {{this.planner.rainThreshold}}mm)</text>
           {{#each this.parking as |p|}}
             <g class="wt-park {{if p.isActive 'is-active'}}">
               <rect

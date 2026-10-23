@@ -11,7 +11,7 @@ const DOT_STEPS = {
     { label: '5', value: 5 },
     { label: '15', value: 15 },
     { label: '30', value: 30 },
-    { label: '60 mm', value: 60 },
+    { label: '60mm', value: 60 },
   ],
   days: [
     { label: '0.5', value: 0.5 },
@@ -62,7 +62,7 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
   get rainLabel() {
     return this.planner.rainMetric === 'mm'
       ? 'Rain per week'
-      : `Days with ${this.planner.rainThreshold} mm or more per week`;
+      : `Days with ${this.planner.rainThreshold}mm or more per week`;
   }
 
   <template>
@@ -82,7 +82,7 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
               <span
                 class="wt-tick"
                 style={{css "left: " tick.left "%"}}
-              >{{tick.t}}°</span>
+              >{{tick.t}}°C</span>
             {{/each}}
           </div>
         </div>

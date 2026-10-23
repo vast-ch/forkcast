@@ -2,10 +2,10 @@ import { htmlSafe } from '@ember/template';
 import { isMissing } from './helpers';
 
 export const fmtTemp = (t: number | undefined | null): string =>
-  isMissing(t) ? '–' : `${Math.round(t)}°`;
+  isMissing(t) ? '–' : `${Math.round(t)}°C`;
 
 export const fmtKm = (km: number): string =>
-  km >= 100 ? `${Math.round(km).toLocaleString()} km` : `${km.toFixed(1)} km`;
+  km >= 100 ? `${Math.round(km).toLocaleString()}km` : `${km.toFixed(1)}km`;
 
 export const fmtPct = (p: number): string =>
   Number.isNaN(p) ? '–' : `${Math.round(p * 100)}%`;

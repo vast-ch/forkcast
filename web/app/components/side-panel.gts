@@ -482,7 +482,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 as |Ctl|
               >
                 {{#each this.rainThresholds as |mm|}}
-                  <Ctl.Item @value={{mm}}>{{mm}} mm</Ctl.Item>
+                  <Ctl.Item @value={{mm}}>{{mm}}mm</Ctl.Item>
                 {{/each}}
               </SegmentedControl>
             </div>
