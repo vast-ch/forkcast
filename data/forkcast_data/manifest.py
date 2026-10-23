@@ -3,28 +3,36 @@
 Lists each continent with its bounding box, its download size (climate grid +
 borders, before compression) and the preset routes on it.
 
-Usage: uv run python -m forkcast_data.manifest
+Usage: uv run python -m forkcast_data build manifest [--fresh]
 """
 
 import gzip
 import json
-from pathlib import Path
+import sys
 
+from . import continents, pipeline
 from .continents import CONTINENTS
+from .pipeline import OUT, Stamp, code_hash, log
 
-OUT = Path(__file__).resolve().parent.parent / "out"
 
-
-def main():
+def build(fresh: bool = False):
+    inputs = [OUT / "routes" / "index.json"]
+    inputs += [OUT / c["id"] / f for c in CONTINENTS for f in ("climate.bin", "climate.json", "countries.json")]
+    stamp = Stamp("manifest", inputs, [OUT / "manifest.json"], code_hash(sys.modules[__name__], continents, pipeline))
+    if not fresh and stamp.up_to_date():
+        log("  manifest is up to date")
+        return
+    if missing := stamp.missing_inputs():
+        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run the builds before the manifest.")
     index = json.loads((OUT / "routes" / "index.json").read_text())["routes"]
-    continents = []
+    entries = []
     for c in CONTINENTS:
         d = OUT / c["id"]
         files = [d / f for f in ("climate.bin", "climate.json", "countries.json")]
         size = sum(f.stat().st_size for f in files)
         # Roughly what the browser downloads, since the server sends these gzipped.
         gz = sum(len(gzip.compress(f.read_bytes(), compresslevel=6, mtime=0)) for f in files)
-        continents.append({
+        entries.append({
             "id": c["id"],
             "name": c["name"],
             "bbox": c["bbox"],
@@ -32,9 +40,6 @@ def main():
             "gzipBytes": gz,
             "routes": [r for r in index if r.get("continent") == c["id"]],
         })
-        print(f"  {c['id']:14} {size / 1e6:5.1f} MB ({gz / 1e6:.1f} MB gzipped), {len(continents[-1]['routes'])} routes")
-    (OUT / "manifest.json").write_text(json.dumps({"continents": continents}, separators=(",", ":"), ensure_ascii=False))
-
-
-if __name__ == "__main__":
-    main()
+        log(f"  {c['id']:14} {size / 1e6:5.1f} MB ({gz / 1e6:.1f} MB gzipped), {len(entries[-1]['routes'])} routes")
+    (OUT / "manifest.json").write_text(json.dumps({"continents": entries}, separators=(",", ":"), ensure_ascii=False))
+    stamp.done()

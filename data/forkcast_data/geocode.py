@@ -1,7 +1,7 @@
 """Resolve route stops to coordinates with Nominatim; results are kept in geocoded.json.
 
-Only stops missing from geocoded.json are looked up (1 request per second).
-Usage: uv run python -m forkcast_data.geocode
+Only stops missing from geocoded.json are looked up (1 request per second),
+or all of them with --fresh. Run as part of: download brouter
 """
 
 import json
@@ -13,11 +13,11 @@ from pathlib import Path
 from .anchors import ROUTES
 
 CACHE = Path(__file__).with_name("geocoded.json")
-UA = "forkcast-build/0.1 (https://github.com/vast-ch/forkcast)"
+UA = "forkcast-build/0.2 (https://github.com/vast-ch/forkcast)"
 
 
-def main():
-    cache = json.loads(CACHE.read_text()) if CACHE.exists() else {}
+def main(fresh: bool = False):
+    cache = {} if fresh or not CACHE.exists() else json.loads(CACHE.read_text())
     for route in ROUTES:
         for stop in route["stops"]:
             cc, name = stop[0], stop[1]

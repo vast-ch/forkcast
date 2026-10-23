@@ -1,23 +1,25 @@
-"""Build the basemaps.
+"""Country borders: download Natural Earth, build the basemaps.
 
-- out/<continent>/countries.json: Natural Earth 1:50m country outlines per continent.
-- out/world.json: one simplified SVG path per continent for the continent picker,
-  from Natural Earth 1:110m countries (which tag each country with its continent).
+- download: Natural Earth 1:50m countries (as world-atlas TopoJSON) and 1:110m
+  countries (GeoJSON, which tag each country with its continent) into
+  cache/borders/. Both are public domain.
+- build:
+  - out/<continent>/countries.json: 1:50m outlines per continent. The app
+    draws its own basemap from these, so it needs no tile server.
+  - out/world.json: one simplified SVG path per continent for the picker map.
 
-The app draws its own basemap from this file, so it needs no tile server.
-Source: world-atlas (Natural Earth, public domain), TopoJSON decoded here.
-
-Usage: uv run python -m forkcast_data.basemap
+Usage: uv run python -m forkcast_data download borders | build borders [--fresh]
 """
 
 import json
-import urllib.request
+import sys
 from pathlib import Path
 
+from . import continents, pipeline
 from .continents import CONTINENTS
+from .pipeline import CACHE, OUT, Stamp, code_hash, ensure, http_get, log
 
-ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "out"
+DIR = CACHE / "borders"
 URL = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json"
 WORLD_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_110m_admin_0_countries.geojson"
 # Natural Earth continent names -> our continent ids (others, e.g. Antarctica, are drawn but not clickable)
@@ -72,10 +74,7 @@ def in_bbox(r, bbox):
     return not (max(xs) < x0 or min(xs) > x1 or max(ys) < y0 or min(ys) > y1)
 
 
-def main():
-    req = urllib.request.Request(URL, headers={"User-Agent": "forkcast-build/0.1"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        topo = json.load(r)
+def _countries(topo):
     arcs = decode_arcs(topo)
     for c in CONTINENTS:
         features = []
@@ -98,11 +97,8 @@ def main():
         print(f"  {c['id']:14} {len(features):3} countries, {path.stat().st_size / 1e6:.2f} MB")
 
 
-def world():
+def _world(gj):
     """One SVG path per continent, equirectangular: x = lon + 180, y = 90 - lat."""
-    req = urllib.request.Request(WORLD_URL, headers={"User-Agent": "forkcast-build/0.1"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        gj = json.load(r)
     paths = {}
     for f in gj["features"]:
         props = f["properties"]
@@ -121,6 +117,39 @@ def world():
     print(f"  world          {len(out)} continents, {path.stat().st_size / 1e3:.0f} kB")
 
 
-if __name__ == "__main__":
-    main()
-    world()
+SOURCES = {
+    "countries-50m.json": URL,
+    "ne_110m_admin_0_countries.geojson": WORLD_URL,
+}
+
+
+def _validate_json(key: str):
+    def validate(path: Path) -> None:
+        data = json.loads(path.read_text())
+        if key not in data:
+            raise ValueError(f"no '{key}' in {path.name}")
+
+    return validate
+
+
+def download(fresh: bool = False) -> None:
+    for name, url in SOURCES.items():
+        key = "objects" if name.endswith(".json") else "features"
+        log("  " + ensure(DIR / name, lambda to, url=url: http_get(url, to), _validate_json(key), fresh))
+
+
+def outputs() -> list[Path]:
+    return [OUT / c["id"] / "countries.json" for c in CONTINENTS] + [OUT / "world.json"]
+
+
+def build(fresh: bool = False) -> None:
+    inputs = [DIR / n for n in SOURCES]
+    stamp = Stamp("borders", inputs, outputs(), code_hash(sys.modules[__name__], continents, pipeline))
+    if not fresh and stamp.up_to_date():
+        log("  borders are up to date")
+        return
+    if stamp.missing_inputs():
+        raise SystemExit("Missing border sources. Run: download borders")
+    _countries(json.loads(inputs[0].read_text()))
+    _world(json.loads(inputs[1].read_text()))
+    stamp.done()

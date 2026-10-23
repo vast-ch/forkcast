@@ -6,9 +6,8 @@ The tracks include variants and spurs, so the route is one path through them
 straight line: over the sea it is a ferry (not counted as riding), over land an
 unmapped stretch (counted, and flagged).
 
-Usage:
-  uv run python -m forkcast_data.eurovelo download   # refresh eurovelo/*.gpx.gz
-  (route building is called from forkcast_data.routes)
+Usage: uv run python -m forkcast_data download eurovelo [--fresh]
+  (the route build in routes.py calls build() here)
 """
 
 import gzip
@@ -309,22 +308,28 @@ def build(simplify, out_dir):
     return index
 
 
-def download():
+def _validate_gpx(path: Path) -> None:
+    head = gzip.decompress(path.read_bytes())
+    if b"<trk>" not in head or b"<trkpt" not in head:
+        raise ValueError("no track in the GPX file")
+
+
+def download(fresh: bool = False) -> None:
+    from .pipeline import ensure, http_get, log
+
     GPX_DIR.mkdir(exist_ok=True)
+
+    def fetch(gpx_id):
+        def go(to: Path) -> None:
+            raw = to.with_name(to.name + ".raw")
+            http_get(f"https://en.eurovelo.com/route/get-gpx/{gpx_id}", raw)
+            to.write_bytes(gzip.compress(raw.read_bytes(), compresslevel=9, mtime=0))
+            raw.unlink()
+
+        return go
+
     for number, _name, gpx_id, _color in CATALOG:
-        req = urllib.request.Request(
-            f"https://en.eurovelo.com/route/get-gpx/{gpx_id}",
-            headers={"User-Agent": "forkcast-build/0.1 (https://github.com/vast-ch/forkcast)"},
-        )
-        with urllib.request.urlopen(req, timeout=600) as r:
-            body = r.read()
-        (GPX_DIR / f"ev{number}.gpx.gz").write_bytes(gzip.compress(body, compresslevel=9, mtime=0))
-        print(f"  EV{number}: {len(body) / 1e6:.1f} MB", flush=True)
-        time.sleep(2)
-
-
-if __name__ == "__main__":
-    if sys.argv[1:] == ["download"]:
-        download()
-    else:
-        print(__doc__)
+        status = ensure(GPX_DIR / f"ev{number}.gpx.gz", fetch(gpx_id), _validate_gpx, fresh)
+        log("  " + status)
+        if status.startswith("got"):
+            time.sleep(2)

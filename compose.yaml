@@ -31,7 +31,10 @@ services:
     volumes:
       - ./data/out:/data/out
       - ./data/cache:/data/cache
+      - ./data/eurovelo:/data/eurovelo
       - ./data/forkcast_data:/data/forkcast_data
+      # Copernicus CDS key for the ERA5-Land downloads (see data/README.md).
+      - ${HOME}/.cdsapirc:/root/.cdsapirc:ro
 
   web:
     build:

@@ -6,28 +6,29 @@
   are real riding distances. Legs marked as ferries are straight lines and do
   not count towards the riding distance.
 
-Every BRouter response is cached in cache/brouter/, so re-running only
-fetches legs that changed.
+- download (`brouter`): geocodes the hand-made routes' stops (geocode.py)
+  and fetches every leg from BRouter into cache/brouter/, one file per leg.
+- build (`routes`): reads only cached files, never the network.
 
-Usage: uv run python -m forkcast_data.routes
+Usage: uv run python -m forkcast_data download brouter | build routes [--fresh]
 """
 
 import hashlib
 import json
 import math
+import sys
 import time
 import urllib.parse
-import urllib.request
 from pathlib import Path
 
+from . import anchors, continents, eurovelo, geocode, pipeline
 from .anchors import ROUTES
+from .pipeline import CACHE as CACHE_ROOT, OUT, Stamp, code_hash, ensure, http_get, log
 
-ROOT = Path(__file__).resolve().parent.parent
-CACHE = ROOT / "cache" / "brouter"
-GEOCODED = Path(__file__).with_name("geocoded.json")
-OUT_DIR = ROOT / "out" / "routes"
+CACHE = CACHE_ROOT / "brouter"
+GEOCODED = geocode.CACHE
+OUT_DIR = OUT / "routes"
 BROUTER = "https://brouter.de/brouter"
-UA = "forkcast-build/0.1 (https://github.com/vast-ch/forkcast)"
 SIMPLIFY_M = 40  # Douglas-Peucker tolerance
 
 
@@ -37,28 +38,53 @@ def haversine_km(a, b):
     return 6371.0088 * 2 * math.asin(math.sqrt(h))
 
 
-def brouter_leg(a, b):
-    """Return [[lat, lon, ele], ...] for one routed leg."""
-    lonlats = f"{a[1]:.5f},{a[0]:.5f}|{b[1]:.5f},{b[0]:.5f}"
-    key = hashlib.sha1(lonlats.encode()).hexdigest()[:16]
-    path = CACHE / f"{key}.json"
-    if not path.exists():
-        q = urllib.parse.urlencode({"lonlats": lonlats, "profile": "trekking", "alternativeidx": 0, "format": "geojson"})
-        req = urllib.request.Request(f"{BROUTER}?{q}", headers={"User-Agent": UA})
-        for attempt in range(4):
-            try:
-                with urllib.request.urlopen(req, timeout=180) as r:
-                    body = r.read()
-                break
-            except Exception as e:  # noqa: BLE001 - retry any network/server error
-                if attempt == 3:
-                    raise RuntimeError(f"BRouter failed for {lonlats}: {e}") from e
-                time.sleep(5 * (attempt + 1))
-        CACHE.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(body)
-        time.sleep(1.5)  # be polite to the public server
+def _lonlats(a, b) -> str:
+    return f"{a[1]:.5f},{a[0]:.5f}|{b[1]:.5f},{b[0]:.5f}"
+
+
+def leg_path(a, b) -> Path:
+    return CACHE / f"{hashlib.sha1(_lonlats(a, b).encode()).hexdigest()[:16]}.json"
+
+
+def _validate_leg(path: Path) -> None:
     gj = json.loads(path.read_text())
     coords = gj["features"][0]["geometry"]["coordinates"]
+    if len(coords) < 2:
+        raise ValueError("leg has fewer than two points")
+
+
+def legs(geo):
+    """All routed (non-ferry) legs of the hand-made routes, as (from, to) coordinates."""
+    for route in ROUTES:
+        stops = route["stops"]
+        for i in range(1, len(stops)):
+            if len(stops[i]) > 2 and stops[i][2] == "ferry":
+                continue
+            a = geo[f"{stops[i - 1][0]}|{stops[i - 1][1]}"]
+            b = geo[f"{stops[i][0]}|{stops[i][1]}"]
+            yield a, b
+
+
+def download(fresh: bool = False) -> None:
+    geocode.main(fresh)
+    geo = json.loads(GEOCODED.read_text())
+    for a, b in legs(geo):
+        q = urllib.parse.urlencode(
+            {"lonlats": _lonlats(a, b), "profile": "trekking", "alternativeidx": 0, "format": "geojson"}
+        )
+        status = ensure(leg_path(a, b), lambda to, q=q: http_get(f"{BROUTER}?{q}", to, timeout=180), _validate_leg, fresh)
+        if status.startswith("got"):
+            log("  " + status)
+            time.sleep(1.5)  # be polite to the public server
+    log("  BRouter legs ready")
+
+
+def brouter_leg(a, b):
+    """Return [[lat, lon, ele], ...] for one cached leg."""
+    path = leg_path(a, b)
+    if not path.exists():
+        raise SystemExit(f"Missing BRouter leg {path.name}. Run: download brouter")
+    coords = json.loads(path.read_text())["features"][0]["geometry"]["coordinates"]
     return [[c[1], c[0], c[2] if len(c) > 2 else None] for c in coords]
 
 
@@ -113,7 +139,6 @@ def build_route(route, geo):
             if not ferry:
                 km += haversine_km(last, p)
             points.append([p[0], p[1], p[2], km, ferry])
-        print(f"  {route['id']}: {stops[i - 1][1]} -> {name}{' (ferry)' if ferry else ''}  {km:7.1f} km", flush=True)
     return {
         "id": route["id"],
         "name": route["name"],
@@ -132,23 +157,33 @@ def build_route(route, geo):
     }
 
 
-def main():
-    from . import eurovelo
+def outputs() -> list[Path]:
+    ids = [r["id"] for r in ROUTES] + [f"ev{c[0]}" for c in eurovelo.CATALOG]
+    return [OUT_DIR / f"{i}.json" for i in ids] + [OUT_DIR / "index.json"]
 
+
+def build(fresh: bool = False) -> None:
     geo = json.loads(GEOCODED.read_text())
+    inputs = [GEOCODED, eurovelo.COUNTRIES]
+    inputs += [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG]
+    inputs += [leg_path(a, b) for a, b in legs(geo)]
+    code = code_hash(sys.modules[__name__], eurovelo, anchors, continents, pipeline)
+    stamp = Stamp("routes", inputs, outputs(), code)
+    if not fresh and stamp.up_to_date():
+        log("  routes are up to date")
+        return
+    if missing := stamp.missing_inputs():
+        raise SystemExit(f"Missing route inputs ({missing[0].name}, …). Run: download eurovelo, download brouter, build borders")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     index = []
     for route in ROUTES:
-        print(route["name"], flush=True)
+        log(route["name"])
         r = build_route(route, geo)
         (OUT_DIR / f"{r['id']}.json").write_text(json.dumps(r, separators=(",", ":"), ensure_ascii=False))
         index.append({k: r[k] for k in ("id", "name", "group", "continent", "color", "url", "km")})
-    print("EuroVelo (official GPX tracks)", flush=True)
+    log("EuroVelo (official GPX tracks)")
     index += eurovelo.build(simplify_indices, OUT_DIR)
     (OUT_DIR / "index.json").write_text(json.dumps({"routes": index}, separators=(",", ":"), ensure_ascii=False))
+    stamp.done()
     total = sum(f.stat().st_size for f in OUT_DIR.glob("*.json"))
-    print(f"wrote {OUT_DIR} ({len(index)} routes, {total / 1e6:.1f} MB)")
-
-
-if __name__ == "__main__":
-    main()
+    log(f"  wrote {OUT_DIR.relative_to(pipeline.ROOT)} ({len(index)} routes, {total / 1e6:.1f} MB)")

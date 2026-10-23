@@ -1,7 +1,5 @@
-# Builds the app's data files into /data/out (mounted from ./data/out by compose).
-#   climate:   CRU TS 4.10 monthly grids -> out/climate.json (downloads ~215 MB once into cache/)
-#   routes:    EuroVelo routes from the official GPX tracks + the BRouter demo route -> out/routes/
-#   basemap:   Natural Earth country outlines -> out/countries.json
+# The data pipeline (see README.md): downloads into cache/, builds into out/.
+#   docker compose --profile tools run --rm data [all|status|download …|build …] [--fresh]
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 WORKDIR /data
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
