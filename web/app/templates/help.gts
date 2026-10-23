@@ -3,19 +3,10 @@ import { service } from '@ember/service';
 import { LinkTo } from '@ember/routing';
 import { pageTitle } from 'ember-page-title';
 import type AtlasService from 'forkcast/services/atlas';
-import { rainyDays } from 'forkcast/utils/climate';
 import Logo from 'forkcast/components/logo';
-
-/** Worked example for the rainy-day estimate: a month with 60 mm on 12 wet days. */
-const EXAMPLE = [1, 5, 10].map((t) => ({
-  t,
-  days: rainyDays(60, 12, t).toFixed(1),
-}));
 
 export default class Help extends Component {
   @service declare atlas: AtlasService;
-
-  example = EXAMPLE;
 
   get years() {
     const y = this.atlas.climate?.years;
@@ -81,84 +72,86 @@ export default class Help extends Component {
         <section id="data">
           <h2>Where the weather data comes from</h2>
           <p>
-            The climate numbers come from
-            <strong>CRU TS 4.10</strong>, published by the Climatic Research
-            Unit of the University of East Anglia. It is built from the monthly
-            records of thousands of weather stations, interpolated onto a
-            regular grid of 0.5° by 0.5° over land. For every grid cell and
-            every month since 1901 it gives the average daily maximum and
-            minimum temperature, the month's precipitation and the number of wet
-            days (days with at least 0.1 mm).
+            Forkcast combines two well-established climate datasets, each used
+            for what it does best.
+          </p>
+          <dl class="wt-help-defs">
+            <div><dt>ERA5-Land</dt><dd>From the European Copernicus Climate
+                Change Service. A weather model re-run over past years and
+                continuously corrected with real observations, giving the
+                weather for every hour over all land at a fine resolution.
+                Forkcast uses it for rain and for the shape of the temperatures:
+                where it is warmer or cooler, coast against hills, valley
+                against plateau.</dd></div>
+            <div><dt>CRU TS</dt><dd>From the University of East Anglia. Built
+                from thousands of weather stations, coarser (about 50 km), but
+                its daily highs and lows are averages of what thermometers
+                actually recorded. Forkcast uses it to set the level of the
+                highs and lows (see below).</dd></div>
+          </dl>
+          <p>
+            Both cover the
+            {{this.years}}
+            period, 15 years: long enough that one odd year doesn't dominate,
+            recent enough to include most of the warming so far. Every January
+            on the map is the average of 15 Januaries: what a typical year looks
+            like, not a forecast.
           </p>
           <p>
-            Forkcast takes the
-            {{this.years}}
-            part of it, 15 years, and averages each calendar month over those
-            years: every January value on the map is the mean of 15 Januaries.
-            That is a "climate normal": what a typical year looks like, recent
-            enough to include most of today's warming. The result is cut into
-            one file per continent and stored compactly (temperatures to 0.1 °C,
-            rain to 1 mm, wet days to 0.1 day), so opening a continent downloads
-            well under 2 MB.
+            The data is prepared in advance on a grid of 0.25° (about 25 km) and
+            split by continent, so opening a continent downloads a few megabytes
+            once; your browser then keeps it.
           </p>
         </section>
 
         <section id="maths">
           <h2>How it is calculated</h2>
           <dl class="wt-help-defs">
-            <div><dt>Between grid cells</dt><dd>A place's value is a weighted
-                average of the four surrounding cell centres (bilinear
-                interpolation), with weights by distance. Over the sea there is
-                no data; a point near the coast uses only the land cells next to
-                it.</dd></div>
-            <div><dt>Between months</dt><dd>Each month's average is treated as
-                the value in the middle of that month. A date in between is
-                blended linearly: on 1 February the January and February values
-                count about half each.</dd></div>
-            <div><dt>Day high, night low</dt><dd>The high for a riding day is
-                taken at the middle of that day's stretch; the night low at the
-                end of it, where you sleep.</dd></div>
-            <div><dt>Rain per day</dt><dd>The month's rainfall divided by its
-                number of days.</dd></div>
-            <div><dt>Rainy days</dt><dd>Estimated from rainfall and wet days
-                (see below), then divided by the month's length to give the
-                chance that a given day is rainy.</dd></div>
-            <div><dt>Rainy riding days</dt><dd>The sum of those chances over all
-                riding days: the expected number, not a promise.</dd></div>
+            <div><dt>Rain</dt><dd>From ERA5-Land's daily rain totals. For every
+                day of the 15 years we check whether it reached 1, 5 or 10 mm
+                and count those days per month, then average over the years. So
+                rainy days are counted, not guessed. The chance that a given day
+                is rainy is the month's rainy days divided by its length.</dd></div>
+            <div><dt>Day high and night low</dt><dd>ERA5-Land gives the average
+                temperature for each hour of a typical day of the month. Its
+                warmest hour is a little cooler than the average daily high,
+                because on real days the peak comes at different times (and the
+                same, the other way round, for the coldest hour). So the highs
+                and lows are shifted to match the station-measured daily
+                extremes from CRU, averaged over each 50 km area, while keeping
+                ERA5-Land's finer detail inside it. Over Europe's land the shift
+                is 1.4–1.8 °C for highs and 1.1–2.0 °C for lows, depending on
+                the month.</dd></div>
+            <div><dt>Altitude</dt><dd>A 25 km grid cell has one average height,
+                but a valley town or a pass on your route can be hundreds of
+                metres above or below it. Air cools with height, so on your
+                route the high and low are corrected for the difference between
+                the route's height and the cell's: by about 6.8 °C per 1,000 m
+                in summer and 4.5 °C in winter, when cold air settles in valleys
+                (the seasonal rates measured across the Alps). Pointing at the
+                route shows the correction when it is half a degree or more. The
+                map colours themselves show the cell averages.</dd></div>
+            <div><dt>Between grid points</dt><dd>A place's value is a weighted
+                average of the four surrounding grid points, closer ones
+                counting more. Over the sea there is no data; near the coast
+                only the land points are used.</dd></div>
+            <div><dt>Between months</dt><dd>Each month's average counts as the
+                value in the middle of that month, and dates in between are
+                blended, so 1 February is about half January, half February.
+                Without this, the weather would jump on the 1st of each month.</dd></div>
+            <div><dt>Your trip's days</dt><dd>A riding day's high and rain are
+                taken in the middle of that day's stretch, where you spend most
+                of the riding hours. The night low is taken at the end of the
+                stretch, where you sleep. "Rainy riding days" adds up the daily
+                chances: the number you should expect, not a promise.</dd></div>
           </dl>
-          <p>
-            <strong>The rainy-day estimate.</strong>
-            The records only count days with at least 0.1 mm, so a five-minute
-            drizzle counts. To get days over 1, 5 or 10 mm, Forkcast assumes
-            that rain amounts on wet days follow an exponential distribution, a
-            standard model for daily rainfall. Its mean is the month's total
-            divided by its wet days, and the share of wet days reaching a
-            threshold
-            <em>T</em>
-            is then exp(−(<em>T</em>
-            − 0.1) ÷ mean). For a month with 60 mm on 12 wet days (5 mm per wet
-            day on average):
-          </p>
-          <table class="wt-help-table">
-            <thead><tr><th>Rainy day</th><th>Days in the month</th></tr></thead>
-            <tbody>
-              {{#each this.example as |row|}}
-                <tr><td>over {{row.t}} mm</td><td>{{row.days}}</td></tr>
-              {{/each}}
-            </tbody>
-          </table>
-          <p>
-            Over 1 mm is the meteorological rain day; over 5 mm, the default, is
-            a proper wet day with rain gear on; over 10 mm is a soaking.
-          </p>
         </section>
 
         <section id="precision">
           <h2>How precise it is</h2>
           <p>
-            The numbers are averages, and the biggest uncertainty is not in the
-            maths but in the weather itself. Measured in the same 15 years of
-            data:
+            The biggest uncertainty is not in the maths but in the weather
+            itself. From the station records for the same 15 years:
           </p>
           <ul>
             <li><strong>Year to year,</strong>
@@ -167,51 +160,48 @@ export default class Help extends Component {
               in January ±2.1 °C, between −2.7 and 3.8 °C) and less on the
               Mediterranean (Valencia in January ±0.9 °C).</li>
             <li><strong>Day to day</strong>
-              the spread is far larger. The data is monthly so it cannot show
-              this, but as a rule of thumb single days often sit 4–6 °C above or
-              below the average. Read the numbers as "what to pack for", not
-              "what it will be".</li>
+              the spread is far larger: as a rule of thumb single days often sit
+              4–6 °C above or below the average. Read the numbers as "what to
+              pack for", not "what it will be".</li>
             <li><strong>Rain varies most:</strong>
               a month's rainfall typically differs from its average by about a
-              third (Interlaken in January: 92 mm on average, ±44 mm). Rainy-day
-              counts carry that uncertainty, plus the estimate's own: the
-              estimate is most reliable over 1 mm and least reliable over 10 mm,
-              where the exponential model fits heavy downpours worst.</li>
+              third (Interlaken in January: 92 mm on average, ±44 mm), and
+              rainy-day counts move with it.</li>
           </ul>
-          <p><strong>Limits of the grid and the maths:</strong></p>
+          <p><strong>Limits of the data and the method:</strong></p>
           <ul>
             <li><strong>Resolution.</strong>
-              A cell is about 55 km north to south and 55 km × cos(latitude)
-              east to west (about 39 km at 45° N). Anything smaller (a valley, a
-              lakeshore, a narrow coast) is averaged with its surroundings.
-              Coastal towns therefore often read colder by day and wetter than
-              they are: Nice in January shows about 10 °C where the city
-              averages nearer 13 °C.</li>
-            <li><strong>Altitude is not corrected.</strong>
-              A cell stands for its average height. Air cools about 6.5 °C per
-              1,000 m of climb, so a pass 1,000 m above its surroundings is
-              roughly that much colder than the map says.</li>
-            <li><strong>Few stations, more error.</strong>
-              Where stations are sparse (deserts, Siberia, high mountains, parts
-              of Africa and South America) the grid is interpolated over long
-              distances and can be off by more.</li>
-            <li><strong>Blending between months</strong>
-              is linear; the real seasonal curve is smooth, so near the turn of
-              a month the value can be off by a few tenths of a degree, rarely
-              more than 0.5 °C.</li>
+              A 25 km cell averages everything inside it. A narrow coast, a
+              lakeshore or a valley can differ from it; the altitude correction
+              fixes most of that on your route, but not, say, a seafront town
+              whose cell includes hills at the same height.</li>
+            <li><strong>Altitude correction</strong>
+              uses seasonal averages. Checked against towns' published climate
+              it is within about 1 °C in summer, but in winter Alpine valleys
+              still come out 2–3 °C too mild, and their nights more: cold air
+              pooling in valleys (and fog) is local and not in the data. Expect
+              colder winter mornings in valleys than shown.</li>
+            <li><strong>Calibration</strong>
+              sets the level of highs and lows from weather stations. Where
+              stations are sparse (deserts, high mountains, parts of Africa,
+              Asia and South America) it is less certain.</li>
+            <li><strong>Days in UTC.</strong>
+              Rain is counted in days from midnight to midnight UTC, which
+              shifts the day by an hour or two in Europe. It hardly changes
+              monthly counts.</li>
             <li><strong>Warming.</strong>
-              The 15-year average is centred on 2018. In Europe temperatures
-              have risen by roughly 0.5 °C per decade, so this year's normal is
+              The 15-year average is centred on 2018. Temperatures are rising,
+              in Europe by roughly 0.5 °C per decade, so this year's normal is
               likely a few tenths warmer than shown.</li>
             <li><strong>Distances and climbing</strong>
-              are measured along the route's points. Simplified tracks lose
-              small bumps, so climbing tends to come out somewhat low; drawn
-              routes are straight lines between your clicks and have no
-              elevation.</li>
+              are measured along the route's points. Tracks are simplified a
+              little, so climbing comes out somewhat low; drawn routes are
+              straight lines and have no height, so no altitude correction.</li>
           </ul>
           <p>
-            The stored values (0.1 °C, 1 mm) are far finer than any of this, so
-            the app rounds what it shows: whole degrees, whole percent.
+            The values are stored to 0.5 °C and finer for rain, well below the
+            real uncertainty, so the app rounds what it shows: whole degrees,
+            whole percent.
           </p>
         </section>
 
@@ -289,13 +279,21 @@ export default class Help extends Component {
             <li>
               <strong>Climate:</strong>
               <a
+                href="https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land"
+                target="_blank"
+                rel="noopener noreferrer"
+              >ERA5-Land</a>, Copernicus Climate Change Service (C3S) Climate
+              Data Store, ECMWF: daily rain, hourly temperature and terrain
+              height. Calibrated with
+              <a
                 href="https://crudata.uea.ac.uk/cru/data/hrg/"
                 target="_blank"
                 rel="noopener noreferrer"
               >CRU TS 4.10</a>, Climatic Research Unit, University of East
-              Anglia: monthly mean daily maximum and minimum temperature,
-              precipitation and wet days, averaged over
-              {{this.years}}.
+              Anglia. Both averaged over
+              {{this.years}}. Contains modified Copernicus Climate Change
+              Service information 2026; neither the European Commission nor
+              ECMWF is responsible for any use of it.
             </li>
             <li>
               <strong>EuroVelo routes:</strong>

@@ -94,9 +94,7 @@ top.
 - **Between months:** each month's average is treated as its mid-month value
   and dates in between are blended linearly. Without this, every 1st of the
   month would jump.
-- **Altitude:** when a point's height is known, high and low are shifted by
-  −6.5 °C per 1,000 m between the point and the cell's mean height (the
-  standard lapse rate).
+- **Altitude:** when a point's height is known, high and low are shifted by the month's lapse rate (4.4–6.8 °C per 1,000 m, smaller in winter) for the difference between the point and the cell's mean height. A constant 6.5 °C/km over-warmed winter valleys; see data/README.md for the measured comparison.
 - **Rainy days:** read from the counted layers (≥ 1, 5, 10 mm). The chance
   that a day is rainy is the month's rainy days divided by its length.
 
@@ -143,7 +141,6 @@ top.
 - 0.25° cells (≈ 25 km) still blur narrow coasts; the altitude correction
   helps route points in mountains but not, for example, a seafront town whose
   cell includes hills at the same height.
-- Winter valley nights can be colder than the lapse rate predicts
-  (cold-air pooling).
+- Winter in Alpine valleys reads 2–3 °C too mild, nights more (cold-air pooling, fog).
 - The demo route and EuroVelo tracks are simplified (≈ 30–40 m tolerance),
   which slightly understates climbing.

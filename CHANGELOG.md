@@ -4,6 +4,8 @@
 
 ### Added
 
+- Better climate data: Forkcast now uses ERA5-Land from the European Copernicus programme, on a grid twice as fine (about 25 km). Rainy days are now counted from daily rain instead of estimated, and highs and lows are matched to weather-station measurements.
+- Temperatures along your route are corrected for altitude: a valley town or a mountain pass gets its own temperature instead of its area's average, with a smaller correction in winter, when cold air settles in valleys.
 - A new name and look: Wheelther is now **Forkcast**, with a logo (a bike fork with the sun between its legs) in the top left and as the browser tab icon.
 - The help page now explains where the weather data comes from, how each number is calculated, and how far to trust it, with real figures for how much the weather varies from year to year.
 - The whole world, one continent at a time. Wheelther now opens on a world map with each continent in its own colour: click yours and only its climate data is downloaded (between 0.3 and 1.8 MB).

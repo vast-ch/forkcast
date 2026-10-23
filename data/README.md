@@ -143,8 +143,7 @@ app's first version used it alone; now it calibrates ERA5-Land.
 - **The catch:** the warmest hour of the *average* day is cooler than the
   *average* daily maximum, because on real days the maximum falls at different
   hours and varies in size. The same holds, the other way round, for the
-  minimum. In our data the gap is about 1.5–2 °C for highs and 1–1.8 °C for
-  lows, varying by place and season.
+  minimum. Over 2011–2025 the median gap is 1.4–1.8 °C for highs and 1.1–2.0 °C for lows depending on the month (the build logs it), and it varies by place.
 - **The fix, calibration against CRU:** for each month and each 0.5° CRU
   cell, compare CRU's mean daily maximum with ERA5-Land's warmest hour
   averaged over the same cell. The difference (the offset) is filled in where
@@ -164,11 +163,8 @@ app's first version used it alone; now it calibrates ERA5-Land.
   terrain (the `orography` download, 52 MB, published by ECMWF), averaged to
   0.25°.
 - **Where it is applied:** in the app, not here. Route points know their
-  height (from the GPX or BRouter tracks), so the app shifts a day's high and
-  low by −6.5 °C per 1,000 m between the route and the cell. The map itself
-  shows cell averages.
-- **Limits:** 6.5 °C per km is an average. In winter, cold air pools in
-  valleys at night, so valley lows can be colder than the correction says.
+  height (from the GPX or BRouter tracks), so the app shifts a day's high and low by the month's lapse rate times the height difference between the route and the cell: from 4.4 °C per 1,000 m in December to 6.8 °C in June–July (seasonal rates measured across the Alps, Rolland 2003; `LAPSE_RATES` in `web/app/utils/climate.ts`). The map itself shows cell averages.
+- **Limits, measured:** against published town climates (2011–2025 data, corrected to town height) summer highs are within about 1 °C (Madrid 33.6 vs 33, Seville 37.0 vs 36, Interlaken 24.8 vs 24, Bergen 18.0 vs 19). Winter in Alpine valleys stays 2–3 °C too mild (Interlaken January high 6 vs 3) and nights more: cold-air pooling and fog are local effects neither the grid nor a lapse rate captures. A constant 6.5 °C/km made winter worse, which is why the rate is seasonal.
 
 ### Size and format
 
