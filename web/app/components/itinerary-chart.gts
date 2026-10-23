@@ -24,6 +24,19 @@ const NUMS = 12; // row of day numbers under the rain band
 const AXIS = 18;
 const LEFT = 34;
 
+/** Left edge of the column of day index `i`. */
+const colX = (i: number) => LEFT + i * COL;
+
+/** The day a key moves to from day `now` (1-based) of `last`. */
+const KEY_STEPS: Record<string, (now: number, last: number) => number> = {
+  ArrowRight: (now) => now + 1,
+  ArrowUp: (now) => now + 1,
+  ArrowLeft: (now) => now - 1,
+  ArrowDown: (now) => now - 1,
+  Home: () => 1,
+  End: (_, last) => last,
+};
+
 interface Bar {
   day: TripDay;
   x: number;
@@ -73,13 +86,6 @@ export default class ItineraryChart extends Component<{
     return TOP + TEMP_H + GAP;
   }
 
-  get rainTicks() {
-    return [1, 0.5, 0].map((f) => ({
-      label: `${f * 100}%`,
-      y: this.rainTop + RAIN_H * (1 - f),
-    }));
-  }
-
   get numY() {
     return this.rainTop + RAIN_H + 10;
   }
@@ -88,11 +94,16 @@ export default class ItineraryChart extends Component<{
     return this.rainTop + RAIN_H + NUMS + 13;
   }
 
+  /** Horizontal lines with their axis labels: every 5° and the rain band's 0–100%. */
   get gridLines() {
     const [lo, hi] = this.range;
     const out = [];
     for (let t = lo; t <= hi; t += 5) {
-      out.push({ t, y: this.y(t), isZero: t === 0 });
+      out.push({ label: `${t}°`, y: this.y(t), isZero: t === 0 });
+    }
+    for (const f of [1, 0.5, 0]) {
+      const y = this.rainTop + RAIN_H * (1 - f);
+      out.push({ label: `${f * 100}%`, y, isZero: false });
     }
     return out;
   }
@@ -106,8 +117,8 @@ export default class ItineraryChart extends Component<{
       const rainH = noData ? 0 : day.weather.rainChance * RAIN_H;
       return {
         day,
-        x: LEFT + i * COL,
-        barX: LEFT + i * COL + 3,
+        x: colX(i),
+        barX: colX(i) + 3,
         yHigh: this.y(high),
         barH: Math.max(2, this.y(low) - this.y(high)),
         rainY: this.rainTop + RAIN_H - rainH,
@@ -121,9 +132,7 @@ export default class ItineraryChart extends Component<{
             : undefined,
         isHighlighted: this.planner.highlightedDay === day.n,
         monthStart:
-          i > 0 &&
-          prev !== undefined &&
-          prev.date.getMonth() !== day.date.getMonth(),
+          prev !== undefined && prev.date.getMonth() !== day.date.getMonth(),
       };
     });
   }
@@ -173,25 +182,16 @@ export default class ItineraryChart extends Component<{
   /** Arrow keys step through the days (Home and End jump to the ends). */
   onKey = (e: KeyboardEvent) => {
     const days = this.args.trip.days;
-    const now = this.planner.highlightedDay ?? 0;
-    const n =
-      e.key === 'ArrowRight' || e.key === 'ArrowUp'
-        ? now + 1
-        : e.key === 'ArrowLeft' || e.key === 'ArrowDown'
-          ? now - 1
-          : e.key === 'Home'
-            ? 1
-            : e.key === 'End'
-              ? days.length
-              : undefined;
-    if (n === undefined) return;
+    const step = KEY_STEPS[e.key];
+    if (!step) return;
     e.preventDefault();
+    const n = step(this.planner.highlightedDay ?? 0, days.length);
     const day = days[Math.min(days.length, Math.max(1, n)) - 1];
     if (!day) return;
     this.planner.highlightDay(day);
     // Keep the day's column in view.
     const el = e.currentTarget as HTMLElement;
-    const x = LEFT + (day.n - 1) * COL;
+    const x = colX(day.n - 1);
     if (x < el.scrollLeft + LEFT) el.scrollLeft = x - LEFT;
     else if (x + COL > el.scrollLeft + el.clientWidth)
       el.scrollLeft = x + COL - el.clientWidth + 8;
@@ -263,7 +263,7 @@ export default class ItineraryChart extends Component<{
               dy="3.5"
               text-anchor="end"
               class="wt-axis"
-            >{{g.t}}°</text>
+            >{{g.label}}</text>
           {{/each}}
           <text
             x={{this.left}}
@@ -271,22 +271,6 @@ export default class ItineraryChart extends Component<{
             dy="-5"
             class="wt-axis wt-axis-title"
           >Chance of a rainy day (over {{this.planner.rainThreshold}} mm)</text>
-          {{#each this.rainTicks as |tick|}}
-            <line
-              x1={{this.left}}
-              x2={{this.width}}
-              y1={{tick.y}}
-              y2={{tick.y}}
-              class="wt-grid"
-            />
-            <text
-              x="28"
-              y={{tick.y}}
-              dy="3.5"
-              text-anchor="end"
-              class="wt-axis"
-            >{{tick.label}}</text>
-          {{/each}}
           {{#each this.bars as |b|}}
             {{! Clicking a column picks its day; keyboards use the slider above. }}
             {{! template-lint-disable no-invalid-interactive }}
