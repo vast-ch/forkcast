@@ -15,6 +15,7 @@
   --wt-muted: #5d6b78;
   --wt-paper: #fbfcfc;
   --wt-line: #dde3e8;
+  --wt-band: #eef2f5;
   --wt-sea: #cfdbe3;
   --wt-land: #e7e9e4;
   --wt-border: #2d3a46;
@@ -192,12 +193,6 @@ body {
   color: var(--wt-accent);
   font-weight: 500;
 }
-/* A line between the panel's sections (climate, route, trip, day by day). */
-.wt-panel-scroll > section + section {
-  border-top: 1px solid var(--wt-line);
-  padding-top: 1.5rem;
-}
-
 .wt-h2 {
   font-family: var(--wt-font-display);
   font-weight: 700;
@@ -205,6 +200,21 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--wt-muted);
+}
+/* The panel's section headings are full-width bands, so each section
+   (climate, route, trip, day by day) reads as its own block. */
+.wt-panel-scroll .wt-h2 {
+  margin-inline: -1.25rem;
+  padding: 0.45rem 1.25rem;
+  background: var(--wt-band);
+  border-block: 1px solid var(--wt-line);
+  color: var(--wt-ink);
+}
+[role="dialog"] .wt-panel-scroll .wt-h2 {
+  margin-inline: 0;
+  padding-inline: 0.75rem;
+  border: 0;
+  border-radius: 6px;
 }
 .wt-title {
   font-family: var(--wt-font-display);
