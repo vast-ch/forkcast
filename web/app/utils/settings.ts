@@ -41,6 +41,27 @@ export const DEFAULTS = {
 };
 
 export type SettingKey = keyof typeof DEFAULTS;
+
+/** Allowed values of the numeric trip settings, for the URL and the inputs alike. */
+export const LIMITS = {
+  km: { min: 5, max: 400, step: 5, isInteger: false },
+  ride: { min: 1, max: 60, step: 1, isInteger: true },
+  rest: { min: 0, max: 30, step: 1, isInteger: true },
+} as const;
+export type LimitedKey = keyof typeof LIMITS;
+
+export function inLimits(key: LimitedKey, v: number): boolean {
+  const l = LIMITS[key];
+  return (
+    Number.isFinite(v) &&
+    v >= l.min &&
+    v <= l.max &&
+    (!l.isInteger || Number.isInteger(v))
+  );
+}
+
+/** A date as the date input and the URL hold it: yyyy-mm-dd. */
+export const isIsoDate = (v: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(v);
 export const SETTING_KEYS = Object.keys(DEFAULTS) as SettingKey[];
 
 /** Route id used for your own route (from `track`). */

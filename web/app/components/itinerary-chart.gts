@@ -4,10 +4,10 @@ import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 import type PlannerService from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
-import { tempColor } from 'forkcast/utils/climate';
+import { tempSwatch } from 'forkcast/utils/climate';
 import {
   css,
-  fmtDate,
+  fmtDayTitle,
   fmtKm,
   fmtMm,
   fmtPct,
@@ -98,20 +98,16 @@ export default class ItineraryChart extends Component<{
       const high = noData ? 0 : day.weather.high;
       const low = noData ? 0 : Math.min(day.weather.low, day.nightLow);
       const prev = this.args.trip.days[i - 1];
+      const rainH = noData ? 0 : day.weather.rainChance * RAIN_H;
       return {
         day,
         x: LEFT + i * COL,
         barX: LEFT + i * COL + 3,
         yHigh: this.y(high),
         barH: Math.max(2, this.y(low) - this.y(high)),
-        rainY:
-          TOP +
-          TEMP_H +
-          GAP +
-          RAIN_H -
-          (noData ? 0 : day.weather.rainChance * RAIN_H),
-        color: noData ? 'var(--wt-muted)' : tempColor(high),
-        rainH: noData ? 0 : day.weather.rainChance * RAIN_H,
+        rainY: this.rainTop + RAIN_H - rainH,
+        color: tempSwatch(day.weather.high, 'var(--wt-muted)'),
+        rainH,
         label:
           i === 0 || day.date.getDate() === 1 || (day.n % 7 === 1 && day.n > 1)
             ? fmtShortDate(day.date)
@@ -131,9 +127,7 @@ export default class ItineraryChart extends Component<{
   }
 
   get detailTitle() {
-    const d = this.detail;
-    if (!d) return '';
-    return `Day ${d.n} · ${fmtDate(d.date)}`;
+    return this.detail ? fmtDayTitle(this.detail) : '';
   }
 
   get detailRoute() {
@@ -145,18 +139,8 @@ export default class ItineraryChart extends Component<{
     }`;
   }
 
-  select = (day: TripDay) => {
-    this.planner.set(
-      'highlightedDay',
-      this.planner.highlightedDay === day.n ? undefined : day.n,
-    );
-    // Follow the trip with the map's climate month.
-    this.planner.showDate(day.date);
-  };
+  select = (day: TripDay) => this.planner.toggleDay(day);
 
-  fmtTemp = fmtTemp;
-  fmtPct = fmtPct;
-  fmtMm = fmtMm;
   half = COL / 2;
   barW = COL - 6;
   colW = COL;

@@ -10,7 +10,7 @@ import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
 import type { RainMetric, TempMetric } from 'forkcast/services/planner';
 import type { RainThreshold } from 'forkcast/utils/climate';
-import { MONTHS, tempColor } from 'forkcast/utils/climate';
+import { MONTHS, tempSwatch } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
@@ -18,12 +18,16 @@ import {
   fmtPct,
   fmtShortDate,
   fmtTemp,
+  fmtWeekday,
 } from 'forkcast/utils/format';
+import { not } from 'forkcast/utils/helpers';
+import { LIMITS } from 'forkcast/utils/settings';
+import { LAST_WEEK } from 'forkcast/utils/weeks';
 import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
 import type { TripDay } from 'forkcast/utils/itinerary';
 import Logo from 'forkcast/components/logo';
+import HelpLink from 'forkcast/components/help-link';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
-import Question from 'ember-phosphor-icons/components/ph-question';
 
 interface SidePanelSignature {
   Args: {
@@ -56,14 +60,16 @@ export default class SidePanel extends Component<SidePanelSignature> {
   @tracked drawnName = '';
   @tracked importError?: string;
 
-  /** The month grid: each month with its four quarter-month segments. */
   /** Month labels under the slider, each centred on its four steps, and a
    * tick at each month's first step. */
   months = MONTHS.map((label, i) => ({
     label,
-    style: css('left: ', ((i * 4 + 1.5) / 47) * 100, '%'),
-    tickStyle: css('left: ', ((i * 4) / 47) * 100, '%'),
+    style: css('left: ', ((i * 4 + 1.5) / LAST_WEEK) * 100, '%'),
+    tickStyle: css('left: ', ((i * 4) / LAST_WEEK) * 100, '%'),
   }));
+
+  lastWeek = LAST_WEEK;
+  limits = LIMITS;
 
   get weekValue() {
     return String(this.planner.week);
@@ -71,7 +77,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
   /** Keeps the week label above the slider's thumb. */
   get weekLabelStyle() {
-    return css('left: ', (this.planner.week / 47) * 100, '%');
+    return css('left: ', (this.planner.week / LAST_WEEK) * 100, '%');
   }
 
   get trip() {
@@ -129,75 +135,33 @@ export default class SidePanel extends Component<SidePanelSignature> {
     return (this.trip?.days ?? []).map((d) => ({
       d,
       date: fmtShortDate(d.date),
-      weekday: d.date.toLocaleDateString(undefined, { weekday: 'short' }),
+      weekday: fmtWeekday(d.date),
       km: d.isRest ? 'rest' : `${Math.round(d.distance)}`,
       high: fmtTemp(d.weather.high),
       low: fmtTemp(d.nightLow),
       rain: fmtPct(d.weather.rainChance),
-      color: Number.isNaN(d.weather.high)
-        ? 'transparent'
-        : tempColor(d.weather.high),
+      color: tempSwatch(d.weather.high),
       isActive: d.n === this.planner.highlightedDay,
     }));
   }
 
-  get cannotSave() {
-    return this.planner.drawn.length < 2;
-  }
-
-  setWeek = (w: number) => this.planner.set('week', w);
-
-  onWeekInput = (value: string) => this.setWeek(Number(value));
+  onWeekInput = (value: string) => this.planner.set('week', Number(value));
   setTempMetric = (v: TempMetric) => this.planner.set('tempMetric', v);
   setRainMetric = (v: RainMetric) => this.planner.set('rainMetric', v);
   setRainThreshold = (v: RainThreshold) => this.planner.set('rainThreshold', v);
-  toggle = (key: 'showTemp' | 'showRain' | 'isReversed', value: boolean) => {
+  toggle = (key: 'showTemp' | 'showRain', value: boolean) =>
     this.planner.set(key, value);
-    if (key === 'isReversed') this.planner.set('highlightedDay', undefined);
-  };
-
-  toggleReversed = () => {
-    this.planner.set('isReversed', !this.planner.isReversed);
-    this.planner.set('highlightedDay', undefined);
-  };
+  toggleReversed = () => this.planner.toggleReversed();
 
   selectRoute = (e: Event) => {
     void this.planner.selectRoute((e.target as HTMLSelectElement).value);
   };
 
-  deleteSelected = () => {
-    this.planner.deleteOwnRoute();
-  };
-
-  setStart = (v: string) => {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) this.planner.set('start', v);
-  };
-
-  setKmPerDay = (v: string) => {
-    const n = Number(v);
-    if (Number.isFinite(n) && n >= 5 && n <= 400)
-      this.planner.set('kmPerDay', n);
-  };
-
-  setRideDays = (v: string) => {
-    const n = Number(v);
-    if (Number.isInteger(n) && n >= 1 && n <= 60)
-      this.planner.set('rideDays', n);
-  };
-
-  setRestDays = (v: string) => {
-    const n = Number(v);
-    if (Number.isInteger(n) && n >= 0 && n <= 30)
-      this.planner.set('restDays', n);
-  };
-
-  selectDay = (d: TripDay) => {
-    this.planner.set(
-      'highlightedDay',
-      this.planner.highlightedDay === d.n ? undefined : d.n,
-    );
-    this.planner.showDate(d.date);
-  };
+  deleteSelected = () => this.planner.deleteOwnRoute();
+  setStart = (v: string) => this.planner.setStart(v);
+  setLimited = (key: keyof typeof LIMITS, v: string) =>
+    this.planner.setLimited(key, v);
+  selectDay = (d: TripDay) => this.planner.toggleDay(d);
 
   startDrawing = () => {
     this.drawnName = '';
@@ -250,12 +214,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 @route="index"
                 aria-label="Forkcast home"
               ><Logo /></LinkTo></h1>
-            <LinkTo
-              @route="help"
-              class="wt-icon-link"
-              aria-label="How it works"
-              title="How it works"
-            ><Question class="size-5" aria-hidden="true" /></LinkTo>
+            <HelpLink />
           </div>
         </header>
       {{/if}}
@@ -287,7 +246,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   input="wt-range h-6 border-0 bg-transparent p-0 shadow-none focus:ring-0"
                 }}
                 min="0"
-                max="47"
+                max={{this.lastWeek}}
                 step="1"
                 aria-label="Time of year"
                 aria-valuetext={{this.planner.weekSlot.label}}
@@ -444,7 +403,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   <button
                     type="button"
                     class="wt-btn is-primary"
-                    disabled={{this.cannotSave}}
+                    disabled={{not this.planner.canFinishDrawing}}
                     {{on "click" this.finishDrawing}}
                   >Save route</button>
                   <button
@@ -513,10 +472,10 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   @type="number"
                   @size="sm"
                   @value="{{this.planner.kmPerDay}}"
-                  @onChange={{this.setKmPerDay}}
-                  min="5"
-                  max="400"
-                  step="5"
+                  @onChange={{fn this.setLimited "km"}}
+                  min={{this.limits.km.min}}
+                  max={{this.limits.km.max}}
+                  step={{this.limits.km.step}}
                 />
               </div>
               <div>
@@ -525,9 +484,10 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   @type="number"
                   @size="sm"
                   @value="{{this.planner.rideDays}}"
-                  @onChange={{this.setRideDays}}
-                  min="1"
-                  max="60"
+                  @onChange={{fn this.setLimited "ride"}}
+                  min={{this.limits.ride.min}}
+                  max={{this.limits.ride.max}}
+                  step={{this.limits.ride.step}}
                 />
               </div>
               <div>
@@ -536,9 +496,10 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   @type="number"
                   @size="sm"
                   @value="{{this.planner.restDays}}"
-                  @onChange={{this.setRestDays}}
-                  min="0"
-                  max="30"
+                  @onChange={{fn this.setLimited "rest"}}
+                  min={{this.limits.rest.min}}
+                  max={{this.limits.rest.max}}
+                  step={{this.limits.rest.step}}
                 />
               </div>
             </div>

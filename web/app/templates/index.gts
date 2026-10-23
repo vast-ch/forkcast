@@ -4,7 +4,6 @@ import { tracked } from '@glimmer/tracking';
 import { LinkTo } from '@ember/routing';
 import { on } from '@ember/modifier';
 import { Drawer } from 'frontile/overlays';
-import Question from 'ember-phosphor-icons/components/ph-question';
 import SlidersHorizontal from 'ember-phosphor-icons/components/ph-sliders-horizontal';
 import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
@@ -15,6 +14,24 @@ import HoverCard from 'forkcast/components/hover-card';
 import Legend from 'forkcast/components/legend';
 import ItineraryChart from 'forkcast/components/itinerary-chart';
 import Logo from 'forkcast/components/logo';
+import HelpLink from 'forkcast/components/help-link';
+import { not } from 'forkcast/utils/helpers';
+import type { TOC } from '@ember/component/template-only';
+import type { Trip } from 'forkcast/utils/itinerary';
+
+/** The day-by-day chart under the map, once there is a trip. */
+const ChartPanel: TOC<{ Args: { trip?: Trip }; Element: HTMLElement }> =
+  <template>
+    {{#if @trip}}
+      <section
+        class="wt-chart-panel min-w-0 px-4 pt-3 pb-2"
+        aria-label="Weather by day"
+        ...attributes
+      >
+        <ItineraryChart @trip={{@trip}} />
+      </section>
+    {{/if}}
+  </template>;
 
 export default class IndexTemplate extends Component {
   @service declare planner: PlannerService;
@@ -36,10 +53,6 @@ export default class IndexTemplate extends Component {
     return this.isSettingsOpen && !this.planner.isDrawing;
   }
 
-  get cannotSave() {
-    return this.planner.drawn.length < 2;
-  }
-
   undoPoint = () => this.planner.undoDrawnPoint();
 
   saveDrawing = () => {
@@ -57,12 +70,7 @@ export default class IndexTemplate extends Component {
           <LinkTo @route="index" aria-label="Forkcast home" class="min-w-0">
             <Logo class="wt-logo-small" />
           </LinkTo>
-          <LinkTo
-            @route="help"
-            class="wt-icon-link"
-            aria-label="How it works"
-            title="How it works"
-          ><Question class="size-6" aria-hidden="true" /></LinkTo>
+          <HelpLink @iconClass="size-6" />
           <button
             type="button"
             class="wt-btn is-primary"
@@ -91,7 +99,7 @@ export default class IndexTemplate extends Component {
               <button
                 type="button"
                 class="wt-btn is-primary"
-                disabled={{this.cannotSave}}
+                disabled={{not this.planner.canFinishDrawing}}
                 {{on "click" this.saveDrawing}}
               >Save</button>
               <button
@@ -102,14 +110,7 @@ export default class IndexTemplate extends Component {
             </div>
           {{/if}}
         </section>
-        {{#if this.planner.trip}}
-          <section
-            class="wt-chart-panel min-w-0 px-4 pt-3 pb-2"
-            aria-label="Weather by day"
-          >
-            <ItineraryChart @trip={{this.planner.trip}} />
-          </section>
-        {{/if}}
+        <ChartPanel @trip={{this.planner.trip}} />
         <SidePanel @part="overview" class="wt-phone-overview" />
       </main>
       {{#if this.showSettings}}
@@ -136,14 +137,7 @@ export default class IndexTemplate extends Component {
           <HoverCard class="absolute top-3 right-3 z-[1000]" />
           <Legend class="absolute bottom-6 left-3 z-[1000]" />
         </section>
-        {{#if this.planner.trip}}
-          <section
-            class="wt-layout-chart wt-chart-panel min-w-0 px-4 pt-3 pb-2"
-            aria-label="Weather by day"
-          >
-            <ItineraryChart @trip={{this.planner.trip}} />
-          </section>
-        {{/if}}
+        <ChartPanel @trip={{this.planner.trip}} class="wt-layout-chart" />
       </main>
     {{/if}}
   </template>

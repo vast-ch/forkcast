@@ -26,5 +26,12 @@ export const fmtDate = (d: Date): string =>
 export const fmtShortDate = (d: Date): string =>
   d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
+export const fmtWeekday = (d: Date): string =>
+  d.toLocaleDateString(undefined, { weekday: 'short' });
+
+/** "Day 3 · Sat 25 Oct" */
+export const fmtDayTitle = (d: { n: number; date: Date }): string =>
+  `Day ${d.n} · ${fmtDate(d.date)}`;
+
 /** Inline style from a value we computed ourselves (colours, sizes), marked safe for binding. */
 export const css = (...parts: (string | number)[]) => htmlSafe(parts.join(''));

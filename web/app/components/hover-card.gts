@@ -1,10 +1,10 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type PlannerService from 'forkcast/services/planner';
-import { tempColor } from 'forkcast/utils/climate';
+import { tempSwatch } from 'forkcast/utils/climate';
 import {
   css,
-  fmtDate,
+  fmtDayTitle,
   fmtKm,
   fmtMm,
   fmtPct,
@@ -47,11 +47,8 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
 
   get dayTitle() {
     const d = this.route?.day;
-    return d ? `Day ${d.n} · ${fmtDate(d.date)}` : '';
+    return d ? fmtDayTitle(d) : '';
   }
-
-  swatch = (t: number | undefined) =>
-    t === undefined || Number.isNaN(t) ? 'transparent' : tempColor(t);
 
   <template>
     <div class="wt-card pointer-events-none w-64 p-3 text-sm" ...attributes>
@@ -70,7 +67,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                     class="wt-chip"
                     style={{css
                       "background: "
-                      (this.swatch this.route.weather.high)
+                      (tempSwatch this.route.weather.high)
                     }}
                   ></span>
                   {{fmtTemp this.route.weather.high}}
@@ -101,7 +98,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <dd>
               <span
                 class="wt-chip"
-                style={{css "background: " (this.swatch this.hover.month.high)}}
+                style={{css "background: " (tempSwatch this.hover.month.high)}}
               ></span>
               {{fmtTemp this.hover.month.high}}
             </dd>

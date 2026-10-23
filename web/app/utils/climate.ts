@@ -432,6 +432,16 @@ export function tempColor(t: number): string {
   return `rgb(${Math.round(r)} ${Math.round(g)} ${Math.round(b)})`;
 }
 
+/** Colour of a temperature, or `fallback` when there is none (no data). */
+export function tempSwatch(
+  t: number | null | undefined,
+  fallback = 'transparent',
+): string {
+  return t === null || t === undefined || Number.isNaN(t)
+    ? fallback
+    : tempColor(t);
+}
+
 /** What the trip planner and the map read from: one grid or several combined. */
 export interface ClimateSource {
   readonly years: [number, number];

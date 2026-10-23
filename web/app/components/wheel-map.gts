@@ -9,7 +9,9 @@ import type PlannerService from 'forkcast/services/planner';
 import { dayAtKm, type Trip } from 'forkcast/utils/itinerary';
 import { temperatureRaster, rainDots } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
-import { climateOn, tempColor } from 'forkcast/utils/climate';
+import { climateOn, tempSwatch } from 'forkcast/utils/climate';
+import { fmtShortDate } from 'forkcast/utils/format';
+import { OWN_COLOR } from 'forkcast/services/planner';
 
 /** The night stops' rings and the highlighted day's stretch: a vivid purple
  * that stands out on every temperature colour (it glows a little, see
@@ -260,7 +262,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
               block,
               grids.slice(0, k),
             )) {
-              L.circle([d.lat, d.lon], {
+              L.circle(latLng(d), {
                 radius: d.radius,
                 renderer,
                 interactive: false,
@@ -317,7 +319,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       const group = L.layerGroup();
       const r = s.route;
       if (r) {
-        const latlngs = r.points.map((p) => [p.lat, p.lon] as [number, number]);
+        const latlngs = r.points.map(latLng);
         L.polyline(latlngs, {
           color: '#fff',
           weight: 7,
@@ -332,7 +334,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }
       this.layers.routes = group.addTo(map);
       if (s.route && this.changed('fitted', s.route.id)) {
-        this.fitTo(L.latLngBounds(s.route.points.map((p) => [p.lat, p.lon])));
+        this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
       }
     }
 
@@ -345,7 +347,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       const trip = s.trip;
       if (trip && s.route) {
         const start = s.route.points[0]!;
-        L.circleMarker([start.lat, start.lon], {
+        L.circleMarker(latLng(start), {
           radius: 6,
           color: '#fff',
           weight: 2,
@@ -358,25 +360,19 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           if (d.isRest) continue;
           const isHi = d.n === s.highlightedDay;
           const hasRestNext = trip.days[d.n]?.isRest === true;
-          const m = L.circleMarker([d.sleep.lat, d.sleep.lon], {
+          const m = L.circleMarker(latLng(d.sleep), {
             radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
             color: isHi ? '#111' : ROUTE_ACCENT,
             weight: isHi ? 3 : 2,
             className: isHi ? 'wt-stop is-active' : 'wt-stop',
-            fillColor: Number.isNaN(d.weather.high)
-              ? '#888'
-              : tempColor(d.weather.high),
+            fillColor: tempSwatch(d.weather.high, '#888'),
             fillOpacity: 1,
           });
-          const date = d.date.toLocaleDateString(undefined, {
-            day: 'numeric',
-            month: 'short',
-          });
           m.bindTooltip(
-            `Night ${d.n} · ${date}${hasRestNext ? ' · rest day next' : ''}`,
+            `Night ${d.n} · ${fmtShortDate(d.date)}${hasRestNext ? ' · rest day next' : ''}`,
             { direction: 'top', offset: [0, -4] },
           );
-          m.on('click', () => this.owner?.planner.set('highlightedDay', d.n));
+          m.on('click', () => this.owner?.planner.highlightDay(d));
           m.addTo(group);
         }
         if (s.highlightedDay) {
@@ -387,20 +383,13 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             );
             const a = pointAt(s.route.points, d.fromKm);
             const b = pointAt(s.route.points, d.toKm);
-            L.polyline(
-              [
-                [a.lat, a.lon],
-                ...seg.map((p) => [p.lat, p.lon] as [number, number]),
-                [b.lat, b.lon],
-              ],
-              {
-                color: ROUTE_ACCENT,
-                weight: 6,
-                opacity: 0.95,
-                interactive: false,
-                className: 'wt-day-stretch',
-              },
-            ).addTo(group);
+            L.polyline([latLng(a), ...seg.map(latLng), latLng(b)], {
+              color: ROUTE_ACCENT,
+              weight: 6,
+              opacity: 0.95,
+              interactive: false,
+              className: 'wt-day-stretch',
+            }).addTo(group);
           }
         }
       }
@@ -410,13 +399,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     if (this.changed('drawn', `${s.isDrawing}-${s.drawnCount}`)) {
       this.layers.drawn?.remove();
       this.layers.drawn = undefined;
-      element(map).style.cursor = s.isDrawing ? 'crosshair' : '';
+      map.getContainer().style.cursor = s.isDrawing ? 'crosshair' : '';
       if (s.isDrawing && s.drawnCount > 0) {
-        const pts = this.owner!.planner.drawn.map(
-          (p) => [p.lat, p.lon] as [number, number],
-        );
+        const pts = this.owner!.planner.drawn.map(latLng);
         this.layers.drawn = L.polyline(pts, {
-          color: '#b5179e',
+          color: OWN_COLOR,
           weight: 3,
           dashArray: '2 6',
           lineCap: 'round',
@@ -430,6 +417,12 @@ class LeafletModifier extends Modifier<LeafletSignature> {
  * Rings of a continent from world.json, whose SVG paths use x = lon + 180 and
  * y = 90 − lat ("M x,y L x,y … Z" per ring).
  */
+/** A point as Leaflet's [lat, lng]. */
+const latLng = (p: { lat: number; lon: number }): [number, number] => [
+  p.lat,
+  p.lon,
+];
+
 function worldRings(d: string): [number, number][][] {
   return d
     .split('M')
@@ -443,10 +436,6 @@ function worldRings(d: string): [number, number][][] {
           return [90 - y!, x! - 180] as [number, number];
         }),
     );
-}
-
-function element(map: L.Map): HTMLElement {
-  return map.getContainer();
 }
 
 interface WheelMapSignature {
@@ -498,8 +487,8 @@ export default class WheelMap extends Component<WheelMapSignature> {
       let bestKm = -1;
       const bounds = map.getBounds().pad(0.1);
       for (const p of route.points) {
-        if (!bounds.contains([p.lat, p.lon])) continue;
-        const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+        if (!bounds.contains(latLng(p))) continue;
+        const pt = map.latLngToContainerPoint(latLng(p));
         const d = (pt.x - cursor.x) ** 2 + (pt.y - cursor.y) ** 2;
         if (d < best) {
           best = d;
@@ -536,14 +525,11 @@ export default class WheelMap extends Component<WheelMapSignature> {
       return;
     }
     const day = this.planner.hover?.onRoute?.day;
-    if (day) {
-      this.planner.set('highlightedDay', day.n);
-      this.planner.showDate(day.date);
-    }
+    if (day) this.planner.highlightDay(day);
   };
 
   onDoubleClick = () => {
-    if (this.planner.isDrawing && this.planner.drawn.length >= 2) {
+    if (this.planner.isDrawing && this.planner.canFinishDrawing) {
       this.planner.finishDrawing('');
     }
   };

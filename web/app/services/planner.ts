@@ -16,6 +16,9 @@ import {
 import {
   DEFAULTS,
   OWN_ROUTE_ID,
+  inLimits,
+  isIsoDate,
+  type LimitedKey,
   type SettingKey,
 } from 'forkcast/utils/settings';
 import { WEEKS, weekOfDate, type WeekSlot } from 'forkcast/utils/weeks';
@@ -23,7 +26,8 @@ import { WEEKS, weekOfDate, type WeekSlot } from 'forkcast/utils/weeks';
 export type TempMetric = 'high' | 'low';
 export type RainMetric = 'mm' | 'days';
 
-const OWN_COLOR = '#b5179e';
+/** Colour of your own route, and of the line while drawing it. */
+export const OWN_COLOR = '#b5179e';
 
 /** What is under the mouse pointer on the map. */
 export interface Hover {
@@ -66,6 +70,12 @@ export default class PlannerService extends Service {
     return this.qp ? this.qp[key] : DEFAULTS[key];
   }
 
+  /** A numeric trip setting from the URL, or its default when out of range. */
+  private limited(key: LimitedKey): number {
+    const v = Number(this.read(key));
+    return inLimits(key, v) ? v : DEFAULTS[key];
+  }
+
   private write<K extends SettingKey>(
     key: K,
     value: (typeof DEFAULTS)[K],
@@ -88,7 +98,7 @@ export default class PlannerService extends Service {
   /** Quarter-month shown on the map, 0–47 */
   get week(): number {
     const w = Math.round(Number(this.read('week'))) - 1;
-    return w >= 0 && w < 48 ? w : DEFAULTS.week - 1;
+    return w >= 0 && w < WEEKS.length ? w : DEFAULTS.week - 1;
   }
   set week(w: number) {
     this.write('week', w + 1);
@@ -147,31 +157,28 @@ export default class PlannerService extends Service {
 
   get start(): string {
     const v = this.read('start');
-    return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : DEFAULTS.start;
+    return isIsoDate(v) ? v : DEFAULTS.start;
   }
   set start(v: string) {
     this.write('start', v);
   }
 
   get kmPerDay(): number {
-    const v = Number(this.read('km'));
-    return v >= 5 && v <= 400 ? v : DEFAULTS.km;
+    return this.limited('km');
   }
   set kmPerDay(v: number) {
     this.write('km', v);
   }
 
   get rideDays(): number {
-    const v = Number(this.read('ride'));
-    return Number.isInteger(v) && v >= 1 && v <= 60 ? v : DEFAULTS.ride;
+    return this.limited('ride');
   }
   set rideDays(v: number) {
     this.write('ride', v);
   }
 
   get restDays(): number {
-    const v = Number(this.read('rest'));
-    return Number.isInteger(v) && v >= 0 && v <= 30 ? v : DEFAULTS.rest;
+    return this.limited('rest');
   }
   set restDays(v: number) {
     this.write('rest', v);
@@ -194,6 +201,37 @@ export default class PlannerService extends Service {
   /** Generic setter used by the UI. */
   set<K extends keyof this>(key: K, value: this[K]): void {
     this[key] = value;
+  }
+
+  /** Set a numeric trip setting from an input; values out of range are ignored. */
+  setLimited(key: LimitedKey, value: string): void {
+    const v = Number(value);
+    if (inLimits(key, v)) this.write(key, v);
+  }
+
+  /** Set the trip's first day from a date input; anything else is ignored. */
+  setStart(value: string): void {
+    if (isIsoDate(value)) this.start = value;
+  }
+
+  // --- Trip days --------------------------------------------------------------
+
+  /** Highlight a trip day and show its week on the map. */
+  highlightDay(day: TripDay): void {
+    this.highlightedDay = day.n;
+    this.showDate(day.date);
+  }
+
+  /** Highlight a trip day, or clear the highlight if it is that day already. */
+  toggleDay(day: TripDay): void {
+    if (this.highlightedDay === day.n) this.highlightedDay = undefined;
+    else this.highlightDay(day);
+  }
+
+  /** Ride the route the other way; the day numbers change, so the highlight goes. */
+  toggleReversed(): void {
+    this.isReversed = !this.isReversed;
+    this.highlightedDay = undefined;
   }
 
   // --- Routes ---------------------------------------------------------------
@@ -314,8 +352,13 @@ export default class PlannerService extends Service {
     this.drawn.splice(0, this.drawn.length);
   }
 
+  /** A drawn route needs at least two points. */
+  get canFinishDrawing(): boolean {
+    return this.drawn.length >= 2;
+  }
+
   finishDrawing(name: string): void {
-    if (this.drawn.length >= 2) {
+    if (this.canFinishDrawing) {
       this.setOwnRoute(name || 'My route', [...this.drawn]);
     }
     this.cancelDrawing();

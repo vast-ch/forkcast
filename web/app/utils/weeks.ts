@@ -37,6 +37,9 @@ export const WEEKS: WeekSlot[] = MONTHS.flatMap((name, month) => {
   });
 });
 
+/** Index of the last slot (47). */
+export const LAST_WEEK = WEEKS.length - 1;
+
 /** The slot a date falls in. */
 export function weekOfDate(date: Date): number {
   const month = date.getMonth();
