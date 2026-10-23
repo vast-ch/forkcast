@@ -630,6 +630,10 @@ body {
   font-size: 10px;
   fill: var(--wt-muted);
 }
+/* A day with more riding than daylight. */
+.wt-lights {
+  font-size: 10px;
+}
 /* Small chart labels: day numbers, parking columns, month names. */
 .wt-day-num,
 .wt-park-label,

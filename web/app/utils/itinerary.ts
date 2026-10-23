@@ -36,6 +36,8 @@ export interface TripDay {
   nightLow: number;
   /** Hours in the saddle at the average speed (0 on rest days) */
   ridingHours: number;
+  /** More riding time than daylight: part of the day is ridden in the dark */
+  needsLights: boolean;
   /** Hours from sunrise where the day starts to sunset where it ends (24 under the midnight sun, 0 in the polar night) */
   daylight: number;
 }
@@ -91,6 +93,8 @@ export function planTrip(
     const mid = pointAt(route.points, (km + to) / 2);
     const sleep = pointAt(route.points, to);
     const weather = climateOn(climate, date, mid, settings.rainThreshold);
+    const daylight = daylightHours(date, here, sleep);
+    const ridingHours = (to - km) / settings.speed;
     days.push({
       n,
       date,
@@ -98,14 +102,15 @@ export function planTrip(
       fromKm: km,
       toKm: to,
       distance: to - km,
-      ridingHours: (to - km) / settings.speed,
+      ridingHours,
       climb: isRest ? 0 : climbBetween(route.points, km, to),
       sleep,
       weather,
       nightLow: isRest
         ? weather.low
         : climateOn(climate, date, sleep, settings.rainThreshold).low,
-      daylight: daylightHours(date, here, sleep),
+      daylight,
+      needsLights: !isRest && ridingHours > daylight,
     });
     km = to;
   }

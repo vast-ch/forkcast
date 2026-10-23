@@ -95,7 +95,9 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                 <dt>Rain, average</dt>
                 <dd>{{fmtMm this.route.weather.rainMm}} / day</dd>
                 <dt>Riding time</dt>
-                <dd>{{fmtHours this.route.day.ridingHours}}</dd>
+                <dd>{{fmtHours this.route.day.ridingHours}}{{#if
+                    this.route.day.needsLights
+                  }} 🔦{{/if}}</dd>
                 <dt>Daylight</dt>
                 <dd>{{fmtDaylight this.route.day.daylight}}</dd>
                 {{#if this.route.point.ele}}

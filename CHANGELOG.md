@@ -4,6 +4,7 @@
 
 ### Added
 
+- A 🔦 marks every day in the chart whose riding time is longer than its daylight, so you can see which days you'd ride partly in the dark.
 - A new trip setting, average speed (21km/h by default), turns each day's distance into riding time, shown with the day you pick and on the route. Compare it with the day's daylight to see whether a day is realistic.
 - Each day shows its hours of daylight, from sunrise where you start to sunset where you stop, when you pick it in the chart or point at it on the route. In the far north it says when it's the midnight sun or the polar night.
 

@@ -20,7 +20,7 @@ import {
 } from 'forkcast/utils/format';
 
 const COL = 18; // px per day
-const TOP = 14; // room for the day numbers
+const TOP = 28; // room for the day numbers and the lights marks
 const TEMP_H = 110;
 const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
@@ -209,7 +209,7 @@ export default class ItineraryChart extends Component<{
     if (d.isRest) return 'Rest day';
     return `${fmtKm(d.distance)} · km ${Math.round(d.fromKm)}–${Math.round(d.toKm)}${
       d.climb !== null ? ` · ${Math.round(d.climb)}m climbing` : ''
-    } · ${fmtHours(d.ridingHours)} riding`;
+    } · ${fmtHours(d.ridingHours)} riding${d.needsLights ? ' · 🔦 needs lights' : ''}`;
   }
 
   select = (day: TripDay) => this.planner.toggleDay(day);
@@ -374,6 +374,15 @@ export default class ItineraryChart extends Component<{
                 text-anchor="middle"
                 class="wt-day-num"
               >{{b.day.n}}</text>
+              {{#if b.day.needsLights}}
+                <text
+                  x={{b.x}}
+                  dx={{this.half}}
+                  y="22"
+                  text-anchor="middle"
+                  class="wt-lights"
+                >🔦</text>
+              {{/if}}
               <rect
                 x={{b.barX}}
                 y={{b.yHigh}}

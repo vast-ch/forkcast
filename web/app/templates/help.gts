@@ -225,7 +225,10 @@ export default class Help extends Component {
             rest 2 means five riding days, two rest days, then again. A trip
             never ends on a rest day. Your average speed (21km/h unless you
             change it) turns each day's distance into time in the saddle, not
-            counting breaks, so you can compare it with the daylight.
+            counting breaks, so you can compare it with the daylight. A day
+            whose riding time is longer than its daylight gets a 🔦 in the
+            chart: you'll ride part of it in the dark, so bring lights or plan a
+            shorter day.
           </p>
           <ul>
             <li>A riding day's
