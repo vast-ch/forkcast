@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.3.0 - 2026-10-23
+
 ### Changed
 
 - Rest days in the day chart show their temperatures and chance of rain too, for where you stay; they are still the shaded columns.
