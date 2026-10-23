@@ -32,8 +32,17 @@ export interface ClimateHeader {
 export type ClimateVar =
   'tmx' | 'tmn' | 'pre' | 'wet' | 'r1' | 'r5' | 'r10' | 'elev';
 
-/** Standard lapse rate: air cools about 6.5 °C per 1,000 m of height. */
-export const LAPSE_RATE = 0.0065;
+/**
+ * How much the air cools with height, °C per metre, by month (Jan … Dec).
+ * The yearly average is the familiar 6.5 °C per 1,000 m, but it is smaller in
+ * winter, when cold air settles in valleys, and larger in summer. Values are
+ * the seasonal lapse rates measured across the Alps (Rolland 2003, J. Climate
+ * 16:1032-1046), rounded.
+ */
+export const LAPSE_RATES = [
+  0.0045, 0.005, 0.0058, 0.0064, 0.0067, 0.0068, 0.0068, 0.0066, 0.006, 0.0054,
+  0.0048, 0.0044,
+];
 
 /** Expected weather for one place on one day of the year. */
 export interface DayClimate {
@@ -242,7 +251,7 @@ export default class ClimateGrid {
     ele?: number | null,
   ): DayClimate {
     const days = DAYS_IN_MONTH[month]!;
-    const shift = this.altitudeShift(lat, lon, ele);
+    const shift = this.altitudeShift(lat, lon, ele, month);
     const pre = this.sample('pre', month, lat, lon);
     const rainy = this.hasRainyDayCounts
       ? this.sample(countVar(threshold), month, lat, lon)
@@ -258,12 +267,17 @@ export default class ClimateGrid {
     };
   }
 
-  /** °C to add for a point at `ele` m compared with its grid cell's mean height. */
-  altitudeShift(lat: number, lon: number, ele?: number | null): number {
+  /** °C to add in `month` (0–11) for a point at `ele` m, compared with its grid cell's mean height. */
+  altitudeShift(
+    lat: number,
+    lon: number,
+    ele: number | null | undefined,
+    month: number,
+  ): number {
     if (!this.hasElevation || ele === null || ele === undefined) return 0;
     const cell = this.sample('elev', 0, lat, lon);
     if (Number.isNaN(cell)) return 0;
-    return -LAPSE_RATE * (ele - cell);
+    return -LAPSE_RATES[month]! * (ele - cell);
   }
 
   /** Rainy days in a month for one grid cell. */
