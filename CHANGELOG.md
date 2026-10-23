@@ -4,6 +4,7 @@
 
 ### Changed
 
+- A new trip starts today instead of on 1 January.
 - The overnight stops along your route have a glowing purple ring, so they stand out on every temperature colour.
 
 ## v0.2.0 - 2026-10-23
