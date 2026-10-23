@@ -23,10 +23,12 @@ Forkcast monorepo: `web/` (Ember app) and `data/` (Python data builders). See RE
 
 ## Data
 
-- EuroVelo routes: `data/forkcast_data/eurovelo.py` (catalogue, GPX → route, variant/gap handling). Raw tracks in `data/eurovelo/` (ODbL; the attribution notice must stay in the help page and map attribution). Refresh with `build.sh download`.
-- Hand-made routes are the town lists in `data/forkcast_data/anchors.py` (the first is the app's default). Coordinates come from `geocoded.json`; after adding stops run `uv run python -m forkcast_data.geocode` (Nominatim, only looks up missing ones), then the `routes` step.
-- Continents (ids, names, bounding boxes) are in `data/forkcast_data/continents.py`; climate, borders and the manifest are built per continent from them.
-- Climate: CRU TS file paths are pinned in `data/build.sh` (version 4.10, 2011–2025).
+- The pipeline is `data/forkcast_data` with one entry point (`./build.sh` / `python -m forkcast_data`): `all`, `status`, `download <source…>`, `build <output…>`, `--fresh`. How skipping, validation and stamps work is documented in `data/README.md`; keep that file in sync when adding or changing a step.
+- A new download step uses `pipeline.ensure()` with a real validator; a new build step uses `pipeline.Stamp` with every input file and `code_hash()` of the modules it depends on, and is registered in `forkcast_data/__main__.py` in dependency order.
+- Builds never touch the network; downloads are the only steps that do. The CDS needs one request at a time.
+- EuroVelo routes: `forkcast_data/eurovelo.py`. Raw tracks in `data/eurovelo/` (ODbL; the attribution notice must stay in the help page and map attribution).
+- Hand-made routes are the town lists in `forkcast_data/anchors.py` (the first is the app's default); stops are geocoded into `geocoded.json` by the `brouter` download.
+- Continents (ids, names, bounding boxes) are in `forkcast_data/continents.py`.
 
 ## Commits and changelog
 

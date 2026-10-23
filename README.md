@@ -11,8 +11,8 @@ Everything runs in Docker (OrbStack domains in this setup).
 ```sh
 docker compose up ui                                # dev server, hot reload: https://ui.forkcast.orb.local
 docker compose --profile prod up --build web        # production nginx image: https://web.forkcast.orb.local
-docker compose --profile tools run --rm data        # rebuild all data into data/out
-docker compose --profile tools run --rm data routes # or one step: climate | routes | basemap
+docker compose --profile tools run --rm data        # data pipeline: download what's missing, build what's stale
+docker compose --profile tools run --rm data status # see data/README.md for steps and --fresh
 ```
 
 ## Layout
@@ -28,11 +28,12 @@ docker compose --profile tools run --rm data routes # or one step: climate | rou
 
 ## Data
 
-- **Climate:** [CRU TS 4.10](https://crudata.uea.ac.uk/cru/data/hrg/) (University of East Anglia), monthly grids at 0.5° (about 50 km), averaged over 2011–2025: mean daily maximum and minimum temperature, precipitation, and wet days (days with at least 0.1 mm). The app interpolates between grid cells and between mid-month values, so every date and place gets its own estimate. Land only; values near coasts come from the nearest land cells.
-- **EuroVelo routes:** the official GPX tracks from [EuroVelo.com](https://www.eurovelo.com) (ODbL, see `data/eurovelo/README.md`). The tracks contain variants (both river banks, alternative countries) and spurs; the build treats stages as a network and takes the shortest path from start to finish. Holes between stages are bridged with straight lines: ferries over the sea (not counted as riding), unmapped stretches over land (counted).
-- **Demo route:** Interlaken → Rhône valley → Spain's east coast → Málaga (2,369 km), routed town to town with [BRouter](https://brouter.de) (trekking profile), which keeps elevation.
-- **Rainy days:** CRU counts wet days at ≥ 0.1 mm. Days over 1, 5 or 10 mm are estimated assuming exponentially distributed wet-day amounts (mean = monthly total ÷ wet days).
-- **Basemap:** Natural Earth 1:50m country outlines via `world-atlas`. The app draws its own basemap, so it needs no tile server.
+How the data is downloaded and built, and how the pipeline decides what to redo, is in [data/README.md](data/README.md).
+
+- **Climate:** [ERA5-Land](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) (Copernicus Climate Change Service), 2011–2025, on a 0.25° grid (about 25 km): rain from the daily totals (rainy days over 1, 5 and 10 mm are counted), highs and lows from the average day's temperature curve calibrated against [CRU TS 4.10](https://crudata.uea.ac.uk/cru/data/hrg/) station-based daily extremes.
+- **EuroVelo routes:** the official GPX tracks from [EuroVelo.com](https://www.eurovelo.com) (ODbL, see `data/eurovelo/README.md`). Variants and spurs are resolved by taking the shortest path through the stages; holes between stages over the sea count as ferries.
+- **Demo route:** Interlaken → Rhône valley → Spain's east coast → Málaga, routed town to town with [BRouter](https://brouter.de) (trekking profile).
+- **Borders:** Natural Earth (public domain).
 
 These are climate normals, not forecasts: they say what is typical, not what a given year will bring.
 
