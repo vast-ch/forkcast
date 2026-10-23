@@ -20,7 +20,9 @@ import {
 } from 'forkcast/utils/format';
 
 const COL = 18; // px per day
-const TOP = 28; // room for the day numbers and the lights marks
+const NUM_Y = 10; // baseline of the day numbers
+const LIGHTS_Y = 22; // baseline of the 🔦 marks under them
+const TOP = 28; // top of the temperature band, below both rows
 const TEMP_H = 110;
 const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
@@ -240,6 +242,8 @@ export default class ItineraryChart extends Component<{
   barW = COL - 6;
   colW = COL;
   left = LEFT;
+  numY = NUM_Y;
+  lightsY = LIGHTS_Y;
   /** Right edge of the axis labels. */
   axisX = LEFT - 6;
   firstDayX = colX(1);
@@ -370,7 +374,7 @@ export default class ItineraryChart extends Component<{
               <text
                 x={{b.x}}
                 dx={{this.half}}
-                y="10"
+                y={{this.numY}}
                 text-anchor="middle"
                 class="wt-day-num"
               >{{b.day.n}}</text>
@@ -378,7 +382,7 @@ export default class ItineraryChart extends Component<{
                 <text
                   x={{b.x}}
                   dx={{this.half}}
-                  y="22"
+                  y={{this.lightsY}}
                   text-anchor="middle"
                   class="wt-lights"
                 >🔦</text>

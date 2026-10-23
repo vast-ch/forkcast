@@ -134,16 +134,17 @@ export default class SidePanel extends Component<SidePanelSignature> {
   /** The numeric trip settings, with their allowed ranges. */
   get tripFields() {
     const p = this.planner;
-    return [
+    const fields: { key: LimitedKey; label: string; value: number }[] = [
       { key: 'km', label: 'km per day', value: p.kmPerDay },
       { key: 'speed', label: 'Avg speed (km/h)', value: p.speed },
       { key: 'ride', label: 'Ride days', value: p.rideDays },
       { key: 'rest', label: 'Rest days', value: p.restDays },
-    ].map((f) => ({
+    ];
+    return fields.map((f) => ({
       ...f,
       value: String(f.value),
-      limits: LIMITS[f.key as LimitedKey],
-      onChange: (v: string) => p.setLimited(f.key as LimitedKey, v),
+      limits: LIMITS[f.key],
+      onChange: (v: string) => p.setLimited(f.key, v),
     }));
   }
 
