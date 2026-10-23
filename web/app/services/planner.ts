@@ -308,7 +308,7 @@ export default class PlannerService extends Service {
   async selectRoute(id: string): Promise<void> {
     const isDefault = id === (this.atlas.presets[0]?.id ?? '');
     this.write('route', isDefault ? '' : id);
-    this.write('day', 0);
+    this.highlightedDay = undefined;
     await this.loadSelected();
   }
 
@@ -327,14 +327,14 @@ export default class PlannerService extends Service {
     this.write('name', name);
     this.write('route', OWN_ROUTE_ID);
     this.write('reverse', false);
-    this.write('day', 0);
+    this.highlightedDay = undefined;
   }
 
   deleteOwnRoute(): void {
     this.write('track', '');
     this.write('name', '');
     this.write('route', '');
-    this.write('day', 0);
+    this.highlightedDay = undefined;
     void this.loadSelected();
   }
 

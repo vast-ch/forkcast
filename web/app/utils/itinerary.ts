@@ -78,37 +78,24 @@ export function planTrip(
     // still distance left, so a trip never ends on a rest day.
     const isRest = rest > 0 && n % cycle >= ride;
     n++;
-    if (isRest) {
-      const here = pointAt(route.points, km);
-      const weather = climateOn(climate, date, here, settings.rainThreshold);
-      days.push({
-        n,
-        date,
-        isRest: true,
-        fromKm: km,
-        toKm: km,
-        distance: 0,
-        climb: 0,
-        sleep: here,
-        weather,
-        nightLow: weather.low,
-      });
-      continue;
-    }
-    const to = Math.min(total, km + perDay);
+    // A rest day is a day that ends where it started.
+    const to = isRest ? km : Math.min(total, km + perDay);
     const mid = pointAt(route.points, (km + to) / 2);
     const sleep = pointAt(route.points, to);
+    const weather = climateOn(climate, date, mid, settings.rainThreshold);
     days.push({
       n,
       date,
-      isRest: false,
+      isRest,
       fromKm: km,
       toKm: to,
       distance: to - km,
-      climb: climbBetween(route.points, km, to),
+      climb: isRest ? 0 : climbBetween(route.points, km, to),
       sleep,
-      weather: climateOn(climate, date, mid, settings.rainThreshold),
-      nightLow: climateOn(climate, date, sleep, settings.rainThreshold).low,
+      weather,
+      nightLow: isRest
+        ? weather.low
+        : climateOn(climate, date, sleep, settings.rainThreshold).low,
     });
     km = to;
   }
