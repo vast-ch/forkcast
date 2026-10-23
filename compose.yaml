@@ -16,8 +16,8 @@ services:
     volumes:
       - ./web:/app
       - /app/node_modules
-      # The app reads the built data from public/data.
-      - ./data/out:/app/public/data:ro
+      # The app imports the built data from /data-out (hashed asset URLs).
+      - ./data/out:/app/data-out:ro
     labels:
       - dev.orbstack.domains=ui.wheelther.orb.local
       - dev.orbstack.http-port=4200

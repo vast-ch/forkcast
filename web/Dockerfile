@@ -17,8 +17,9 @@ CMD ["pnpm", "start"]
 ### Stage 2: build
 FROM base AS build
 COPY web/ .
-# Data built by the `data` image; see data/Dockerfile.
-COPY data/out/ public/data/
+# Data built by the `data` image (see data/Dockerfile). The app imports it as
+# assets, so every file gets a content-hashed name and can be cached for a year.
+COPY data/out/ data-out/
 RUN pnpm run build
 
 ### Stage 3: prod
