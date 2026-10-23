@@ -169,7 +169,8 @@ body {
 /* Type */
 .wt-logo {
   display: inline-flex;
-  align-items: center;
+  /* The mark's horizon sits on the wordmark's baseline. */
+  align-items: baseline;
   gap: 0.45rem;
   font-family: var(--wt-font-display);
   font-weight: 800;
@@ -179,14 +180,14 @@ body {
   color: var(--wt-ink);
 }
 .wt-logo-mark {
-  width: 1.15em;
-  height: 1.15em;
+  width: 1.55em;
+  height: 0.75em;
   flex: none;
 }
 .wt-logo-sun {
   fill: var(--wt-sun);
 }
-.wt-logo-fork {
+.wt-logo-ink {
   stroke: var(--wt-ink);
 }
 .wt-logo-cast {

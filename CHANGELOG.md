@@ -4,6 +4,7 @@
 
 ### Changed
 
+- A new logo: a bicycle wheel rising over the horizon like the sun, in the top left, as the browser tab icon and as the home-screen icon.
 - The day list is gone: the chart under the map now shows each day's number along its top (rest days included, in place of the old "R") instead of dates under it, and you pick a day there, by clicking or with the arrow keys. The selected day's distance, climbing and weather appear above the chart.
 - A new trip starts today instead of on 1 January.
 - Picking a start date selects the trip's first day, so the chart, the map and its week start there.
