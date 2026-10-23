@@ -28,7 +28,7 @@
   --wt-pick: #a020f0;
   --wt-pick-wash: color-mix(in srgb, var(--wt-pick) 14%, transparent);
   --wt-font-display:
-    "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+    "Bricolage Grotesque Variable", "Avenir Next", system-ui, sans-serif;
   --wt-font-body:
     "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --wt-font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;

@@ -19,6 +19,29 @@ host or CDN, and the app keeps working offline once loaded. The price is that
 everything a user might look at has to be downloaded, which is why the data is
 split by continent and kept compact.
 
+## No third parties
+
+Every file the app uses comes from its own origin: the code, the data and the
+fonts (bundled from Fontsource packages in `web/app/app.ts` rather than loaded
+from Google Fonts). There are no analytics, cookies or ads. The hosting
+headers enforce it (`web/security-headers.conf` for nginx, `web/public/_headers`
+for Netlify; keep the two in step):
+
+- **Content Security Policy:** scripts, styles, images, fonts and requests only
+  from `'self'` (plus `data:`/`blob:` images for the temperature layer and the
+  GPX export, and inline styles, which Leaflet and Ember's style bindings use).
+  Vite is told not to inline the data files as `data:` URLs
+  (`build.assetsInlineLimit` in `web/vite.config.mjs`), since the policy only
+  allows fetching from the site.
+- **Referrer-Policy: no-referrer** (also a `<meta>` in `index.html`, for hosts
+  without headers): the plan is in the URL, and a linked site would otherwise
+  receive it.
+- **Permissions-Policy: browsing-topics=()**: no interest-based ad topics from
+  visits here.
+
+**Why:** a trip plan says where someone will be and when. It should not reach
+anyone the rider didn't send it to.
+
 ## What gets downloaded, and when
 
 1. **On start:** the code, `manifest.json` (the continents and their preset routes, a few kB), `world.json` (one outline per continent, ~120 kB) and Europe's climate grid and borders (1.2 MB gzipped). The app opens straight on the planner; there is no separate start page.

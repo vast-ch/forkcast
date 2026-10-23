@@ -268,11 +268,23 @@ export default class Help extends Component {
         <section id="links">
           <h2>Bookmarks and sharing</h2>
           <p>
-            Everything you set (continent, month, layers, route, start date,
-            distances, rest pattern, the highlighted day and your own route) is
-            kept in the page address. Bookmark it or send the link, and the same
-            plan opens again. Settings left at their defaults are not written to
-            the address, so links stay short.
+            Everything you set (continent, week, layers, route, start date,
+            distances, speed, rest pattern, the highlighted day and your own
+            route) is kept in the page address. Bookmark it or send the link,
+            and the same plan opens again. Settings left at their defaults are
+            not written to the address, so links stay short.
+          </p>
+        </section>
+
+        <section id="privacy">
+          <h2>Privacy</h2>
+          <p>
+            Forkcast runs entirely in your browser. There is no server behind
+            it, no account, no cookies, no analytics, no ads and no tracking:
+            the page, its fonts and its data all come from the site itself, and
+            your browser is told to refuse anything from anywhere else. Your
+            plan is only in the address bar, and following a link out of the app
+            doesn't pass it on.
           </p>
         </section>
 

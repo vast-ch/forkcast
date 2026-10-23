@@ -57,6 +57,13 @@ export default defineConfig({
     tailwindcss(),
     staticPages(),
   ],
+  build: {
+    // Data files stay files, even small ones, rather than data: URLs inlined
+    // into the code: the content security policy only lets the app fetch from
+    // its own origin (see security-headers.conf).
+    assetsInlineLimit: (file) =>
+      /\.(json|bin)(\?|$)/.test(file) ? false : undefined,
+  },
   optimizeDeps: {
     // See winds-mobi-client-web: Frontile's collections package breaks Vite's prebundling.
     exclude: ['ember-page-title', '@frontile/collections'],
