@@ -3,7 +3,11 @@ import { cached, tracked } from '@glimmer/tracking';
 import { TrackedArray } from 'tracked-built-ins';
 import type AtlasService from './atlas';
 import type IndexController from 'forkcast/controllers/index';
-import type { DayClimate, RainThreshold } from 'forkcast/utils/climate';
+import {
+  RAIN_THRESHOLDS,
+  type DayClimate,
+  type RainThreshold,
+} from 'forkcast/utils/climate';
 import { planTrip, type Trip, type TripDay } from 'forkcast/utils/itinerary';
 import {
   decodeTrack,
@@ -149,7 +153,7 @@ export default class PlannerService extends Service {
 
   get rainThreshold(): RainThreshold {
     const v = Number(this.read('rainy'));
-    return v === 1 || v === 10 ? v : 5;
+    return RAIN_THRESHOLDS.find((t) => t === v) ?? 5;
   }
   set rainThreshold(v: RainThreshold) {
     this.write('rainy', v);

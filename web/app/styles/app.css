@@ -434,7 +434,11 @@ body {
   outline-offset: 4px;
   border-radius: 4px;
 }
-.wt-scroll:focus-visible {
+/* Keyboard focus on the chart, the route controls and the help link. */
+.wt-scroll:focus-visible,
+.wt-reverse:focus-visible,
+.wt-select:focus-within,
+.wt-icon-link:focus-visible {
   outline: 2px solid var(--wt-accent);
   outline-offset: 1px;
 }
@@ -453,15 +457,6 @@ body {
 }
 .wt-reverse:hover {
   border-color: var(--wt-ink);
-}
-.wt-reverse.is-active {
-  background: var(--wt-ink);
-  border-color: var(--wt-ink);
-  color: #fff;
-}
-.wt-reverse:focus-visible {
-  outline: 2px solid var(--wt-accent);
-  outline-offset: 1px;
 }
 .wt-empty {
   padding: 0.6rem 0.75rem;
@@ -492,10 +487,6 @@ body {
 }
 .wt-select select:focus-visible {
   outline: none;
-}
-.wt-select:focus-within {
-  outline: 2px solid var(--wt-accent);
-  outline-offset: 1px;
 }
 .wt-route {
   display: flex;
@@ -544,7 +535,8 @@ body {
   color: var(--wt-ink);
   cursor: pointer;
 }
-.wt-btn.is-primary {
+.wt-btn.is-primary,
+.wt-reverse.is-active {
   background: var(--wt-ink);
   border-color: var(--wt-ink);
   color: #fff;
@@ -692,10 +684,6 @@ body {
   color: var(--wt-ink);
   background: var(--wt-accent-soft);
 }
-.wt-icon-link:focus-visible {
-  outline: 2px solid var(--wt-accent);
-  outline-offset: 1px;
-}
 .wt-help-link {
   font-size: 0.85rem;
   font-weight: 500;
@@ -790,27 +778,6 @@ body {
 .wt-help-defs dt {
   font-family: var(--wt-font-data);
   font-weight: 500;
-}
-.wt-help-table {
-  margin-top: 0.75rem;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-.wt-help-table th,
-.wt-help-table td {
-  padding: 0.35rem 1.25rem 0.35rem 0;
-  border-bottom: 1px solid var(--wt-line);
-  text-align: left;
-}
-.wt-help-table th {
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--wt-muted);
-  font-weight: 500;
-}
-.wt-help-table td {
-  font-family: var(--wt-font-data);
 }
 @media (max-width: 480px) {
   .wt-help-defs > div {

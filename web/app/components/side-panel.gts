@@ -8,7 +8,7 @@ import { SegmentedControl } from 'frontile/buttons';
 import { Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
-import { MONTHS } from 'forkcast/utils/climate';
+import { MONTHS, RAIN_THRESHOLDS } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
@@ -67,6 +67,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
   }));
 
   lastWeek = LAST_WEEK;
+  rainThresholds = RAIN_THRESHOLDS;
 
   get weekValue() {
     return String(this.planner.week);
@@ -307,9 +308,9 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 aria-label="Rain needed for a rainy day"
                 as |Ctl|
               >
-                <Ctl.Item @value={{1}}>1 mm</Ctl.Item>
-                <Ctl.Item @value={{5}}>5 mm</Ctl.Item>
-                <Ctl.Item @value={{10}}>10 mm</Ctl.Item>
+                {{#each this.rainThresholds as |mm|}}
+                  <Ctl.Item @value={{mm}}>{{mm}} mm</Ctl.Item>
+                {{/each}}
               </SegmentedControl>
             </div>
           </section>
