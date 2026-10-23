@@ -24,7 +24,7 @@
 - The trip summary is tidier: one number per item, with riding and rest days and the date of the coldest night as items of their own.
 - A thin line now separates the panel's sections (climate on the map, route, trip, day by day), so it is clearer where one ends and the next begins.
 - The trip summary's values are all in one typeface, so the arrival date no longer looks out of place next to the numbers.
-- Draw a route, Import GPX and Export GPX now look the same.
+- Draw a route, Import GPX and Export GPX now look the same and share the full width of the panel.
 - Days are simply the route cut into equal stretches of your daily distance; the nearby town names are gone.
 - Your own route is now kept in the page address instead of in the browser, one at a time. Drawing or importing a new one replaces it.
 - The app and its data now download once and are then kept by your browser for up to a year, so opening it again is fast. New releases are still picked up straight away.

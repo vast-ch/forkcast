@@ -460,13 +460,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 </div>
               </div>
             {{else}}
-              <div class="flex flex-wrap gap-2">
+              <div class="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  class="wt-btn"
+                  class="wt-btn justify-center"
                   {{on "click" this.startDrawing}}
                 >Draw a route</button>
-                <label class="wt-btn">
+                <label class="wt-btn justify-center">
                   Import GPX
                   <input
                     type="file"
@@ -477,7 +477,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 </label>
                 <button
                   type="button"
-                  class="wt-btn"
+                  class="wt-btn justify-center"
                   {{on "click" this.exportGpx}}
                 >Export GPX</button>
               </div>
