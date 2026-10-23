@@ -168,10 +168,10 @@ body {
 
 /* Type */
 .wt-logo {
-  display: inline-flex;
-  /* The mark's horizon sits on the wordmark's baseline. */
-  align-items: baseline;
-  gap: 0.45rem;
+  /* Inline, not flex: an inline SVG's bottom edge sits exactly on the text
+     baseline, and the mark's bottom edge is its horizon line. */
+  display: inline-block;
+  white-space: nowrap;
   font-family: var(--wt-font-display);
   font-weight: 800;
   font-size: 2rem;
@@ -180,9 +180,11 @@ body {
   color: var(--wt-ink);
 }
 .wt-logo-mark {
+  display: inline;
+  vertical-align: baseline;
   width: 1.55em;
-  height: 0.75em;
-  flex: none;
+  height: 0.71em;
+  /* The space after it in the markup is the gap to the wordmark. */
 }
 .wt-logo-sun {
   fill: var(--wt-sun);

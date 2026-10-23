@@ -6,7 +6,7 @@ import type { TOC } from '@ember/component/template-only';
  */
 const Logo: TOC<{ Element: HTMLSpanElement }> = <template>
   <span class="wt-logo" ...attributes>
-    <svg viewBox="1 18 62 30" class="wt-logo-mark" aria-hidden="true">
+    <svg viewBox="1 18 62 28.5" class="wt-logo-mark" aria-hidden="true">
       <path d="M12 44a20 20 0 0 1 40 0z" class="wt-logo-sun" /><g
         fill="none"
         class="wt-logo-ink"
