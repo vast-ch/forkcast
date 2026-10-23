@@ -1,0 +1,44 @@
+# Wheelther monorepo.
+#   docker compose up ui                  dev server with hot reload (https://ui.wheelther.orb.local)
+#   docker compose run --rm data          rebuild all data into data/out (or: data climate|routes|basemap)
+#   docker compose --profile prod up --build web   production image (nginx) at https://web.wheelther.orb.local
+services:
+  ui:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: base
+    init: true
+    expose:
+      - 4200
+    environment:
+      - APP_URL=https://ui.wheelther.orb.local
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      # The app reads the built data from public/data.
+      - ./data/out:/app/public/data:ro
+    labels:
+      - dev.orbstack.domains=ui.wheelther.orb.local
+      - dev.orbstack.http-port=4200
+
+  data:
+    build:
+      context: ./data
+    profiles: [tools]
+    volumes:
+      - ./data/out:/data/out
+      - ./data/cache:/data/cache
+      - ./data/wheelther_data:/data/wheelther_data
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: prod
+    profiles: [prod]
+    expose:
+      - 80
+    labels:
+      - dev.orbstack.domains=web.wheelther.orb.local
+      - dev.orbstack.http-port=80
