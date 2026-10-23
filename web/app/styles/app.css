@@ -670,11 +670,6 @@ body {
   font-family: var(--wt-font-body);
   font-size: 11px;
 }
-.wt-rest-label {
-  font-family: var(--wt-font-data);
-  font-size: 9px;
-  fill: var(--wt-muted);
-}
 .wt-month-line {
   stroke: #9fb3c4;
   stroke-width: 1;

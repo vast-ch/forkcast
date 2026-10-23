@@ -16,11 +16,10 @@ import {
 } from 'forkcast/utils/format';
 
 const COL = 18; // px per day
-const TOP = 14;
+const TOP = 14; // room for the day numbers
 const TEMP_H = 110;
 const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
-const NUMS = 12; // row of day numbers under the rain band
 const AXIS = 18;
 const LEFT = 34;
 
@@ -79,19 +78,15 @@ export default class ItineraryChart extends Component<{
   }
 
   get height() {
-    return TOP + TEMP_H + GAP + RAIN_H + NUMS + AXIS;
+    return TOP + TEMP_H + GAP + RAIN_H + AXIS;
   }
 
   get rainTop() {
     return TOP + TEMP_H + GAP;
   }
 
-  get numY() {
-    return this.rainTop + RAIN_H + 10;
-  }
-
   get axisY() {
-    return this.rainTop + RAIN_H + NUMS + 13;
+    return this.rainTop + RAIN_H + 13;
   }
 
   /** Horizontal lines with their axis labels: every 5° and the rain band's 0–100%. */
@@ -297,15 +292,14 @@ export default class ItineraryChart extends Component<{
                   class="wt-month-line"
                 />
               {{/if}}
-              {{#if b.day.isRest}}
-                <text
-                  x={{b.x}}
-                  dx={{this.half}}
-                  y="10"
-                  text-anchor="middle"
-                  class="wt-rest-label"
-                >R</text>
-              {{else}}
+              <text
+                x={{b.x}}
+                dx={{this.half}}
+                y="10"
+                text-anchor="middle"
+                class="wt-day-num"
+              >{{b.day.n}}</text>
+              {{#unless b.day.isRest}}
                 <rect
                   x={{b.barX}}
                   y={{b.yHigh}}
@@ -323,14 +317,7 @@ export default class ItineraryChart extends Component<{
                   class="wt-rain-bar"
                   rx="1"
                 />
-              {{/if}}
-              <text
-                x={{b.x}}
-                dx={{this.half}}
-                y={{this.numY}}
-                text-anchor="middle"
-                class="wt-day-num"
-              >{{b.day.n}}</text>
+              {{/unless}}
               {{#if b.label}}
                 <text
                   x={{b.x}}

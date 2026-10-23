@@ -63,7 +63,7 @@ top.
 
 ## The day chart
 
-Under the map, one column per day: a bar from the night low to the day high, coloured by the high, the chance of a rainy day under it, the day number and a date every week. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
+Under the map, one column per day: the day number on top, a bar from the night low to the day high, coloured by the high, the chance of a rainy day under it and a date every week. Rest days are shaded columns with no bar. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
 
 **Why:** a list of days repeated what the chart shows, and on a phone it was a long scroll. The selected day's figures sit above the chart.
 
