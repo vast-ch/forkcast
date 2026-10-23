@@ -146,7 +146,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
     }));
   }
 
-  onWeekInput = (value: string) => this.planner.set('week', Number(value));
+  onWeekInput = (value: string) => this.planner.selectWeek(Number(value));
   /** For the map's switches and segmented controls: `(fn this.setMap "showRain")`. */
   // Each control passes its own setting's type of value; `fn` can't carry that.
   setMap = (key: MapSetting, value: unknown) =>
@@ -219,103 +219,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
       <div
         class="wt-panel-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6"
       >
-        {{#if this.showSettings}}
-          <section
-            aria-labelledby="h-month"
-            class="wt-sec-climate flex flex-col gap-3"
-          >
-            <h2 id="h-month" class="wt-h2">Climate on the map</h2>
-            <div class="wt-range-wrap">
-              <div class="wt-range-scale is-top" aria-hidden="true">
-                <span
-                  class="wt-range-value"
-                  style={{this.weekLabelStyle}}
-                >{{this.planner.weekSlot.label}}</span>
-              </div>
-              {{! `input` below is Frontile's class slot, not an event handler. }}
-              {{! template-lint-disable no-passed-in-event-handlers }}
-              <Input
-                @type="range"
-                @value={{this.weekValue}}
-                @onInput={{this.onWeekInput}}
-                @classes={{hash
-                  innerContainer="border-0 bg-transparent p-0 shadow-none"
-                  input="wt-range h-6 border-0 bg-transparent p-0 shadow-none focus:ring-0"
-                }}
-                min="0"
-                max={{this.lastWeek}}
-                step="1"
-                aria-label="Time of year"
-                aria-valuetext={{this.planner.weekSlot.label}}
-              />
-              <div class="wt-range-scale is-ticks" aria-hidden="true">
-                {{#each this.months as |m|}}
-                  <span class="wt-range-tick" style={{m.tickStyle}}></span>
-                {{/each}}
-              </div>
-              <div class="wt-range-scale is-bottom" aria-hidden="true">
-                {{#each this.months as |m|}}
-                  <span
-                    class="wt-range-month"
-                    style={{m.style}}
-                  >{{m.label}}</span>
-                {{/each}}
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between gap-3">
-              <Switch
-                @label="Temperature"
-                @size="sm"
-                @isSelected={{this.planner.showTemp}}
-                @onChange={{fn this.setMap "showTemp"}}
-              />
-              <SegmentedControl
-                @value={{this.planner.tempMetric}}
-                @onChange={{fn this.setMap "tempMetric"}}
-                @size="sm"
-                aria-label="Temperature shown"
-                as |Ctl|
-              >
-                <Ctl.Item @value="high">Day high</Ctl.Item>
-                <Ctl.Item @value="low">Night low</Ctl.Item>
-              </SegmentedControl>
-            </div>
-            <div class="flex items-center justify-between gap-3">
-              <Switch
-                @label="Rain"
-                @size="sm"
-                @isSelected={{this.planner.showRain}}
-                @onChange={{fn this.setMap "showRain"}}
-              />
-              <SegmentedControl
-                @value={{this.planner.rainMetric}}
-                @onChange={{fn this.setMap "rainMetric"}}
-                @size="sm"
-                aria-label="Rain shown"
-                as |Ctl|
-              >
-                <Ctl.Item @value="mm">mm</Ctl.Item>
-                <Ctl.Item @value="days">Rainy days</Ctl.Item>
-              </SegmentedControl>
-            </div>
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm">Rainy day &gt;</span>
-              <SegmentedControl
-                @value={{this.planner.rainThreshold}}
-                @onChange={{fn this.setMap "rainThreshold"}}
-                @size="sm"
-                aria-label="Rain needed for a rainy day"
-                as |Ctl|
-              >
-                {{#each this.rainThresholds as |mm|}}
-                  <Ctl.Item @value={{mm}}>{{mm}} mm</Ctl.Item>
-                {{/each}}
-              </SegmentedControl>
-            </div>
-          </section>
-        {{/if}}
-
         {{#if this.showSettings}}
           <section
             aria-labelledby="h-route"
@@ -489,6 +392,102 @@ export default class SidePanel extends Component<SidePanelSignature> {
             {{/if}}{{/if}}
         </section>
 
+        {{#if this.showSettings}}
+          <section
+            aria-labelledby="h-map"
+            class="wt-sec-map flex flex-col gap-3"
+          >
+            <h2 id="h-map" class="wt-h2">Map</h2>
+            <div class="wt-range-wrap">
+              <div class="wt-range-scale is-top" aria-hidden="true">
+                <span
+                  class="wt-range-value"
+                  style={{this.weekLabelStyle}}
+                >{{this.planner.weekSlot.label}}</span>
+              </div>
+              {{! `input` below is Frontile's class slot, not an event handler. }}
+              {{! template-lint-disable no-passed-in-event-handlers }}
+              <Input
+                @type="range"
+                @value={{this.weekValue}}
+                @onInput={{this.onWeekInput}}
+                @classes={{hash
+                  innerContainer="border-0 bg-transparent p-0 shadow-none"
+                  input="wt-range h-6 border-0 bg-transparent p-0 shadow-none focus:ring-0"
+                }}
+                min="0"
+                max={{this.lastWeek}}
+                step="1"
+                aria-label="Time of year"
+                aria-valuetext={{this.planner.weekSlot.label}}
+              />
+              <div class="wt-range-scale is-ticks" aria-hidden="true">
+                {{#each this.months as |m|}}
+                  <span class="wt-range-tick" style={{m.tickStyle}}></span>
+                {{/each}}
+              </div>
+              <div class="wt-range-scale is-bottom" aria-hidden="true">
+                {{#each this.months as |m|}}
+                  <span
+                    class="wt-range-month"
+                    style={{m.style}}
+                  >{{m.label}}</span>
+                {{/each}}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <Switch
+                @label="Temperature"
+                @size="sm"
+                @isSelected={{this.planner.showTemp}}
+                @onChange={{fn this.setMap "showTemp"}}
+              />
+              <SegmentedControl
+                @value={{this.planner.tempMetric}}
+                @onChange={{fn this.setMap "tempMetric"}}
+                @size="sm"
+                aria-label="Temperature shown"
+                as |Ctl|
+              >
+                <Ctl.Item @value="high">Day high</Ctl.Item>
+                <Ctl.Item @value="low">Night low</Ctl.Item>
+              </SegmentedControl>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <Switch
+                @label="Rain"
+                @size="sm"
+                @isSelected={{this.planner.showRain}}
+                @onChange={{fn this.setMap "showRain"}}
+              />
+              <SegmentedControl
+                @value={{this.planner.rainMetric}}
+                @onChange={{fn this.setMap "rainMetric"}}
+                @size="sm"
+                aria-label="Rain shown"
+                as |Ctl|
+              >
+                <Ctl.Item @value="mm">mm</Ctl.Item>
+                <Ctl.Item @value="days">Rainy days</Ctl.Item>
+              </SegmentedControl>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm">Rainy day &gt;</span>
+              <SegmentedControl
+                @value={{this.planner.rainThreshold}}
+                @onChange={{fn this.setMap "rainThreshold"}}
+                @size="sm"
+                aria-label="Rain needed for a rainy day"
+                as |Ctl|
+              >
+                {{#each this.rainThresholds as |mm|}}
+                  <Ctl.Item @value={{mm}}>{{mm}} mm</Ctl.Item>
+                {{/each}}
+              </SegmentedControl>
+            </div>
+          </section>
+        {{/if}}
       </div>
     </aside>
   </template>

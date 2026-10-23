@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Moving the week on the map now moves the day chart with it: it picks your trip's first day in that week, or no day if the trip isn't there then.
+- The sidebar's "Climate on the map" section is now called "Map" and comes last, after Route and Trip.
 - The line in the day chart where a new month starts is labelled with the month's full name, written along it.
 
 ## v0.3.0 - 2026-10-23
