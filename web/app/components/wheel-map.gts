@@ -489,7 +489,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
     if (!grid) return;
     const lat = latlng.lat;
     const lon = latlng.lng;
-    const month = grid.covers(lat, lon)
+    const climate = grid.covers(lat, lon)
       ? grid.at(
           this.planner.weekSlot.phase,
           lat,
@@ -528,7 +528,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
         };
       }
     }
-    this.planner.hover = { lat, lon, month, onRoute };
+    this.planner.hover = { lat, lon, climate, onRoute };
   };
 
   onLeave = () => {

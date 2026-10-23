@@ -12,6 +12,8 @@ export interface WeekSlot {
   /** First and last day of the month it covers */
   from: number;
   to: number;
+  /** How many days it covers (7 or 8) */
+  days: number;
   /** e.g. "9–16 Jan" */
   label: string;
   /** Middle of the slot as a position in the year, 0 … 1 */
@@ -31,6 +33,7 @@ export const WEEKS: WeekSlot[] = MONTHS.flatMap((name, month) => {
       quarter,
       from,
       to,
+      days: to - from + 1,
       label: `${from}–${to} ${name}`,
       phase: (month + (quarter + 0.5) / 4) / 12,
     };

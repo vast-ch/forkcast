@@ -37,7 +37,8 @@ export const OWN_COLOR = '#b5179e';
 export interface Hover {
   lat: number;
   lon: number;
-  month: DayClimate | null;
+  /** The average climate there in the week shown, if there is data */
+  climate: DayClimate | null;
   /** Set when the pointer is near the selected route */
   onRoute?: {
     km: number;

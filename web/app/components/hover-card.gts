@@ -27,6 +27,20 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
     return this.planner.weekSlot.label;
   }
 
+  /** Expected rain over the week shown, in total. */
+  get weekRain() {
+    const c = this.hover?.climate;
+    return c ? fmtMm(c.rainMm * this.planner.weekSlot.days) : '';
+  }
+
+  /** Expected rainy days out of the week's days, e.g. "2.6 of 8". */
+  get weekRainyDays() {
+    const c = this.hover?.climate;
+    if (!c || isMissing(c.rainChance)) return '–';
+    const days = this.planner.weekSlot.days;
+    return `${(c.rainChance * days).toFixed(1)} of ${days}`;
+  }
+
   get coords() {
     const h = this.hover;
     if (!h) return '';
@@ -92,23 +106,26 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
           {{else}}
             <p class="wt-muted mt-1">Beyond the end of the planned days.</p>
           {{/if}}
-        {{else if this.hover.month}}
+        {{else if this.hover.climate}}
           <p class="wt-eyebrow">{{this.weekLabel}} average · {{this.coords}}</p>
           <dl class="wt-readout mt-2">
             <dt>Day high</dt>
             <dd>
               <span
                 class="wt-chip"
-                style={{css "background: " (tempSwatch this.hover.month.high)}}
+                style={{css
+                  "background: "
+                  (tempSwatch this.hover.climate.high)
+                }}
               ></span>
-              {{fmtTemp this.hover.month.high}}
+              {{fmtTemp this.hover.climate.high}}
             </dd>
             <dt>Night low</dt>
-            <dd>{{fmtTemp this.hover.month.low}}</dd>
+            <dd>{{fmtTemp this.hover.climate.low}}</dd>
             <dt>Rain</dt>
-            <dd>{{fmtMm this.hover.month.monthRainMm}} / month</dd>
+            <dd>{{this.weekRain}}</dd>
             <dt>Rainy days (≥ {{this.planner.rainThreshold}} mm)</dt>
-            <dd>{{round this.hover.month.monthWetDays}} / month</dd>
+            <dd>{{this.weekRainyDays}}</dd>
           </dl>
         {{else}}
           <p class="wt-eyebrow">{{this.coords}}</p>

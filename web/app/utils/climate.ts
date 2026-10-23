@@ -54,10 +54,6 @@ export interface DayClimate {
   rainMm: number;
   /** Chance of a rainy day (at least the chosen threshold of rain), 0..1 */
   rainChance: number;
-  /** The same rates scaled to an average month, for the legend-style readout. */
-  monthRainMm: number;
-  /** Rainy days in an average month, at the chosen threshold */
-  monthWetDays: number;
   /** °C added to high and low for the point's height versus its grid cell (0 if unknown) */
   altitudeShift: number;
 }
@@ -379,8 +375,6 @@ export default class ClimateGrid implements ClimateSource {
       low: this.sampleAt('tmn', phase, lat, lon) + shift,
       rainMm: rain,
       rainChance: chance,
-      monthRainMm: rain * DAYS_PER_MONTH,
-      monthWetDays: chance * DAYS_PER_MONTH,
       altitudeShift: shift,
     };
   }
@@ -471,8 +465,6 @@ const NO_DATA: DayClimate = {
   low: Number.NaN,
   rainMm: Number.NaN,
   rainChance: Number.NaN,
-  monthRainMm: Number.NaN,
-  monthWetDays: Number.NaN,
   altitudeShift: 0,
 };
 
