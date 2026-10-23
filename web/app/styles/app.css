@@ -1,0 +1,591 @@
+/* stylelint-disable */
+@import "tailwindcss" source("../../");
+@import "leaflet/dist/leaflet.css";
+
+@plugin "@frontile/theme/plugin/default";
+@import "@frontile/theme";
+
+@source '../../node_modules/@frontile';
+@source '../../node_modules/frontile';
+
+/* Layout: a working tool. Left panel for settings and the day list, the map
+   fills the rest, and the day-by-day weather strip sits under the map. */
+:root {
+  --wt-ink: #17212b;
+  --wt-muted: #5d6b78;
+  --wt-paper: #fbfcfc;
+  --wt-line: #dde3e8;
+  --wt-sea: #cfdbe3;
+  --wt-land: #e7e9e4;
+  --wt-border: #2d3a46;
+  --wt-accent: #0d6b78;
+  --wt-accent-soft: #dcefef;
+  --wt-rain: #112f6e;
+  --wt-danger: #b42318;
+  --wt-font-display:
+    "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --wt-font-body:
+    "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --wt-font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--wt-paper);
+  color: var(--wt-ink);
+  font-family: var(--wt-font-body);
+  font-size: 15px;
+}
+
+.wt-shell {
+  height: 100%;
+}
+
+.wt-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 58vh auto auto;
+  grid-template-areas: "map" "chart" "panel";
+  overflow-y: auto;
+}
+
+.wt-layout-panel {
+  grid-area: panel;
+}
+.wt-layout-map {
+  grid-area: map;
+}
+.wt-layout-chart {
+  grid-area: chart;
+}
+
+@media (min-width: 900px) {
+  .wt-layout {
+    grid-template-columns: 380px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: "panel map" "panel chart";
+    overflow: hidden;
+  }
+  .wt-layout-panel {
+    border-right: 1px solid var(--wt-line);
+    overflow: hidden;
+  }
+}
+
+.wt-panel {
+  background: var(--wt-paper);
+}
+
+.wt-chart-panel {
+  border-top: 1px solid var(--wt-line);
+  background: var(--wt-paper);
+}
+
+/* Type */
+.wt-logo {
+  font-family: var(--wt-font-display);
+  font-weight: 800;
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.wt-logo span {
+  color: var(--wt-accent);
+  font-weight: 500;
+}
+.wt-h2 {
+  font-family: var(--wt-font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt-title {
+  font-family: var(--wt-font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  text-wrap: balance;
+}
+.wt-eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+  font-variant-numeric: tabular-nums;
+}
+.wt-muted {
+  color: var(--wt-muted);
+}
+.wt-error {
+  color: var(--wt-danger);
+}
+
+/* Map */
+.wt-map {
+  background: var(--wt-sea);
+  font-family: var(--wt-font-body);
+}
+.wt-map .leaflet-tooltip {
+  font-family: var(--wt-font-body);
+  font-size: 12px;
+}
+.wt-land {
+  fill: var(--wt-land);
+}
+.wt-border {
+  stroke: var(--wt-border);
+  stroke-opacity: 0.55;
+}
+
+.wt-card {
+  background: color-mix(in srgb, var(--wt-paper) 94%, transparent);
+  border: 1px solid var(--wt-line);
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgb(23 33 43 / 10%);
+  backdrop-filter: blur(4px);
+}
+
+.wt-readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.75rem;
+}
+.wt-readout dt {
+  color: var(--wt-muted);
+}
+.wt-readout dd {
+  margin: 0;
+  text-align: right;
+  font-family: var(--wt-font-data);
+  font-size: 0.85rem;
+}
+
+.wt-chip {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-right: 0.35rem;
+  border-radius: 2px;
+  vertical-align: -0.05rem;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 15%);
+}
+
+.wt-tick {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  color: var(--wt-muted);
+}
+.wt-dot {
+  display: inline-block;
+  border-radius: 999px;
+  background: rgb(17 47 110 / 78%);
+  border: 1px solid rgb(255 255 255 / 60%);
+}
+
+/* Month picker: a calendar strip */
+.wt-months {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  border: 1px solid var(--wt-line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.wt-month {
+  padding: 0.4rem 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-right: 1px solid var(--wt-line);
+  border-bottom: 1px solid var(--wt-line);
+  background: #fff;
+  cursor: pointer;
+}
+.wt-month:nth-child(6n) {
+  border-right: 0;
+}
+.wt-month:nth-child(n + 7) {
+  border-bottom: 0;
+}
+.wt-month:hover {
+  background: var(--wt-accent-soft);
+}
+.wt-month.is-active {
+  background: var(--wt-ink);
+  color: #fff;
+}
+.wt-month:focus-visible,
+.wt-route:focus-visible,
+.wt-days-row:focus-visible,
+.wt-day:focus-visible {
+  outline: 2px solid var(--wt-accent);
+  outline-offset: 1px;
+}
+
+/* Routes */
+.wt-select {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.5rem;
+  border: 1px solid var(--wt-ink);
+  border-radius: 6px;
+  background: #fff;
+}
+.wt-select select {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 500;
+  color: var(--wt-ink);
+  padding: 0.2rem 0;
+  cursor: pointer;
+}
+.wt-select select:focus-visible {
+  outline: none;
+}
+.wt-select:focus-within {
+  outline: 2px solid var(--wt-accent);
+  outline-offset: 1px;
+}
+.wt-route {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--wt-line);
+  border-radius: 6px;
+  cursor: pointer;
+  background: #fff;
+}
+.wt-route:hover {
+  border-color: var(--wt-accent);
+}
+.wt-route.is-active {
+  border-color: var(--wt-ink);
+  box-shadow: inset 0 0 0 1px var(--wt-ink);
+}
+.wt-route-swatch {
+  width: 0.35rem;
+  align-self: stretch;
+  border-radius: 2px;
+}
+.wt-link-danger {
+  color: var(--wt-danger);
+  padding: 0.25rem;
+}
+.wt-link-danger:hover {
+  text-decoration: underline;
+}
+.wt-draw {
+  border: 1px dashed #b5179e;
+  border-radius: 6px;
+  background: #fdf3fb;
+}
+.wt-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  height: 2rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--wt-line);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--wt-ink);
+  cursor: pointer;
+}
+.wt-btn.is-primary {
+  background: var(--wt-ink);
+  border-color: var(--wt-ink);
+  color: #fff;
+}
+.wt-btn.is-primary:hover {
+  background: var(--wt-accent);
+}
+.wt-btn.is-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.wt-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.wt-btn:hover {
+  background: var(--wt-accent-soft);
+}
+.wt-btn:focus-within,
+.wt-btn:focus-visible {
+  outline: 2px solid var(--wt-accent);
+}
+
+/* Trip summary */
+.wt-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid var(--wt-line);
+  border-radius: 6px;
+}
+.wt-summary dt {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt-summary dd {
+  margin: 0;
+  font-family: var(--wt-font-data);
+  font-size: 0.95rem;
+}
+
+.wt-inline-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+.wt-inline-stats dt {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+}
+.wt-inline-stats dd {
+  margin: 0;
+  font-family: var(--wt-font-data);
+  font-size: 0.95rem;
+}
+
+/* Day list */
+.wt-days {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.wt-days-head,
+.wt-days-row {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr) 2.6rem 3.2rem 2.8rem 2.8rem;
+  gap: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  align-items: center;
+}
+.wt-days-head {
+  color: var(--wt-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--wt-line);
+}
+.wt-days-row {
+  cursor: pointer;
+  border-bottom: 1px solid color-mix(in srgb, var(--wt-line) 60%, transparent);
+  font-family: var(--wt-font-data);
+}
+.wt-days-row:hover {
+  background: var(--wt-accent-soft);
+}
+.wt-days-row.is-active {
+  background: var(--wt-ink);
+  color: #fff;
+}
+.wt-days-row.is-active .wt-muted {
+  color: #c9d2da;
+}
+.wt-days-row.is-rest {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 6px,
+    rgb(23 33 43 / 5%) 6px 7px
+  );
+}
+
+/* Chart */
+.wt-scroll {
+  scrollbar-width: thin;
+}
+.wt-grid {
+  stroke: var(--wt-line);
+}
+.wt-grid-zero {
+  stroke: #9fb3c4;
+  stroke-dasharray: 3 3;
+}
+.wt-axis {
+  font-family: var(--wt-font-data);
+  font-size: 10px;
+  fill: var(--wt-muted);
+}
+.wt-day {
+  cursor: pointer;
+}
+.wt-day-hit {
+  fill: transparent;
+}
+.wt-day:hover .wt-day-hit {
+  fill: rgb(13 107 120 / 8%);
+}
+.wt-day.is-active .wt-day-hit {
+  fill: rgb(23 33 43 / 10%);
+}
+.wt-day.is-rest .wt-day-hit {
+  fill: rgb(23 33 43 / 4%);
+}
+.wt-temp-bar {
+  stroke: rgb(0 0 0 / 18%);
+  stroke-width: 0.5;
+}
+.wt-day.is-active .wt-temp-bar {
+  stroke: var(--wt-ink);
+  stroke-width: 1.5;
+}
+.wt-rain-bar {
+  fill: var(--wt-rain);
+  opacity: 0.75;
+}
+.wt-rest-label {
+  font-family: var(--wt-font-data);
+  font-size: 9px;
+  fill: var(--wt-muted);
+}
+.wt-month-line {
+  stroke: #9fb3c4;
+  stroke-width: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-zoom-anim .leaflet-zoom-animated {
+    transition: none !important;
+  }
+}
+
+/* Help page: one readable column, scrolls on its own (the app shell is fixed height). */
+.wt-help-link {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--wt-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.wt-help-link:hover {
+  color: var(--wt-ink);
+}
+.wt-help-page {
+  height: 100%;
+  overflow-y: auto;
+  padding-inline: 20px;
+  padding-block: 32px 64px;
+}
+.wt-help-header,
+.wt-help-toc,
+.wt-help {
+  max-width: 44rem;
+  margin-inline: auto;
+}
+.wt-help-lede {
+  margin-top: 0.75rem;
+  font-size: 1.1rem;
+  color: var(--wt-muted);
+  text-wrap: balance;
+}
+.wt-help-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin-top: 1.5rem;
+  padding-block: 0.75rem;
+  border-block: 1px solid var(--wt-line);
+  font-size: 0.85rem;
+}
+.wt-help-toc a {
+  color: var(--wt-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--wt-line);
+  text-underline-offset: 3px;
+}
+.wt-help-toc a:hover {
+  text-decoration-color: var(--wt-accent);
+}
+.wt-help section {
+  padding-top: 2rem;
+  scroll-margin-top: 1rem;
+}
+.wt-help h2 {
+  font-family: var(--wt-font-display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+}
+.wt-help p,
+.wt-help li {
+  line-height: 1.6;
+  max-width: 65ch;
+}
+.wt-help p {
+  margin-top: 0.75rem;
+}
+.wt-help ul {
+  margin-top: 0.75rem;
+  padding-left: 1.2rem;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.wt-help a {
+  color: var(--wt-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.wt-help-defs {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.wt-help-defs > div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.6rem 0.75rem;
+  background: #fff;
+  border: 1px solid var(--wt-line);
+  border-radius: 6px;
+}
+.wt-help-defs dt {
+  font-family: var(--wt-font-data);
+  font-weight: 500;
+}
+.wt-help-table {
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.wt-help-table th,
+.wt-help-table td {
+  padding: 0.35rem 1.25rem 0.35rem 0;
+  border-bottom: 1px solid var(--wt-line);
+  text-align: left;
+}
+.wt-help-table th {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wt-muted);
+  font-weight: 500;
+}
+.wt-help-table td {
+  font-family: var(--wt-font-data);
+}
+@media (max-width: 480px) {
+  .wt-help-defs > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+}
+/* stylelint-enable */
