@@ -10,21 +10,18 @@ import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
 import type { RainMetric, TempMetric } from 'forkcast/services/planner';
 import type { RainThreshold } from 'forkcast/utils/climate';
-import { MONTHS, tempSwatch } from 'forkcast/utils/climate';
+import { MONTHS } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
   fmtKm,
-  fmtPct,
   fmtShortDate,
   fmtTemp,
-  fmtWeekday,
 } from 'forkcast/utils/format';
 import { not } from 'forkcast/utils/helpers';
 import { LIMITS } from 'forkcast/utils/settings';
 import { LAST_WEEK } from 'forkcast/utils/weeks';
 import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
-import type { TripDay } from 'forkcast/utils/itinerary';
 import Logo from 'forkcast/components/logo';
 import HelpLink from 'forkcast/components/help-link';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
@@ -131,20 +128,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
     };
   }
 
-  get dayRows() {
-    return (this.trip?.days ?? []).map((d) => ({
-      d,
-      date: fmtShortDate(d.date),
-      weekday: fmtWeekday(d.date),
-      km: d.isRest ? 'rest' : `${Math.round(d.distance)}`,
-      high: fmtTemp(d.weather.high),
-      low: fmtTemp(d.nightLow),
-      rain: fmtPct(d.weather.rainChance),
-      color: tempSwatch(d.weather.high),
-      isActive: d.n === this.planner.highlightedDay,
-    }));
-  }
-
   onWeekInput = (value: string) => this.planner.set('week', Number(value));
   setTempMetric = (v: TempMetric) => this.planner.set('tempMetric', v);
   setRainMetric = (v: RainMetric) => this.planner.set('rainMetric', v);
@@ -161,7 +144,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
   setStart = (v: string) => this.planner.setStart(v);
   setLimited = (key: keyof typeof LIMITS, v: string) =>
     this.planner.setLimited(key, v);
-  selectDay = (d: TripDay) => this.planner.toggleDay(d);
 
   startDrawing = () => {
     this.drawnName = '';
@@ -523,49 +505,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
             {{/if}}{{/if}}
         </section>
 
-        {{#if this.trip}}
-          {{#if this.showOverview}}
-            <section
-              aria-labelledby="h-days"
-              class="wt-sec-days flex flex-col gap-2"
-            >
-              <h2 id="h-days" class="wt-h2">Day by day</h2>
-              <div class="wt-days" role="table" aria-label="Days of the trip">
-                <div role="row" class="wt-days-head">
-                  <span role="columnheader">Day</span>
-                  <span role="columnheader">Date</span>
-                  <span role="columnheader" class="text-right">km</span>
-                  <span role="columnheader" class="text-right">High</span>
-                  <span role="columnheader" class="text-right">Night</span>
-                  <span role="columnheader" class="text-right">Rain</span>
-                </div>
-                {{#each this.dayRows as |row|}}
-                  <div
-                    role="row"
-                    tabindex="0"
-                    class="wt-days-row
-                      {{if row.isActive 'is-active'}}
-                      {{if row.d.isRest 'is-rest'}}"
-                    {{on "click" (fn this.selectDay row.d)}}
-                  >
-                    <span role="cell">{{row.d.n}}</span>
-                    <span role="cell"><span
-                        class="wt-muted"
-                      >{{row.weekday}}</span>
-                      {{row.date}}</span>
-                    <span role="cell" class="text-right">{{row.km}}</span>
-                    <span role="cell" class="text-right"><span
-                        class="wt-chip"
-                        style={{css "background: " row.color}}
-                      ></span>{{row.high}}</span>
-                    <span role="cell" class="text-right">{{row.low}}</span>
-                    <span role="cell" class="text-right">{{row.rain}}</span>
-                  </div>
-                {{/each}}
-              </div>
-            </section>
-          {{/if}}
-        {{/if}}
       </div>
     </aside>
   </template>

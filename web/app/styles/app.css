@@ -8,7 +8,7 @@
 @source '../../node_modules/@frontile';
 @source '../../node_modules/frontile';
 
-/* Layout: a working tool. Left panel for settings and the day list, the map
+/* Layout: a working tool. Left panel for settings and the trip summary, the map
    fills the rest, and the day-by-day weather strip sits under the map. */
 :root {
   --wt-ink: #17212b;
@@ -211,7 +211,7 @@ body {
   color: var(--wt-muted);
 }
 /* The panel's section headings are full-width bands, so each section
-   (climate, route, trip, day by day) reads as its own block. */
+   (climate, route, trip) reads as its own block. */
 .wt-panel-scroll .wt-h2 {
   margin-inline: -1.25rem;
   padding: 0.45rem 1.25rem;
@@ -434,10 +434,7 @@ body {
   outline-offset: 4px;
   border-radius: 4px;
 }
-.wt-month-name:focus-visible,
-.wt-route:focus-visible,
-.wt-days-row:focus-visible,
-.wt-day:focus-visible {
+.wt-scroll:focus-visible {
   outline: 2px solid var(--wt-accent);
   outline-offset: 1px;
 }
@@ -617,49 +614,6 @@ body {
   font-weight: 500;
 }
 
-/* Day list */
-.wt-days {
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-}
-.wt-days-head,
-.wt-days-row {
-  display: grid;
-  grid-template-columns: 2.2rem minmax(0, 1fr) 2.6rem 3.2rem 2.8rem 2.8rem;
-  gap: 0.25rem;
-  padding: 0.3rem 0.4rem;
-  align-items: center;
-}
-.wt-days-head {
-  color: var(--wt-muted);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--wt-line);
-}
-.wt-days-row {
-  cursor: pointer;
-  border-bottom: 1px solid color-mix(in srgb, var(--wt-line) 60%, transparent);
-  font-family: var(--wt-font-data);
-}
-.wt-days-row:hover {
-  background: var(--wt-accent-soft);
-}
-.wt-days-row.is-active {
-  background: var(--wt-ink);
-  color: #fff;
-}
-.wt-days-row.is-active .wt-muted {
-  color: #c9d2da;
-}
-.wt-days-row.is-rest {
-  background-image: repeating-linear-gradient(
-    135deg,
-    transparent 0 6px,
-    rgb(23 33 43 / 5%) 6px 7px
-  );
-}
-
 /* Chart */
 .wt-scroll {
   scrollbar-width: thin;
@@ -675,6 +629,15 @@ body {
   font-family: var(--wt-font-data);
   font-size: 10px;
   fill: var(--wt-muted);
+}
+.wt-day-num {
+  font-family: var(--wt-font-data);
+  font-size: 9px;
+  fill: var(--wt-muted);
+}
+.wt-day.is-active .wt-day-num {
+  fill: var(--wt-ink);
+  font-weight: 600;
 }
 .wt-day {
   cursor: pointer;

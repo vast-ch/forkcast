@@ -243,8 +243,9 @@ export default class Help extends Component {
           <p>
             In the chart, each bar runs from the night low to the day high and
             is coloured by the high. The blue bar underneath is the chance of a
-            rainy day. Shaded columns are rest days. Click a day, in the chart
-            or in the day list, to show its stretch on the map.
+            rainy day, and under it the day's number. Shaded columns are rest
+            days. Click a day, or focus the chart and use the arrow keys, to see
+            its numbers and its stretch on the map.
           </p>
         </section>
 

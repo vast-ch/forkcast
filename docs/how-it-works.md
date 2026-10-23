@@ -49,7 +49,7 @@ truth, visible in the address bar.
 
 Below 900 px wide (`web/app/services/media.ts`) the planner switches layout
 instead of squeezing the sidebar: a slim bar (logo, continent, help, Settings),
-the map, then the trip (summary, day chart, day list). All settings (month,
+the map, then the trip (day chart, then summary). All settings (month,
 layers, route, trip) live in a Frontile Drawer opened from the bar; it is the same `SidePanel` component rendering only its settings part, which also says which continent is loaded. Tapping the route
 selects a day: touch screens have no hover, so the map works out what is under
 the tap before handling it. Drawing a route closes the drawer and shows a
@@ -60,6 +60,12 @@ is shortened to one line with a link to the help page's sources.
 the settings are changed now and then. Leaflet's own z-indexes are contained
 (`isolation: isolate` on the map's section) so the drawer and the bar stay on
 top.
+
+## The day chart
+
+Under the map, one column per day: a bar from the night low to the day high, coloured by the high, the chance of a rainy day under it, the day number and a date every week. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
+
+**Why:** a list of days repeated what the chart shows, and on a phone it was a long scroll. The selected day's figures sit above the chart.
 
 ## The map
 

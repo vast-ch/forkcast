@@ -4,6 +4,7 @@
 
 ### Changed
 
+- The day list is gone: the chart under the map now shows each day's number, and you pick a day there, by clicking or with the arrow keys. The selected day's distance, climbing and weather appear above the chart.
 - A new trip starts today instead of on 1 January.
 - Picking a start date selects the trip's first day, so the chart, the map and its week start there.
 - Clicking an overnight stop on the map now also moves the map to that day's week, as picking the day in the chart or the list already did.

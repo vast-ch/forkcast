@@ -20,6 +20,7 @@ const TOP = 14;
 const TEMP_H = 110;
 const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
+const NUMS = 12; // row of day numbers under the rain band
 const AXIS = 18;
 const LEFT = 34;
 
@@ -65,7 +66,7 @@ export default class ItineraryChart extends Component<{
   }
 
   get height() {
-    return TOP + TEMP_H + GAP + RAIN_H + AXIS;
+    return TOP + TEMP_H + GAP + RAIN_H + NUMS + AXIS;
   }
 
   get rainTop() {
@@ -79,8 +80,12 @@ export default class ItineraryChart extends Component<{
     }));
   }
 
+  get numY() {
+    return this.rainTop + RAIN_H + 10;
+  }
+
   get axisY() {
-    return this.rainTop + RAIN_H + 13;
+    return this.rainTop + RAIN_H + NUMS + 13;
   }
 
   get gridLines() {
@@ -141,6 +146,41 @@ export default class ItineraryChart extends Component<{
 
   select = (day: TripDay) => this.planner.toggleDay(day);
 
+  /** What a screen reader says for the selected day. */
+  get valueText() {
+    const d = this.detail;
+    if (!d) return 'No day selected';
+    const w = d.weather;
+    return `${this.detailTitle}, ${this.detailRoute}, high ${fmtTemp(w.high)}, night ${fmtTemp(d.nightLow)}, rain chance ${fmtPct(w.rainChance)}`;
+  }
+
+  /** Arrow keys step through the days (Home and End jump to the ends). */
+  onKey = (e: KeyboardEvent) => {
+    const days = this.args.trip.days;
+    const now = this.planner.highlightedDay ?? 0;
+    const n =
+      e.key === 'ArrowRight' || e.key === 'ArrowUp'
+        ? now + 1
+        : e.key === 'ArrowLeft' || e.key === 'ArrowDown'
+          ? now - 1
+          : e.key === 'Home'
+            ? 1
+            : e.key === 'End'
+              ? days.length
+              : undefined;
+    if (n === undefined) return;
+    e.preventDefault();
+    const day = days[Math.min(days.length, Math.max(1, n)) - 1];
+    if (!day) return;
+    this.planner.highlightDay(day);
+    // Keep the day's column in view.
+    const el = e.currentTarget as HTMLElement;
+    const x = LEFT + (day.n - 1) * COL;
+    if (x < el.scrollLeft + LEFT) el.scrollLeft = x - LEFT;
+    else if (x + COL > el.scrollLeft + el.clientWidth)
+      el.scrollLeft = x + COL - el.clientWidth + 8;
+  };
+
   half = COL / 2;
   barW = COL - 6;
   colW = COL;
@@ -150,6 +190,7 @@ export default class ItineraryChart extends Component<{
     <div class="flex min-h-0 flex-col gap-2" ...attributes>
       <div
         class="flex min-h-[2.75rem] flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+        aria-hidden="true"
       >
         {{#if this.detail}}
           <div class="min-w-0">
@@ -170,12 +211,26 @@ export default class ItineraryChart extends Component<{
           </dl>
         {{/if}}
       </div>
-      <div class="wt-scroll overflow-x-auto overflow-y-hidden">
+      {{! The chart is the way to pick a day: click a column, or focus it and
+          step through the days with the arrow keys. }}
+      {{! A slider's content is presentational by definition; the drawing is
+          aria-hidden and the selected day is read out as the value. }}
+      {{! template-lint-disable require-presentational-children }}
+      <div
+        class="wt-scroll overflow-x-auto overflow-y-hidden"
+        role="slider"
+        tabindex="0"
+        aria-label="Day of the trip (expected temperatures and rain for each day)"
+        aria-valuemin="1"
+        aria-valuemax={{@trip.days.length}}
+        aria-valuenow={{this.planner.highlightedDay}}
+        aria-valuetext={{this.valueText}}
+        {{on "keydown" this.onKey}}
+      >
         <svg
           width={{this.width}}
           height={{this.height}}
-          role="img"
-          aria-label="Expected temperatures and rain for each day of the trip"
+          aria-hidden="true"
           class="block"
         >
           {{#each this.gridLines as |g|}}
@@ -217,7 +272,7 @@ export default class ItineraryChart extends Component<{
             >{{tick.label}}</text>
           {{/each}}
           {{#each this.bars as |b|}}
-            {{! Mouse shortcut only; the day table in the side panel is the accessible way to pick a day. }}
+            {{! Clicking a column picks its day; keyboards use the slider above. }}
             {{! template-lint-disable no-invalid-interactive }}
             <g
               class="wt-day
@@ -269,6 +324,13 @@ export default class ItineraryChart extends Component<{
                   rx="1"
                 />
               {{/if}}
+              <text
+                x={{b.x}}
+                dx={{this.half}}
+                y={{this.numY}}
+                text-anchor="middle"
+                class="wt-day-num"
+              >{{b.day.n}}</text>
               {{#if b.label}}
                 <text
                   x={{b.x}}
