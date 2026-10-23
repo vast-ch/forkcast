@@ -7,9 +7,10 @@ import { DEFAULTS, SETTING_KEYS } from 'forkcast/utils/settings';
  * only while it differs from the default declared here. The planner service
  * reads and writes these; components go through the planner.
  */
-export default class ContinentController extends Controller {
+export default class IndexController extends Controller {
   queryParams = SETTING_KEYS;
 
+  @tracked continent = DEFAULTS.continent;
   @tracked month = DEFAULTS.month;
   @tracked temp = DEFAULTS.temp;
   @tracked heat = DEFAULTS.heat;
@@ -29,6 +30,6 @@ export default class ContinentController extends Controller {
 
 declare module '@ember/controller' {
   interface Registry {
-    continent: ContinentController;
+    index: IndexController;
   }
 }

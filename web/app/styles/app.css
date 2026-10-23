@@ -235,6 +235,34 @@ body {
   font-family: var(--wt-font-body);
   font-size: 12px;
 }
+/* Continents not loaded yet: light shapes in the picker's colours, clickable. */
+.wt-other {
+  fill-opacity: 0.35;
+  stroke: #fff;
+  stroke-opacity: 0.7;
+  cursor: pointer;
+}
+.wt-other:hover {
+  fill-opacity: 0.6;
+}
+.wt-other-europe {
+  fill: #8fb3d9;
+}
+.wt-other-africa {
+  fill: #e3b26b;
+}
+.wt-other-asia {
+  fill: #d98f8f;
+}
+.wt-other-north-america {
+  fill: #9cc59a;
+}
+.wt-other-south-america {
+  fill: #c3a3d6;
+}
+.wt-other-oceania {
+  fill: #7fc4bd;
+}
 .wt-land {
   fill: var(--wt-land);
 }
@@ -728,95 +756,4 @@ body {
   }
 }
 
-/* Continent picker: a world map */
-.wt-picker {
-  height: 100%;
-  overflow-y: auto;
-  padding-inline: 20px;
-  padding-block: 40px 48px;
-}
-.wt-picker-header,
-.wt-world,
-.wt-world-list {
-  max-width: 72rem;
-  margin-inline: auto;
-}
-.wt-world {
-  margin-top: 2rem;
-}
-.wt-world svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  background: var(--wt-sea);
-  border-radius: 8px;
-}
-.wt-world-other {
-  fill: #c3ccd3;
-}
-.wt-world-link path {
-  fill: var(--wt-land);
-  stroke: var(--wt-paper);
-  stroke-width: 0.15;
-  transition: fill 120ms;
-  cursor: pointer;
-}
-/* One muted colour per continent; the hovered one darkens and gets an outline. */
-.wt-world-link[data-continent="europe"] path {
-  fill: #8fb3d9;
-}
-.wt-world-link[data-continent="africa"] path {
-  fill: #e3b26b;
-}
-.wt-world-link[data-continent="asia"] path {
-  fill: #d98f8f;
-}
-.wt-world-link[data-continent="north-america"] path {
-  fill: #9cc59a;
-}
-.wt-world-link[data-continent="south-america"] path {
-  fill: #c3a3d6;
-}
-.wt-world-link[data-continent="oceania"] path {
-  fill: #7fc4bd;
-}
-.wt-world-link.is-hovered path,
-.wt-world-link:focus-visible path {
-  filter: brightness(0.78) saturate(1.3);
-  stroke: var(--wt-ink);
-  stroke-width: 0.3;
-}
-.wt-world-link:focus-visible {
-  outline: none;
-}
-.wt-world-caption {
-  margin-top: 0.75rem;
-  min-height: 1.6rem;
-  font-family: var(--wt-font-display);
-  font-weight: 700;
-  font-size: 1.2rem;
-  text-align: center;
-}
-.wt-world-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.4rem 1.25rem;
-  margin-top: 0.75rem;
-  font-size: 0.9rem;
-}
-.wt-world-list a {
-  color: var(--wt-ink);
-  text-decoration: underline;
-  text-decoration-color: var(--wt-line);
-  text-underline-offset: 3px;
-}
-.wt-world-list a:hover {
-  text-decoration-color: var(--wt-accent);
-}
-@media (prefers-reduced-motion: reduce) {
-  .wt-world-link path {
-    transition: none;
-  }
-}
 /* stylelint-enable */

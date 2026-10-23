@@ -2,7 +2,7 @@ import Service, { service } from '@ember/service';
 import { cached, tracked } from '@glimmer/tracking';
 import { TrackedArray } from 'tracked-built-ins';
 import type AtlasService from './atlas';
-import type ContinentController from 'forkcast/controllers/continent';
+import type IndexController from 'forkcast/controllers/index';
 import type { DayClimate, RainThreshold } from 'forkcast/utils/climate';
 import { planTrip, type Trip, type TripDay } from 'forkcast/utils/itinerary';
 import {
@@ -53,8 +53,8 @@ export interface RouteChoice {
 export default class PlannerService extends Service {
   @service declare atlas: AtlasService;
 
-  /** Set by the continent route; undefined outside it. */
-  @tracked qp?: ContinentController;
+  /** Set by the index route (the planner); undefined outside it. */
+  @tracked qp?: IndexController;
 
   // Interaction (not in the URL)
   @tracked hover?: Hover;
@@ -71,6 +71,16 @@ export default class PlannerService extends Service {
   ): void {
     if (this.qp)
       (this.qp as unknown as Record<SettingKey, unknown>)[key] = value;
+  }
+
+  /** Continent whose climate is loaded; changing it loads that continent. */
+  get continent(): string {
+    return this.read('continent');
+  }
+  set continent(id: string) {
+    this.write('continent', id);
+    this.write('route', '');
+    this.write('day', 0);
   }
 
   /** Map month, 0–11 */

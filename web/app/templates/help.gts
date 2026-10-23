@@ -23,15 +23,7 @@ export default class Help extends Component {
     {{pageTitle "How it works · Forkcast"}}
     <div class="wt-help-page">
       <header class="wt-help-header">
-        {{#if this.atlas.continent}}
-          <LinkTo
-            @route="continent"
-            @model={{this.atlas.continent.id}}
-            class="wt-help-link"
-          >← Back to the map</LinkTo>
-        {{else}}
-          <LinkTo @route="index" class="wt-help-link">← Back to the map</LinkTo>
-        {{/if}}
+        <LinkTo @route="index" class="wt-help-link">← Back to the map</LinkTo>
         <h1 class="wt-logo-heading mt-3"><LinkTo
             @route="index"
             aria-label="Forkcast home"
@@ -63,9 +55,11 @@ export default class Help extends Component {
             top of it: the dot's area grows with the month's rainfall, or with
             the number of rainy days if you switch to that. When you zoom out,
             neighbouring dots merge into one showing their average, so they stay
-            readable. Point at the map to read the averages for that spot; point
-            at your route to see the day you would be there and the weather
-            expected on that date.
+            readable. Forkcast opens on Europe; the other continents are drawn
+            as light shapes, and clicking one loads its climate (a one-off
+            download of 1–5 MB). Point at the map to read the averages for that
+            spot; point at your route to see the day you would be there and the
+            weather expected on that date.
           </p>
         </section>
 

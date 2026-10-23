@@ -8,6 +8,8 @@ export function nextJanuary(today = new Date()): string {
 }
 
 export const DEFAULTS = {
+  /** Continent whose climate is loaded; Europe is loaded by default */
+  continent: 'europe',
   /** Month shown on the map, 1–12 */
   month: 1,
   /** Temperature shown: day high or night low */

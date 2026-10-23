@@ -21,11 +21,8 @@ split by continent and kept compact.
 
 ## What gets downloaded, and when
 
-1. **On start:** the code, `manifest.json` (the continents and their preset
-   routes, a few kB) and `world.json` (the picker map, ~120 kB).
-2. **When a continent is opened:** its climate grid (`climate.bin` +
-   `climate.json`) and borders (`countries.json`), from about 1 MB (South
-   America, Oceania) up to several MB (Asia), before compression.
+1. **On start:** the code, `manifest.json` (the continents and their preset routes, a few kB), `world.json` (one outline per continent, ~120 kB) and Europe's climate grid and borders (1.2 MB gzipped). The app opens straight on the planner; there is no separate start page.
+2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.7 to 4.8 MB gzipped. The other continents are drawn from `world.json` as light, clickable shapes until then.
 3. **When a route is picked:** that route's track (`routes/<id>.json`).
 
 Every data file is imported through `web/app/utils/assets.ts`, so the
@@ -33,19 +30,13 @@ production build gives it a content-hashed name (`climate-BRovctLk.bin`). nginx
 serves everything under `/assets/` with `Cache-Control: max-age=31536000,
 immutable` and `index.html` with `no-cache`.
 
-**Why:** a changed file gets a new name, so browsers can keep files for a year
-without ever showing stale data, and a new release is picked up as soon as the
-page itself reloads. Only the continent you use is downloaded.
+**Why:** a changed file gets a new name, so browsers can keep files for a year without ever showing stale data, and a new release is picked up as soon as the page itself reloads. Only the continent you use is downloaded. Europe is preloaded because the preset routes are there; anyone else is one click away from their own continent.
 
 ## Settings live in the URL
 
-Every setting (month, layers, rainy-day threshold, route, start date, km per
-day, ride/rest pattern, direction, highlighted day) is a query parameter of
-the continent route. `web/app/controllers/continent.ts` declares them with
+Every setting (continent, month, layers, rainy-day threshold, route, start date, km per day, ride/rest pattern, direction, highlighted day) is a query parameter of the app's single planner route (`/`). `web/app/controllers/index.ts` declares them with
 their defaults (`web/app/utils/settings.ts`); Ember writes a parameter to the
-URL only while it differs from its default. Your own drawn or imported route
-is in the URL too, polyline-encoded with elevation and simplified to at most
-600 points.
+URL only while it differs from its default. Your own drawn or imported route is in the URL too, polyline-encoded with elevation and simplified to at most 600 points. The continent is a query parameter rather than a path (`/?continent=asia`, left out for Europe): changing it re-runs the route's model hook, which loads that continent's data.
 
 **Why:** a bookmark or a shared link reopens exactly the same plan, reloads
 lose nothing, and there is no account or storage to manage. Defaults are left
@@ -57,8 +48,7 @@ truth, visible in the address bar.
 Below 900 px wide (`web/app/services/media.ts`) the planner switches layout
 instead of squeezing the sidebar: a slim bar (logo, continent, help, Settings),
 the map, then the trip (summary, day chart, day list). All settings (month,
-layers, route, trip) live in a Frontile Drawer opened from the bar; it is the
-same `SidePanel` component rendering only its settings part. Tapping the route
+layers, route, trip) live in a Frontile Drawer opened from the bar; it is the same `SidePanel` component rendering only its settings part, which also says which continent is loaded. Tapping the route
 selects a day: touch screens have no hover, so the map works out what is under
 the tap before handling it. Drawing a route closes the drawer and shows a
 floating toolbar on the map (points, Undo, Save, Cancel). The map attribution
@@ -128,7 +118,7 @@ top.
 
 | Path | What |
 |---|---|
-| `web/app/routes/`, `web/app/templates/` | `index` (world-map picker), `continent` (the planner), `help` |
+| `web/app/routes/`, `web/app/templates/` | `index` (the planner, at `/`), `help` |
 | `web/app/services/atlas.ts` | loads the manifest, continents and route tracks |
 | `web/app/services/planner.ts` | all planner state, read from and written to the URL |
 | `web/app/components/wheel-map.gts` | the Leaflet map |

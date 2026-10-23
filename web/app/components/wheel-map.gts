@@ -37,6 +37,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   layers: {
     borders?: L.GeoJSON;
     land?: L.GeoJSON;
+    others?: L.LayerGroup;
     temp?: L.ImageOverlay;
     rain?: L.LayerGroup;
     routes?: L.LayerGroup;
@@ -93,6 +94,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         '<span class="wt-attr-short">Contains modified Copernicus C3S information 2026 · CRU · EuroVelo (ODbL) · © OpenStreetMap · <a href="/help#sources">Sources</a></span>',
     );
     map.createPane('land').style.zIndex = '200';
+    map.createPane('others').style.zIndex = '210';
     map.createPane('climate').style.zIndex = '300';
     map.createPane('rain').style.zIndex = '350';
     map.createPane('borders').style.zIndex = '380';
@@ -157,7 +159,9 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     const atlas = this.owner!.atlas;
     const grid = atlas.climate;
 
-    if (atlas.countries && !this.layers.land) {
+    if (atlas.countries && this.changed('countries', atlas.countries)) {
+      this.layers.land?.remove();
+      this.layers.borders?.remove();
       this.layers.land = L.geoJSON(atlas.countries, {
         pane: 'land',
         interactive: false,
@@ -170,8 +174,40 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }).addTo(map);
     }
 
+    // The other continents: plain shapes that load their climate on click.
+    if (
+      atlas.world &&
+      this.changed(
+        'others',
+        `${atlas.continent?.id}-${atlas.continents.length}`,
+      )
+    ) {
+      this.layers.others?.remove();
+      const group = L.layerGroup();
+      for (const c of atlas.continents) {
+        if (c.id === atlas.continent?.id) continue;
+        const rings = worldRings(atlas.world[c.id] ?? '');
+        if (!rings.length) continue;
+        const mb = (c.gzipBytes / 1e6).toFixed(1);
+        L.polygon(rings, {
+          pane: 'others',
+          className: `wt-other wt-other-${c.id}`,
+          weight: 1,
+        })
+          .bindTooltip(`${c.name}: click to load its climate (${mb} MB)`, {
+            sticky: true,
+            direction: 'top',
+          })
+          .on('click', () => {
+            if (!this.owner?.planner.isDrawing) this.owner?.loadContinent(c.id);
+          })
+          .addTo(group);
+      }
+      this.layers.others = group.addTo(map);
+    }
+
     if (grid) {
-      const tempKey = `${s.month}-${s.tempMetric}-${s.showTemp}`;
+      const tempKey = `${atlas.continent?.id}-${s.month}-${s.tempMetric}-${s.showTemp}`;
       if (this.changed('temp', tempKey)) {
         this.layers.temp?.remove();
         this.layers.temp = undefined;
@@ -188,7 +224,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         }
       }
       const block = this.rainBlock(grid.step);
-      const rainKey = `${s.month}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
+      const rainKey = `${atlas.continent?.id}-${s.month}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
       if (this.changed('rain', rainKey)) {
         this.layers.rain?.remove();
         this.layers.rain = undefined;
@@ -328,6 +364,25 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   }
 }
 
+/**
+ * Rings of a continent from world.json, whose SVG paths use x = lon + 180 and
+ * y = 90 − lat ("M x,y L x,y … Z" per ring).
+ */
+function worldRings(d: string): [number, number][][] {
+  return d
+    .split('M')
+    .filter(Boolean)
+    .map((ring) =>
+      ring
+        .replace('Z', '')
+        .split('L')
+        .map((pt) => {
+          const [x, y] = pt.split(',').map(Number);
+          return [90 - y!, x! - 180] as [number, number];
+        }),
+    );
+}
+
 function element(map: L.Map): HTMLElement {
   return map.getContainer();
 }
@@ -403,6 +458,10 @@ export default class WheelMap extends Component<WheelMapSignature> {
       }
     }
     this.planner.hover = { lat, lon, month, onRoute };
+  };
+
+  loadContinent = (id: string) => {
+    this.planner.continent = id;
   };
 
   onLeave = () => {

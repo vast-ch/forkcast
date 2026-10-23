@@ -12,8 +12,8 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 
 ## Web app structure
 
-- Routes: `index` is the continent picker (world map), `continent` (`/:continent_id`) is the planner (map, panel, chart), `help` is the help page (`app/templates/help.gts`) where explanations of the data and calculations live; keep the planner UI free of long notes.
-- Settings live in the URL: `app/controllers/continent.ts` declares them as query parameters with defaults from `app/utils/settings.ts` (Ember omits defaults from the URL); `planner.ts` reads and writes them. Add a new setting in both places. No localStorage.
+- Routes: `index` (`/`) is the planner (map, panel, chart) and opens on Europe; other continents load when clicked on the map (`?continent=…`). `help` is the help page (`app/templates/help.gts`) where explanations of the data and calculations live; keep the planner UI free of long notes.
+- Settings live in the URL: `app/controllers/index.ts` declares them as query parameters with defaults from `app/utils/settings.ts` (Ember omits defaults from the URL); `planner.ts` reads and writes them. Add a new setting in both places. No localStorage.
 - Data files are imported through `app/utils/assets.ts` (`import.meta.glob` over `/data-out`, the mounted `data/out`), never fetched by fixed path, so they get hashed names and can be cached for a year.
 - `app/services/atlas.ts` loads the manifest and picker map first, a continent's climate grid and borders when it is opened, and a route's track when it is picked.
 - `app/services/planner.ts` is the single place components get state from; derived `route` and `trip` are `@cached`.
