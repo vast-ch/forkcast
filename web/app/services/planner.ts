@@ -209,9 +209,15 @@ export default class PlannerService extends Service {
     if (inLimits(key, v)) this.write(key, v);
   }
 
-  /** Set the trip's first day from a date input; anything else is ignored. */
+  /**
+   * Set the trip's first day from a date input (anything else is ignored),
+   * and select that first day, so the chart and the map start there.
+   */
   setStart(value: string): void {
-    if (isIsoDate(value)) this.start = value;
+    if (!isIsoDate(value)) return;
+    this.start = value;
+    const first = this.trip?.days[0];
+    if (first) this.highlightDay(first);
   }
 
   // --- Trip days --------------------------------------------------------------

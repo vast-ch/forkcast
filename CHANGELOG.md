@@ -5,6 +5,8 @@
 ### Changed
 
 - A new trip starts today instead of on 1 January.
+- Picking a start date selects the trip's first day, so the chart, the map and its week start there.
+- Clicking an overnight stop on the map now also moves the map to that day's week, as picking the day in the chart or the list already did.
 - The overnight stops along your route have a glowing purple ring, and the stretch of the day you pick on the map is the same purple, so both stand out on every temperature colour.
 
 ## v0.2.0 - 2026-10-23
