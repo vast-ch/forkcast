@@ -6,7 +6,8 @@ import { fn } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
 import { pageTitle } from 'ember-page-title';
 import type RouterService from '@ember/routing/router-service';
-import type AtlasService from 'wheelther/services/atlas';
+import type AtlasService from 'forkcast/services/atlas';
+import Logo from 'forkcast/components/logo';
 
 /** The continent picker: a clickable world map. */
 export default class IndexTemplate extends Component {
@@ -46,11 +47,11 @@ export default class IndexTemplate extends Component {
   };
 
   <template>
-    {{pageTitle "Wheelther"}}
+    {{pageTitle "Forkcast"}}
     <div class="wt-picker">
       <header class="wt-picker-header">
         <div class="flex items-baseline justify-between gap-3">
-          <h1 class="wt-logo">Wheel<span>ther</span></h1>
+          <h1 class="wt-logo-heading"><Logo /></h1>
           <LinkTo @route="help" class="wt-help-link">How it works</LinkTo>
         </div>
         <p class="wt-help-lede">What the weather usually does along your bike

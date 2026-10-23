@@ -22,6 +22,7 @@
   --wt-accent-soft: #dcefef;
   --wt-rain: #112f6e;
   --wt-danger: #b42318;
+  --wt-sun: #f2b632;
   --wt-font-display:
     "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --wt-font-body:
@@ -86,13 +87,28 @@ body {
 
 /* Type */
 .wt-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   font-family: var(--wt-font-display);
   font-weight: 800;
   font-size: 2rem;
   line-height: 1;
   letter-spacing: -0.03em;
+  color: var(--wt-ink);
 }
-.wt-logo span {
+.wt-logo-mark {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+}
+.wt-logo-sun {
+  fill: var(--wt-sun);
+}
+.wt-logo-fork {
+  stroke: var(--wt-ink);
+}
+.wt-logo-cast {
   color: var(--wt-accent);
   font-weight: 500;
 }
@@ -226,6 +242,29 @@ body {
 }
 
 /* Routes */
+.wt-reverse {
+  display: inline-grid;
+  place-items: center;
+  width: 2.6rem;
+  flex: none;
+  border: 1px solid var(--wt-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--wt-ink);
+  cursor: pointer;
+}
+.wt-reverse:hover {
+  border-color: var(--wt-ink);
+}
+.wt-reverse.is-active {
+  background: var(--wt-ink);
+  border-color: var(--wt-ink);
+  color: #fff;
+}
+.wt-reverse:focus-visible {
+  outline: 2px solid var(--wt-accent);
+  outline-offset: 1px;
+}
 .wt-empty {
   padding: 0.6rem 0.75rem;
   border: 1px dashed var(--wt-line);
@@ -455,6 +494,10 @@ body {
 .wt-rain-bar {
   fill: var(--wt-rain);
   opacity: 0.75;
+}
+.wt-axis-title {
+  font-family: var(--wt-font-body);
+  font-size: 11px;
 }
 .wt-rest-label {
   font-family: var(--wt-font-data);
