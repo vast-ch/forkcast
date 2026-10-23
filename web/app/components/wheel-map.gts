@@ -38,7 +38,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     borders?: L.GeoJSON;
     land?: L.GeoJSON;
     others?: L.LayerGroup;
-    temp?: L.ImageOverlay;
+    temp?: L.LayerGroup;
     rain?: L.LayerGroup;
     routes?: L.LayerGroup;
     stops?: L.LayerGroup;
@@ -79,7 +79,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       attributionControl: true,
       doubleClickZoom: false,
     });
-    const bbox = this.owner?.atlas.continent?.bbox;
+    const bbox = this.owner?.atlas.loaded[0]?.continent.bbox;
     if (bbox) {
       map.fitBounds([
         [bbox[1], bbox[0]],
@@ -157,35 +157,35 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     this.lastState = s;
     const map = this.map!;
     const atlas = this.owner!.atlas;
-    const grid = atlas.climate;
+    const loaded = atlas.loaded;
+    const ids = atlas.loadedIds.join(',');
 
-    if (atlas.countries && this.changed('countries', atlas.countries)) {
+    if (this.changed('countries', ids)) {
       this.layers.land?.remove();
       this.layers.borders?.remove();
-      this.layers.land = L.geoJSON(atlas.countries, {
+      const features = loaded.flatMap((l) => l.countries.features);
+      const all = { type: 'FeatureCollection' as const, features };
+      this.layers.land = L.geoJSON(all, {
         pane: 'land',
         interactive: false,
         style: { stroke: false, fillOpacity: 1, className: 'wt-land' },
       }).addTo(map);
-      this.layers.borders = L.geoJSON(atlas.countries, {
+      this.layers.borders = L.geoJSON(all, {
         pane: 'borders',
         interactive: false,
         style: { weight: 0.8, fill: false, className: 'wt-border' },
       }).addTo(map);
     }
 
-    // The other continents: plain shapes that load their climate on click.
+    // Continents not shown yet: plain shapes that add their climate on click.
     if (
       atlas.world &&
-      this.changed(
-        'others',
-        `${atlas.continent?.id}-${atlas.continents.length}`,
-      )
+      this.changed('others', `${ids}-${atlas.continents.length}`)
     ) {
       this.layers.others?.remove();
       const group = L.layerGroup();
       for (const c of atlas.continents) {
-        if (c.id === atlas.continent?.id) continue;
+        if (atlas.loadedIds.includes(c.id)) continue;
         const rings = worldRings(atlas.world[c.id] ?? '');
         if (!rings.length) continue;
         const mb = (c.gzipBytes / 1e6).toFixed(1);
@@ -194,7 +194,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           className: `wt-other wt-other-${c.id}`,
           weight: 1,
         })
-          .bindTooltip(`${c.name}: click to load its climate (${mb} MB)`, {
+          .bindTooltip(`${c.name}: click to add its climate (${mb} MB)`, {
             sticky: true,
             direction: 'top',
           })
@@ -206,25 +206,32 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       this.layers.others = group.addTo(map);
     }
 
-    if (grid) {
-      const tempKey = `${atlas.continent?.id}-${s.month}-${s.tempMetric}-${s.showTemp}`;
+    if (loaded.length) {
+      const grids = loaded.map((l) => l.climate);
+      const tempKey = `${ids}-${s.month}-${s.tempMetric}-${s.showTemp}`;
       if (this.changed('temp', tempKey)) {
         this.layers.temp?.remove();
         this.layers.temp = undefined;
         if (s.showTemp) {
-          const r = temperatureRaster(
-            grid,
-            s.month,
-            s.tempMetric as 'high' | 'low',
-          );
-          this.layers.temp = L.imageOverlay(r.url, r.bounds, {
-            pane: 'climate',
-            interactive: false,
-          }).addTo(map);
+          // One image per continent; cells an earlier one covers are left out.
+          const group = L.layerGroup();
+          grids.forEach((g, k) => {
+            const r = temperatureRaster(
+              g,
+              s.month,
+              s.tempMetric as 'high' | 'low',
+              grids.slice(0, k),
+            );
+            L.imageOverlay(r.url, r.bounds, {
+              pane: 'climate',
+              interactive: false,
+            }).addTo(group);
+          });
+          this.layers.temp = group.addTo(map);
         }
       }
-      const block = this.rainBlock(grid.step);
-      const rainKey = `${atlas.continent?.id}-${s.month}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
+      const block = this.rainBlock(grids[0]!.step);
+      const rainKey = `${ids}-${s.month}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
       if (this.changed('rain', rainKey)) {
         this.layers.rain?.remove();
         this.layers.rain = undefined;
@@ -234,24 +241,27 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             padding: 0.3,
           }));
           const group = L.layerGroup();
-          for (const d of rainDots(
-            grid,
-            s.month,
-            s.rainMetric as 'mm' | 'days',
-            s.rainThreshold,
-            block,
-          )) {
-            L.circle([d.lat, d.lon], {
-              radius: d.radius,
-              renderer,
-              interactive: false,
-              color: '#ffffff',
-              opacity: 0.5,
-              weight: 0.8,
-              fillColor: '#112f6e',
-              fillOpacity: 0.6,
-            }).addTo(group);
-          }
+          grids.forEach((g, k) => {
+            for (const d of rainDots(
+              g,
+              s.month,
+              s.rainMetric as 'mm' | 'days',
+              s.rainThreshold,
+              block,
+              grids.slice(0, k),
+            )) {
+              L.circle([d.lat, d.lon], {
+                radius: d.radius,
+                renderer,
+                interactive: false,
+                color: '#ffffff',
+                opacity: 0.5,
+                weight: 0.8,
+                fillColor: '#112f6e',
+                fillOpacity: 0.6,
+              }).addTo(group);
+            }
+          });
           this.layers.rain = group.addTo(map);
         }
       }
@@ -461,7 +471,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
   };
 
   loadContinent = (id: string) => {
-    this.planner.continent = id;
+    this.planner.addContinent(id);
   };
 
   onLeave = () => {

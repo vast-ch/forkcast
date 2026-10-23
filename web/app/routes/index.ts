@@ -8,12 +8,12 @@ import { DEFAULTS, SETTING_KEYS } from 'forkcast/utils/settings';
 
 /**
  * Settings change the URL in place, without piling up browser history.
- * Changing the continent loads its data, so it re-runs the model hook.
+ * Changing the continents loads their data, so it re-runs the model hook.
  */
 const QUERY_PARAMS = Object.fromEntries(
   SETTING_KEYS.map((k) => [
     k,
-    k === 'continent'
+    k === 'continents'
       ? { replace: true, refreshModel: true }
       : { replace: true },
   ]),
@@ -25,13 +25,12 @@ export default class IndexRoute extends Route {
 
   queryParams = QUERY_PARAMS;
 
-  async model(params: { continent?: string }) {
-    const id = params.continent || DEFAULTS.continent;
-    // An unknown continent in a link falls back to Europe.
-    return (
-      (await this.atlas.openContinent(id)) ??
-      (await this.atlas.openContinent(DEFAULTS.continent))
-    );
+  async model(params: { continents?: string }) {
+    const ids = (params.continents || DEFAULTS.continents).split(',');
+    const shown = await this.atlas.show(ids);
+    // A link with only unknown continents falls back to Europe.
+    if (shown.length === 0) await this.atlas.show([DEFAULTS.continents]);
+    return this.atlas.loadedIds;
   }
 
   setupController(

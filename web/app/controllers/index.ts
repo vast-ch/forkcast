@@ -10,7 +10,7 @@ import { DEFAULTS, SETTING_KEYS } from 'forkcast/utils/settings';
 export default class IndexController extends Controller {
   queryParams = SETTING_KEYS;
 
-  @tracked continent = DEFAULTS.continent;
+  @tracked continents = DEFAULTS.continents;
   @tracked month = DEFAULTS.month;
   @tracked temp = DEFAULTS.temp;
   @tracked heat = DEFAULTS.heat;

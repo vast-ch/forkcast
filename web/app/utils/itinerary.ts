@@ -1,8 +1,7 @@
 // Splits a route into riding days and rest days, and attaches the expected
 // weather for each day from the climate normals.
 
-import type ClimateGrid from './climate';
-import type { DayClimate } from './climate';
+import type { ClimateSource, DayClimate } from './climate';
 import { climbBetween, pointAt, type Route, type RoutePoint } from './route';
 
 export interface TripSettings {
@@ -60,7 +59,7 @@ export function addDays(date: Date, n: number): Date {
 
 export function planTrip(
   route: Route,
-  climate: ClimateGrid,
+  climate: ClimateSource,
   settings: TripSettings,
 ): Trip {
   const total = route.points[route.points.length - 1]?.km ?? 0;

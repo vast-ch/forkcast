@@ -43,11 +43,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
     return this.part === 'all';
   }
 
-  /** Rendered in the phone settings drawer. */
-  get isDrawer() {
-    return this.part === 'settings';
-  }
-
   get showSettings() {
     return this.part !== 'overview';
   }
@@ -249,24 +244,12 @@ export default class SidePanel extends Component<SidePanelSignature> {
               ><Logo /></LinkTo></h1>
             <LinkTo @route="help" class="wt-help-link">How it works</LinkTo>
           </div>
-          <p class="wt-muted mt-2 text-xs">Climate loaded for
-            <span
-              class="font-medium text-[var(--wt-ink)]"
-            >{{this.atlas.continent.name}}</span>. Click another continent on
-            the map to load it.</p>
         </header>
       {{/if}}
 
       <div
         class="wt-panel-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6"
       >
-        {{#if this.isDrawer}}
-          <p class="wt-muted text-xs">Climate loaded for
-            <span
-              class="font-medium text-[var(--wt-ink)]"
-            >{{this.atlas.continent.name}}</span>. Click another continent on
-            the map to load it.</p>
-        {{/if}}
         {{#if this.showSettings}}
           <section
             aria-labelledby="h-month"

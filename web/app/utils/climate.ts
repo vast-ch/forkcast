@@ -114,7 +114,7 @@ function decoder(header: ClimateHeader, v: ClimateVar): (x: number) => number {
   return (x) => x / scale;
 }
 
-export default class ClimateGrid {
+export default class ClimateGrid implements ClimateSource {
   readonly source: string;
   readonly years: [number, number];
   readonly cols: number;
@@ -372,4 +372,77 @@ export function tempRgb(t: number): [number, number, number] {
 export function tempColor(t: number): string {
   const [r, g, b] = tempRgb(t);
   return `rgb(${Math.round(r)} ${Math.round(g)} ${Math.round(b)})`;
+}
+
+/** What the trip planner and the map read from: one grid or several combined. */
+export interface ClimateSource {
+  readonly years: [number, number];
+  covers(lat: number, lon: number): boolean;
+  month(
+    month: number,
+    lat: number,
+    lon: number,
+    threshold: number,
+    ele?: number | null,
+  ): DayClimate;
+  on(
+    date: Date,
+    lat: number,
+    lon: number,
+    threshold: number,
+    ele?: number | null,
+  ): DayClimate;
+}
+
+const NO_DATA: DayClimate = {
+  high: Number.NaN,
+  low: Number.NaN,
+  rainMm: Number.NaN,
+  rainChance: Number.NaN,
+  monthRainMm: Number.NaN,
+  monthWetDays: Number.NaN,
+  altitudeShift: 0,
+};
+
+/**
+ * Several loaded continents as one climate. Every continent is cut from the
+ * same worldwide grid, so where two overlap their values are identical: a
+ * point is answered by the first grid that has data there.
+ */
+export class ClimateSet implements ClimateSource {
+  constructor(readonly grids: ClimateGrid[]) {}
+
+  get years(): [number, number] {
+    return this.grids[0]?.years ?? [2011, 2025];
+  }
+
+  private gridAt(lat: number, lon: number): ClimateGrid | undefined {
+    return this.grids.find((g) => g.covers(lat, lon));
+  }
+
+  covers(lat: number, lon: number): boolean {
+    return this.gridAt(lat, lon) !== undefined;
+  }
+
+  month(
+    month: number,
+    lat: number,
+    lon: number,
+    threshold: number,
+    ele?: number | null,
+  ): DayClimate {
+    return (
+      this.gridAt(lat, lon)?.month(month, lat, lon, threshold, ele) ?? NO_DATA
+    );
+  }
+
+  on(
+    date: Date,
+    lat: number,
+    lon: number,
+    threshold: number,
+    ele?: number | null,
+  ): DayClimate {
+    return this.gridAt(lat, lon)?.on(date, lat, lon, threshold, ele) ?? NO_DATA;
+  }
 }

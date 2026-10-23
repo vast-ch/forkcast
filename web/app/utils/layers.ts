@@ -12,6 +12,19 @@ const toY = (lat: number) =>
 const toLat = (y: number) =>
   (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * (180 / Math.PI);
 
+/** Does `g` have its own land cell at this point? */
+function hasCell(
+  g: ClimateGrid,
+  v: 'tmx' | 'tmn' | 'pre',
+  month: number,
+  lat: number,
+  lon: number,
+): boolean {
+  const row = Math.round((g.lat0 - lat) / g.step);
+  const col = Math.round((lon - g.lon0) / g.step);
+  return !Number.isNaN(g.cell(v, month, row, col));
+}
+
 export interface Raster {
   url: string;
   bounds: [[number, number], [number, number]];
@@ -31,6 +44,8 @@ export function temperatureRaster(
   grid: ClimateGrid,
   month: number,
   metric: TempMetric,
+  /** Grids drawn before this one: cells they cover are left to them. */
+  earlier: ClimateGrid[] = [],
 ): Raster {
   const f = frame(grid, 12);
   const canvas = document.createElement('canvas');
@@ -48,6 +63,7 @@ export function temperatureRaster(
       // Inside a land cell only (no coastal extrapolation), bilinear between land cells.
       const own = grid.cell(v, month, Math.round(fy), Math.round(fx));
       if (Number.isNaN(own)) continue;
+      if (earlier.some((g) => hasCell(g, v, month, lat, lon))) continue;
       const t = grid.sample(v, month, lat, lon);
       const [r, g, b] = tempRgb(t);
       const i = (py * f.width + px) * 4;
@@ -85,6 +101,8 @@ export function rainDots(
   threshold: number,
   /** Merge block × block cells into one dot (their average), for zoomed-out views */
   block = 1,
+  /** Grids drawn before this one: their area is left to them. */
+  earlier: ClimateGrid[] = [],
 ): RainDot[] {
   // A dot fills its block at 250 mm/month or 20 rainy days.
   const full = metric === 'mm' ? 250 : 20;
@@ -94,12 +112,20 @@ export function rainDots(
       ? grid.cell('pre', month, row, col)
       : grid.cellRainyDays(month, row, col, threshold);
   const dots: RainDot[] = [];
-  for (let r0 = 0; r0 < grid.rows; r0 += block) {
-    for (let c0 = 0; c0 < grid.cols; c0 += block) {
+  // Blocks are aligned to the worldwide grid, not to this continent's corner,
+  // so neighbouring continents merge cells into the same pattern of dots.
+  const rowStart = -(Math.round((90 - grid.lat0) / grid.step) % block);
+  const colStart = -(Math.round((grid.lon0 + 180) / grid.step) % block);
+  for (let r0 = rowStart; r0 < grid.rows; r0 += block) {
+    for (let c0 = colStart; c0 < grid.cols; c0 += block) {
       let sum = 0;
       let n = 0;
-      for (let r = r0; r < Math.min(grid.rows, r0 + block); r++) {
-        for (let c = c0; c < Math.min(grid.cols, c0 + block); c++) {
+      for (let r = Math.max(0, r0); r < Math.min(grid.rows, r0 + block); r++) {
+        for (
+          let c = Math.max(0, c0);
+          c < Math.min(grid.cols, c0 + block);
+          c++
+        ) {
           const v = value(r, c);
           if (!Number.isNaN(v)) {
             sum += v;
@@ -112,11 +138,13 @@ export function rainDots(
       const val = sum / n;
       if (val <= 0) continue;
       const lat = grid.lat0 - (r0 + (block - 1) / 2) * grid.step;
+      const lonC = grid.lon0 + (c0 + (block - 1) / 2) * grid.step;
+      if (earlier.some((g) => hasCell(g, 'pre', month, lat, lonC))) continue;
       const half =
         (cellM * block * Math.min(1, Math.cos((lat * Math.PI) / 180))) / 2;
       dots.push({
         lat,
-        lon: grid.lon0 + (c0 + (block - 1) / 2) * grid.step,
+        lon: lonC,
         radius: half * Math.sqrt(Math.min(1.3, val / full)) * 0.85,
       });
     }

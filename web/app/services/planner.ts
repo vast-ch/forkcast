@@ -47,7 +47,7 @@ export interface RouteChoice {
 }
 
 /**
- * All planner state. Settings are stored in the continent controller's query
+ * All planner state. Settings are stored in the index controller's query
  * parameters (so they live in the URL); everything else here is transient.
  */
 export default class PlannerService extends Service {
@@ -73,14 +73,15 @@ export default class PlannerService extends Service {
       (this.qp as unknown as Record<SettingKey, unknown>)[key] = value;
   }
 
-  /** Continent whose climate is loaded; changing it loads that continent. */
-  get continent(): string {
-    return this.read('continent');
+  /** Continents whose climate is shown, in the order they were added. */
+  get continents(): string[] {
+    return this.read('continents').split(',').filter(Boolean);
   }
-  set continent(id: string) {
-    this.write('continent', id);
-    this.write('route', '');
-    this.write('day', 0);
+
+  /** Show another continent as well (loads its data). */
+  addContinent(id: string): void {
+    if (this.continents.includes(id)) return;
+    this.write('continents', [...this.continents, id].join(','));
   }
 
   /** Map month, 0–11 */
@@ -199,14 +200,14 @@ export default class PlannerService extends Service {
     };
   }
 
-  /** Everything the route picker offers on this continent. */
+  /** Everything the route picker offers on the loaded continents. */
   @cached
   get choices(): RouteChoice[] {
     const own = this.ownRoute;
     return own ? [...this.atlas.presets, own] : this.atlas.presets;
   }
 
-  /** The selected route id, falling back to the continent's first preset. */
+  /** The selected route id, falling back to the first preset of the loaded continents. */
   get routeId(): string {
     const id = this.read('route');
     if (id && this.choices.some((r) => r.id === id)) return id;
