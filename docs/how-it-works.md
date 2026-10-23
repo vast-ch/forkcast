@@ -38,7 +38,7 @@ immutable` and `index.html` with `no-cache`.
 
 Every setting (continent, month, layers, rainy-day threshold, route, start date, km per day, ride/rest pattern, direction, highlighted day) is a query parameter of the app's single planner route (`/`). `web/app/controllers/index.ts` declares them with
 their defaults (`web/app/utils/settings.ts`); Ember writes a parameter to the
-URL only while it differs from its default. Your own drawn or imported route is in the URL too, polyline-encoded with elevation and simplified to at most 600 points. The shown continents are a query parameter rather than a path (`/?continents=europe,asia`, left out when it is just Europe): changing it re-runs the route's model hook, which loads what is missing. The map month defaults to the current month.
+URL only while it differs from its default. Your own drawn or imported route is in the URL too, polyline-encoded with elevation and simplified to at most 600 points. The shown continents are a query parameter rather than a path (`/?continents=europe,asia`, left out when it is just Europe): changing it re-runs the route's model hook, which loads what is missing. The map's time of year is a quarter-month (`week`, 1–48, see `web/app/utils/weeks.ts`), defaulting to the current one; quarter-months keep the familiar month grid and line up with the monthly data. In the sidebar it is a one-line carousel of months, each with four segments; ‹ › and the arrow keys step a week, and the chosen month scrolls to the centre.
 
 **Why:** a bookmark or a shared link reopens exactly the same plan, reloads
 lose nothing, and there is no account or storage to manage. Defaults are left
@@ -83,9 +83,28 @@ top.
 - **Between grid cells:** bilinear interpolation of the four surrounding cell
   centres. A point near the coast uses only land cells; just off the coast it
   falls back to the nearest land cell.
-- **Between months:** each month's average is treated as its mid-month value
-  and dates in between are blended linearly. Without this, every 1st of the
-  month would jump.
+- **Through the year:** when a continent loads, every cell's twelve
+  monthly values are turned into a smooth seasonal curve: the yearly mean plus
+  three harmonics (12-, 6- and 4-month waves), 7 numbers per value instead of
+  12. Rain is fitted as mm per day and rainy days as the share of days, so
+  months of different lengths compare fairly; results are clamped to
+  0 … 1 / ≥ 0. A monthly average flattens each wave a little compared with
+  its value at mid-month (by sin(πk/12)/(πk/12) for the k-th wave), so the
+  fitted waves are scaled back up by that factor; otherwise peaks would come
+  out too mild. Any day of the year then has its own value (`ClimateGrid.at`).
+  The previous version blended linearly between mid-month values, which left
+  kinks every month in the trip and whole-month steps on the map.
+- **Why curves and not weekly tables:** 52 weekly layers would make every
+  download about four times bigger, and the temperatures would not be more
+  real for it: the only fast temperature source is monthly (see
+  data/README.md). The curves cost nothing to download and make every value
+  continuous.
+- **The trade-off:** the curve cannot change faster than its shortest wave
+  (4 months), so sharp seasonal edges are softened; a monsoon that starts
+  within two weeks appears to start over about a month. The better fix for
+  rain is weekly totals and rainy-day counts computed from the daily ERA5-Land
+  data at build time (the daily rain is already downloaded), smoothed lightly
+  and fitted with more harmonics. That is not done yet.
 - **Altitude:** when a point's height is known, high and low are shifted by the month's lapse rate (4.4–6.8 °C per 1,000 m, smaller in winter) for the difference between the point and the cell's mean height. A constant 6.5 °C/km over-warmed winter valleys; see data/README.md for the measured comparison.
 - **Rainy days:** read from the counted layers (≥ 1, 5, 10 mm). The chance
   that a day is rainy is the month's rainy days divided by its length.

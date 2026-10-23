@@ -55,12 +55,14 @@ export default class Help extends Component {
             top of it: the dot's area grows with the month's rainfall, or with
             the number of rainy days if you switch to that. When you zoom out,
             neighbouring dots merge into one showing their average, so they stay
-            readable. Forkcast opens on Europe and the current month; the other
-            continents are drawn as light shapes, and clicking one adds its
-            climate (a one-off download of 1–5 MB). You can show several at
-            once, for a trip that crosses from one into another. Point at the
-            map to read the averages for that spot; point at your route to see
-            the day you would be there and the weather expected on that date.
+            readable. Forkcast opens on Europe and the current week (choose
+            another in the strip of months: each month has four segments, about
+            a week each); the other continents are drawn as light shapes, and
+            clicking one adds its climate (a one-off download of 1–5 MB). You
+            can show several at once, for a trip that crosses from one into
+            another. Point at the map to read the averages for that spot; point
+            at your route to see the day you would be there and the weather
+            expected on that date.
           </p>
         </section>
 
@@ -130,10 +132,14 @@ export default class Help extends Component {
                 average of the four surrounding grid points, closer ones
                 counting more. Over the sea there is no data; near the coast
                 only the land points are used.</dd></div>
-            <div><dt>Between months</dt><dd>Each month's average counts as the
-                value in the middle of that month, and dates in between are
-                blended, so 1 February is about half January, half February.
-                Without this, the weather would jump on the 1st of each month.</dd></div>
+            <div><dt>Through the year</dt><dd>The data comes as twelve monthly
+                averages. Forkcast draws a smooth curve through them for every
+                place: the yearly average plus three gentle waves (12, 6 and 4
+                months long). Every day then gets its own value, so the weather
+                changes gradually instead of jumping from one month to the next,
+                and the map can show any quarter of a month (roughly a week).
+                Rain is smoothed as a daily rate and rainy days as the share of
+                days, so short and long months compare fairly.</dd></div>
             <div><dt>Your trip's days</dt><dd>A riding day's high and rain are
                 taken in the middle of that day's stretch, where you spend most
                 of the riding hours. The night low is taken at the end of the
@@ -180,6 +186,15 @@ export default class Help extends Component {
               sets the level of highs and lows from weather stations. Where
               stations are sparse (deserts, high mountains, parts of Africa,
               Asia and South America) it is less certain.</li>
+            <li><strong>Smoothing is a trade-off.</strong>
+              The curve cannot change faster than its shortest wave, about four
+              months. Sharp seasonal edges get softened: a rainy season that
+              starts within two weeks is shown starting more gently, spread over
+              a month or so, and a short dry or cold spell typical of one part
+              of a month is blurred into its neighbours. For temperatures this
+              costs little (the seasons change smoothly); for rain in monsoon or
+              Mediterranean climates the exact start and end of the wet season
+              can be off by a couple of weeks.</li>
             <li><strong>Days in UTC.</strong>
               Rain is counted in days from midnight to midnight UTC, which
               shifts the day by an hour or two in Europe. It hardly changes

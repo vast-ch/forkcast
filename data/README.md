@@ -181,6 +181,16 @@ app's first version used it alone; now it calibrates ERA5-Land.
   in. The files get content-hashed names in the app build and are cached by
   browsers for a year.
 
+### Monthly values, smooth in the app
+
+The grids hold monthly values; the app fits a smooth seasonal curve through
+them per cell (see docs/how-it-works.md, "Through the year"), so the map can
+show quarter-months and every trip day gets its own value without bigger
+downloads. Known trade-off: sharp seasonal edges, such as the start of a
+monsoon, are softened. Improvement left for later: compute weekly rain totals
+and rainy-day counts from the daily rain already in `cache/era5land/` and
+store those (or their seasonal-curve coefficients) instead of monthly rain.
+
 ### Period
 
 2011–2025: 15 years is long enough to average out unusual years and recent
