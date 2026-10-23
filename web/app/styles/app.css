@@ -672,6 +672,16 @@ body {
   stroke: #9fb3c4;
   stroke-width: 1;
 }
+/* Written along the month line; the halo keeps it readable over the bars. */
+.wt-month-name {
+  font-family: var(--wt-font-data);
+  font-size: 9px;
+  fill: var(--wt-muted);
+  stroke: var(--wt-paper);
+  stroke-width: 3px;
+  paint-order: stroke;
+  pointer-events: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .leaflet-zoom-anim .leaflet-zoom-animated {

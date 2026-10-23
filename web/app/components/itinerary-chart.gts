@@ -4,7 +4,7 @@ import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 import type PlannerService from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
-import { tempSwatch } from 'forkcast/utils/climate';
+import { MONTHS, tempSwatch } from 'forkcast/utils/climate';
 import {
   css,
   fmtDayTitle,
@@ -45,7 +45,8 @@ interface Bar {
   color: string;
   rainH: number;
   isHighlighted: boolean;
-  monthStart: boolean;
+  /** Set on the first day of a month after the trip's first: its name, for the line before it */
+  monthStart?: string;
 }
 
 export default class ItineraryChart extends Component<{
@@ -83,6 +84,19 @@ export default class ItineraryChart extends Component<{
     return TOP + TEMP_H + GAP;
   }
 
+  /** Month names start at the foot of the temperature band and read upwards. */
+  get months() {
+    const y = TOP + TEMP_H;
+    return this.bars
+      .filter((b) => b.monthStart)
+      .map((b) => ({
+        name: b.monthStart,
+        x: b.x,
+        y,
+        transform: `rotate(-90 ${b.x} ${y})`,
+      }));
+  }
+
   /** Horizontal lines with their axis labels: every 5° and the rain band's 0–100%. */
   get gridLines() {
     const [lo, hi] = this.range;
@@ -115,7 +129,9 @@ export default class ItineraryChart extends Component<{
         rainH,
         isHighlighted: this.planner.highlightedDay === day.n,
         monthStart:
-          prev !== undefined && prev.date.getMonth() !== day.date.getMonth(),
+          prev !== undefined && prev.date.getMonth() !== day.date.getMonth()
+            ? MONTHS[day.date.getMonth()]
+            : undefined,
       };
     });
   }
@@ -291,6 +307,16 @@ export default class ItineraryChart extends Component<{
                 rx="1"
               />
             </g>
+          {{/each}}
+          {{! On top of every column, so the next day's bar can't cover them. }}
+          {{#each this.months as |m|}}
+            <text
+              x={{m.x}}
+              y={{m.y}}
+              transform={{m.transform}}
+              dominant-baseline="central"
+              class="wt-month-name"
+            >{{m.name}}</text>
           {{/each}}
         </svg>
       </div>

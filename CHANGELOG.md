@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- The line in the day chart where a new month starts is labelled with the month's name, written along it.
+
 ## v0.3.0 - 2026-10-23
 
 ### Changed
