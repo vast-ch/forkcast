@@ -4,12 +4,13 @@ import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 import type PlannerService from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
-import { MONTHS, tempSwatch } from 'forkcast/utils/climate';
+import { tempSwatch } from 'forkcast/utils/climate';
 import {
   css,
   fmtDayTitle,
   fmtKm,
   fmtMm,
+  fmtMonth,
   fmtPct,
   fmtTemp,
 } from 'forkcast/utils/format';
@@ -130,7 +131,7 @@ export default class ItineraryChart extends Component<{
         isHighlighted: this.planner.highlightedDay === day.n,
         monthStart:
           prev !== undefined && prev.date.getMonth() !== day.date.getMonth()
-            ? MONTHS[day.date.getMonth()]
+            ? fmtMonth(day.date)
             : undefined,
       };
     });

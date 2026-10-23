@@ -27,6 +27,10 @@ export const fmtDate = (d: Date): string =>
 export const fmtShortDate = (d: Date): string =>
   d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
+/** The month's full name, e.g. "November". */
+export const fmtMonth = (d: Date): string =>
+  d.toLocaleDateString(undefined, { month: 'long' });
+
 /** "Day 3 · Sat 25 Oct" */
 export const fmtDayTitle = (d: { n: number; date: Date }): string =>
   `Day ${d.n} · ${fmtDate(d.date)}`;
