@@ -6,11 +6,11 @@ import { fn } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
 import { SegmentedControl } from 'frontile/buttons';
 import { Input, Switch } from 'frontile/forms';
-import type PlannerService from 'wheelther/services/planner';
-import type AtlasService from 'wheelther/services/atlas';
-import type { RainMetric, TempMetric } from 'wheelther/services/planner';
-import type { RainThreshold } from 'wheelther/utils/climate';
-import { MONTHS, tempColor } from 'wheelther/utils/climate';
+import type PlannerService from 'forkcast/services/planner';
+import type AtlasService from 'forkcast/services/atlas';
+import type { RainMetric, TempMetric } from 'forkcast/services/planner';
+import type { RainThreshold } from 'forkcast/utils/climate';
+import { MONTHS, tempColor } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
@@ -18,9 +18,11 @@ import {
   fmtPct,
   fmtShortDate,
   fmtTemp,
-} from 'wheelther/utils/format';
-import { gpxName, parseGpx, toGpx } from 'wheelther/utils/route';
-import type { TripDay } from 'wheelther/utils/itinerary';
+} from 'forkcast/utils/format';
+import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
+import type { TripDay } from 'forkcast/utils/itinerary';
+import Logo from 'forkcast/components/logo';
+import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 
 const eq = (a: unknown, b: unknown) => a === b;
 
@@ -115,6 +117,11 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
     if (key === 'isReversed') this.planner.set('highlightedDay', undefined);
   };
 
+  toggleReversed = () => {
+    this.planner.set('isReversed', !this.planner.isReversed);
+    this.planner.set('highlightedDay', undefined);
+  };
+
   selectRoute = (e: Event) => {
     void this.planner.selectRoute((e.target as HTMLSelectElement).value);
   };
@@ -206,7 +213,10 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
     <aside class="wt-panel flex min-h-0 flex-col" ...attributes>
       <header class="wt-brand px-5 pt-5 pb-4">
         <div class="flex items-baseline justify-between gap-3">
-          <h1 class="wt-logo">Wheel<span>ther</span></h1>
+          <h1 class="wt-logo-heading"><LinkTo
+              @route="index"
+              aria-label="Forkcast home"
+            ><Logo /></LinkTo></h1>
           <LinkTo @route="help" class="wt-help-link">How it works</LinkTo>
         </div>
         <p class="mt-2 flex items-baseline justify-between gap-3 text-sm">
@@ -287,26 +297,36 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
           <div class="flex flex-col gap-1.5">
             <label for="route-picker" class="sr-only">Route</label>
             {{#if this.groups.length}}
-              <div class="wt-select">
-                <span
-                  class="wt-route-swatch"
-                  style={{css
-                    "background: "
-                    (if this.selected this.selected.color "transparent")
-                  }}
-                ></span>
-                <select id="route-picker" {{on "change" this.selectRoute}}>
-                  {{#each this.groups as |g|}}
-                    <optgroup label={{g.label}}>
-                      {{#each g.routes as |r|}}
-                        <option
-                          value={{r.id}}
-                          selected={{r.isSelected}}
-                        >{{r.label}}</option>
-                      {{/each}}
-                    </optgroup>
-                  {{/each}}
-                </select>
+              <div class="flex items-stretch gap-2">
+                <div class="wt-select min-w-0 flex-1">
+                  <span
+                    class="wt-route-swatch"
+                    style={{css
+                      "background: "
+                      (if this.selected this.selected.color "transparent")
+                    }}
+                  ></span>
+                  <select id="route-picker" {{on "change" this.selectRoute}}>
+                    {{#each this.groups as |g|}}
+                      <optgroup label={{g.label}}>
+                        {{#each g.routes as |r|}}
+                          <option
+                            value={{r.id}}
+                            selected={{r.isSelected}}
+                          >{{r.label}}</option>
+                        {{/each}}
+                      </optgroup>
+                    {{/each}}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  class="wt-reverse {{if this.planner.isReversed 'is-active'}}"
+                  aria-pressed={{if this.planner.isReversed "true" "false"}}
+                  aria-label="Ride it the other way"
+                  title="Ride it the other way"
+                  {{on "click" this.toggleReversed}}
+                ><ArrowsDownUp class="size-5" aria-hidden="true" /></button>
               </div>
             {{else}}
               <p class="wt-empty">No preset routes here yet. Draw a route on the
@@ -392,12 +412,6 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
           {{#if this.importError}}
             <p class="wt-error text-sm" role="alert">{{this.importError}}</p>
           {{/if}}
-          <Switch
-            @label="Ride it the other way"
-            @size="sm"
-            @isSelected={{this.planner.isReversed}}
-            @onChange={{fn this.toggle "isReversed"}}
-          />
         </section>
 
         <section aria-labelledby="h-trip" class="flex flex-col gap-3">

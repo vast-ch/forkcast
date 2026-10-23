@@ -2,9 +2,9 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
-import type PlannerService from 'wheelther/services/planner';
-import type { Trip, TripDay } from 'wheelther/utils/itinerary';
-import { tempColor } from 'wheelther/utils/climate';
+import type PlannerService from 'forkcast/services/planner';
+import type { Trip, TripDay } from 'forkcast/utils/itinerary';
+import { tempColor } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
@@ -13,12 +13,12 @@ import {
   fmtPct,
   fmtShortDate,
   fmtTemp,
-} from 'wheelther/utils/format';
+} from 'forkcast/utils/format';
 
 const COL = 18; // px per day
 const TOP = 14;
 const TEMP_H = 110;
-const GAP = 10;
+const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
 const AXIS = 18;
 const LEFT = 34;
@@ -70,6 +70,13 @@ export default class ItineraryChart extends Component<{
 
   get rainTop() {
     return TOP + TEMP_H + GAP;
+  }
+
+  get rainTicks() {
+    return [1, 0.5, 0].map((f) => ({
+      label: `${f * 100}%`,
+      y: this.rainTop + RAIN_H * (1 - f),
+    }));
   }
 
   get axisY() {
@@ -177,10 +184,6 @@ export default class ItineraryChart extends Component<{
                   this.detail.weather.rainMm
                 }}</dd></div>
           </dl>
-        {{else}}
-          <p class="wt-muted text-xs">Each bar is one day: from the night low to
-            the day high, coloured by the high. Below it, the chance of rain.
-            Shaded columns are rest days. Click a day to show it on the map.</p>
         {{/if}}
       </div>
       <div class="wt-scroll overflow-x-auto overflow-y-hidden">
@@ -207,21 +210,28 @@ export default class ItineraryChart extends Component<{
               class="wt-axis"
             >{{g.t}}°</text>
           {{/each}}
-          <line
-            x1={{this.left}}
-            x2={{this.width}}
-            y1={{this.rainTop}}
-            y2={{this.rainTop}}
-            class="wt-grid"
-          />
           <text
-            x="28"
+            x={{this.left}}
             y={{this.rainTop}}
-            dy="9"
-            text-anchor="end"
-            class="wt-axis"
-          >100%</text>
-          <text x="2" y={{this.axisY}} dy="-15" class="wt-axis">rain</text>
+            dy="-5"
+            class="wt-axis wt-axis-title"
+          >Chance of a rainy day (over {{this.planner.rainThreshold}} mm)</text>
+          {{#each this.rainTicks as |tick|}}
+            <line
+              x1={{this.left}}
+              x2={{this.width}}
+              y1={{tick.y}}
+              y2={{tick.y}}
+              class="wt-grid"
+            />
+            <text
+              x="28"
+              y={{tick.y}}
+              dy="3.5"
+              text-anchor="end"
+              class="wt-axis"
+            >{{tick.label}}</text>
+          {{/each}}
           {{#each this.bars as |b|}}
             {{! Mouse shortcut only; the day table in the side panel is the accessible way to pick a day. }}
             {{! template-lint-disable no-invalid-interactive }}
