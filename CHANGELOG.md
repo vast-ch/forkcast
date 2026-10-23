@@ -4,6 +4,7 @@
 
 ### Added
 
+- All preset routes are shown on the map as dashed lines; point at one to see its name, click it to plan it.
 - Better climate data: Forkcast now uses ERA5-Land from the European Copernicus programme, on a grid twice as fine (about 25 km). Rainy days are now counted from daily rain instead of estimated, and highs and lows are matched to weather-station measurements.
 - Temperatures along your route are corrected for altitude: a valley town or a mountain pass gets its own temperature instead of its area's average, with a smaller correction in winter, when cold air settles in valleys.
 - A new name and look: Wheelther is now **Forkcast**, with a logo (a bike fork with the sun between its legs) in the top left and as the browser tab icon.

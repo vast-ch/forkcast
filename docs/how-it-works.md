@@ -25,7 +25,7 @@ split by continent and kept compact.
 2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.7 to 4.8 MB gzipped, added to what is already shown. Continents not shown yet are drawn from `world.json` as light, clickable shapes.
 
 Continents add up rather than replace each other, because a trip can cross from one to another (Europe into Asia, say). They are all cut from the same worldwide grid, so where two overlap their values are identical: `ClimateSet` in `web/app/utils/climate.ts` answers each point from the first loaded continent that covers it, and the map draws overlapping cells only once (rain dots are grouped on the worldwide grid so the patterns line up).
-3. **When a route is picked:** that route's track (`routes/<id>.json`).
+3. **When a route is picked:** that route's full track (`routes/<id>.json`). Every other preset route is drawn dashed from `routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped, loaded at start), so the map shows what is available without downloading each track; clicking a dashed route selects it.
 
 Every data file is imported through `web/app/utils/assets.ts`, so the
 production build gives it a content-hashed name (`climate-BRovctLk.bin`). nginx

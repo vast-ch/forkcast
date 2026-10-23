@@ -38,6 +38,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     borders?: L.GeoJSON;
     land?: L.GeoJSON;
     others?: L.LayerGroup;
+    overview?: L.LayerGroup;
     temp?: L.LayerGroup;
     rain?: L.LayerGroup;
     routes?: L.LayerGroup;
@@ -98,6 +99,8 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     map.createPane('climate').style.zIndex = '300';
     map.createPane('rain').style.zIndex = '350';
     map.createPane('borders').style.zIndex = '380';
+    // Other routes: above the climate layers, below the selected route (400).
+    map.createPane('overview').style.zIndex = '390';
     map.getPane('borders')!.style.pointerEvents = 'none';
     map.getPane('climate')!.style.pointerEvents = 'none';
     map.getPane('rain')!.style.pointerEvents = 'none';
@@ -265,6 +268,41 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           this.layers.rain = group.addTo(map);
         }
       }
+    }
+
+    // Every preset route of the shown continents, dashed; click one to pick it.
+    const selectedId = s.route?.id;
+    if (
+      this.changed('overview', `${ids}-${selectedId}-${atlas.overview.length}`)
+    ) {
+      this.layers.overview?.remove();
+      const group = L.layerGroup();
+      const names = new Map(atlas.presets.map((r) => [r.id, r.name]));
+      for (const r of atlas.overview) {
+        if (r.id === selectedId || !atlas.loadedIds.includes(r.continent))
+          continue;
+        L.polyline(
+          r.lat.map((lat, i) => [lat, r.lon[i]!] as [number, number]),
+          {
+            pane: 'overview',
+            color: r.color,
+            weight: 2.5,
+            opacity: 0.75,
+            dashArray: '6 5',
+            className: 'wt-overview-route',
+          },
+        )
+          .bindTooltip(names.get(r.id) ?? r.id, {
+            sticky: true,
+            direction: 'top',
+          })
+          .on('click', () => {
+            if (!this.owner?.planner.isDrawing)
+              void this.owner?.planner.selectRoute(r.id);
+          })
+          .addTo(group);
+      }
+      this.layers.overview = group.addTo(map);
     }
 
     if (this.changed('route', s.route)) {

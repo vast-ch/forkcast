@@ -263,6 +263,13 @@ body {
 .wt-other-oceania {
   fill: #7fc4bd;
 }
+.wt-overview-route {
+  cursor: pointer;
+}
+.wt-overview-route:hover {
+  stroke-opacity: 1;
+  stroke-width: 4;
+}
 .wt-land {
   fill: var(--wt-land);
 }

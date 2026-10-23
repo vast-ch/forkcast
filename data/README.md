@@ -34,7 +34,7 @@ work after `data`).
 | Step | Reads | Writes |
 |---|---|---|
 | `borders` | `cache/borders/` | `out/<continent>/countries.json`, `out/world.json` |
-| `routes` | `eurovelo/`, `cache/brouter/`, `out/europe/countries.json` | `out/routes/<id>.json`, `out/routes/index.json` |
+| `routes` | `eurovelo/`, `cache/brouter/`, `out/europe/countries.json` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `out/<continent>/climate.bin` + `climate.json` |
 | `manifest` | everything above | `out/manifest.json` |

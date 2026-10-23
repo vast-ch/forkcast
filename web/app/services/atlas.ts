@@ -32,6 +32,14 @@ export interface Continent {
  * small and loads first; a continent's climate grid and borders load when it
  * is opened, and a route's track when it is picked.
  */
+export interface RouteOverview {
+  id: string;
+  continent: string;
+  color: string;
+  lat: number[];
+  lon: number[];
+}
+
 export interface LoadedContinent {
   continent: Continent;
   climate: ClimateGrid;
@@ -42,6 +50,8 @@ export default class AtlasService extends Service {
   @tracked continents: Continent[] = [];
   /** One SVG path per continent id (plus "other"), for the map's continent shapes */
   @tracked world?: Record<string, string>;
+  /** Every preset route simplified to ~1 km, for drawing them all on the map */
+  @tracked overview: RouteOverview[] = [];
   /** The continents whose data is shown, in the order they were added. */
   @tracked loaded: LoadedContinent[] = [];
   @tracked error?: string;
@@ -74,10 +84,12 @@ export default class AtlasService extends Service {
     this.#manifest ??= Promise.all([
       fetchJson<{ continents: Continent[] }>('manifest.json'),
       fetchJson<Record<string, string>>('world.json'),
+      fetchJson<{ routes: RouteOverview[] }>('routes/overview.json'),
     ]).then(
-      ([m, world]) => {
+      ([m, world, overview]) => {
         this.continents = m.continents;
         this.world = world;
+        this.overview = overview.routes;
       },
       (e: unknown) => {
         this.error = e instanceof Error ? e.message : String(e);
