@@ -3,7 +3,7 @@
 // re-projected rather than stretching the grid image.
 
 import type ClimateGrid from './climate';
-import { tempRgb } from './climate';
+import { DAYS_PER_MONTH, tempRgb } from './climate';
 import type { RainMetric, TempMetric } from 'forkcast/services/planner';
 
 const R = 6378137;
@@ -109,11 +109,11 @@ export function rainDots(
   // A dot fills its block at 250 mm/month or 20 rainy days.
   const full = metric === 'mm' ? 250 : 20;
   const cellM = (grid.step * Math.PI * 6371000) / 180;
-  // Rates at this moment, scaled to an average month (30.44 days).
+  // Rates at this moment, scaled to an average month.
   const value = (row: number, col: number) =>
-    metric === 'mm'
-      ? Math.max(0, grid.cellAt('pre', phase, row, col)) * 30.44
-      : grid.cellRainChanceAt(phase, row, col, threshold) * 30.44;
+    (metric === 'mm'
+      ? Math.max(0, grid.cellAt('pre', phase, row, col))
+      : grid.cellRainChanceAt(phase, row, col, threshold)) * DAYS_PER_MONTH;
   const dots: RainDot[] = [];
   // Blocks are aligned to the worldwide grid, not to this continent's corner,
   // so neighbouring continents merge cells into the same pattern of dots.

@@ -17,7 +17,7 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 - Data files are imported through `app/utils/assets.ts` (`import.meta.glob` over `/data-out`, the mounted `data/out`), never fetched by fixed path, so they get hashed names and can be cached for a year.
 - `app/services/atlas.ts` loads the manifest and picker map first, a continent's climate grid and borders when it is opened, and a route's track when it is picked.
 - `app/services/planner.ts` is the single place components get state from; derived `route` and `trip` are `@cached`.
-- `app/utils/climate.ts` samples the climate grid (bilinear in space, linear between mid-month values in time) and owns the temperature colour scale.
+- `app/utils/climate.ts` samples the climate grid (bilinear in space, a smooth seasonal curve in time) and owns the temperature colour scale.
 - `app/utils/itinerary.ts` splits a route into riding and rest days and attaches weather. `app/utils/route.ts` is geometry and GPX.
 - `app/components/wheel-map.gts` wraps Leaflet in a class modifier; `sync()` diffs the state and only rebuilds layers that changed. The temperature layer is rendered into a Web-Mercator canvas (`app/utils/layers.ts`); rain dots are metre-sized circles on a canvas renderer.
 - Frontile is used for Switch, SegmentedControl and Input. Buttons are plain `<button class="wt-btn">`. Frontile's Button rendered oversized here and its press handling didn't respond to plain clicks.

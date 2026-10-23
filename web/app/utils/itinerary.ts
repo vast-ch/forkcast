@@ -1,7 +1,7 @@
 // Splits a route into riding days and rest days, and attaches the expected
 // weather for each day from the climate normals.
 
-import type { ClimateSource, DayClimate } from './climate';
+import { climateOn, type ClimateSource, type DayClimate } from './climate';
 import { climbBetween, pointAt, type Route, type RoutePoint } from './route';
 
 export interface TripSettings {
@@ -80,13 +80,7 @@ export function planTrip(
     n++;
     if (isRest) {
       const here = pointAt(route.points, km);
-      const weather = climate.on(
-        date,
-        here.lat,
-        here.lon,
-        settings.rainThreshold,
-        here.ele,
-      );
+      const weather = climateOn(climate, date, here, settings.rainThreshold);
       days.push({
         n,
         date,
@@ -113,20 +107,8 @@ export function planTrip(
       distance: to - km,
       climb: climbBetween(route.points, km, to),
       sleep,
-      weather: climate.on(
-        date,
-        mid.lat,
-        mid.lon,
-        settings.rainThreshold,
-        mid.ele,
-      ),
-      nightLow: climate.on(
-        date,
-        sleep.lat,
-        sleep.lon,
-        settings.rainThreshold,
-        sleep.ele,
-      ).low,
+      weather: climateOn(climate, date, mid, settings.rainThreshold),
+      nightLow: climateOn(climate, date, sleep, settings.rainThreshold).low,
     });
     km = to;
   }

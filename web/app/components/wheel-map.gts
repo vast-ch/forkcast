@@ -9,7 +9,7 @@ import type PlannerService from 'forkcast/services/planner';
 import { dayAtKm, type Trip } from 'forkcast/utils/itinerary';
 import { temperatureRaster, rainDots } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
-import { tempColor } from 'forkcast/utils/climate';
+import { climateOn, tempColor } from 'forkcast/utils/climate';
 
 /** Ring around each night's stop: a vivid purple that stands out on every
  * temperature colour (it glows a little, see .wt-stop in app.css). */
@@ -507,13 +507,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
           point,
           day,
           weather: day
-            ? grid.on(
-                day.date,
-                point.lat,
-                point.lon,
-                this.planner.rainThreshold,
-                point.ele,
-              )
+            ? climateOn(grid, day.date, point, this.planner.rainThreshold)
             : undefined,
         };
       }
