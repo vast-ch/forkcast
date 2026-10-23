@@ -479,7 +479,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 </label>
                 <button
                   type="button"
-                  class="wt-btn is-ghost"
+                  class="wt-btn"
                   {{on "click" this.exportGpx}}
                 >Export GPX</button>
               </div>

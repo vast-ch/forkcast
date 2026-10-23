@@ -19,6 +19,7 @@
 - The rain bars under the day chart are now labelled: they show the chance of a rainy day (over your chosen amount), on a 0–100 % scale.
 - "Ride it the other way" is now a small button with up-down arrows next to the route picker.
 - The link to the help page is now a question-mark icon in the top corner.
+- Draw a route, Import GPX and Export GPX now look the same.
 - Days are simply the route cut into equal stretches of your daily distance; the nearby town names are gone.
 - Your own route is now kept in the page address instead of in the browser, one at a time. Drawing or importing a new one replaces it.
 - The app and its data now download once and are then kept by your browser for up to a year, so opening it again is fast. New releases are still picked up straight away.
