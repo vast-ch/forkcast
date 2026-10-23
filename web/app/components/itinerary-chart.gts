@@ -8,6 +8,7 @@ import type { Trip, TripDay } from 'forkcast/utils/itinerary';
 import { tempSwatch } from 'forkcast/utils/climate';
 import {
   css,
+  fmtDate,
   fmtDayTitle,
   fmtKm,
   fmtMm,
@@ -24,16 +25,19 @@ const RAIN_H = 34;
 const BOTTOM = 4;
 const LEFT = 34;
 
-/** Left edge of the column of day index `i`. */
-const colX = (i: number) => LEFT + i * COL;
+// Columns: 0 is the "before the trip" parking column, 1 … N are the days
+// (day n in column n), N + 1 is "after the trip".
 
-/** Keeps day `n`'s column in view however it was picked (chart, map, week slider). */
-const scrollToDay = modifier<{
+/** Left edge of column `c`. */
+const colX = (c: number) => LEFT + c * COL;
+
+/** Keeps the selected column in view however it was picked (chart, map, week slider). */
+const scrollToColumn = modifier<{
   Element: HTMLElement;
   Args: { Positional: [number | undefined] };
-}>((el, [n]) => {
-  if (!n) return;
-  const x = colX(n - 1);
+}>((el, [c]) => {
+  if (c === undefined) return;
+  const x = colX(c);
   if (x < el.scrollLeft + LEFT) el.scrollLeft = x - LEFT;
   else if (x + COL > el.scrollLeft + el.clientWidth)
     el.scrollLeft = x + COL - el.clientWidth + 8;
@@ -87,7 +91,42 @@ export default class ItineraryChart extends Component<{
   };
 
   get width() {
-    return LEFT + this.args.trip.days.length * COL + 8;
+    return colX(this.args.trip.days.length + 2) + 8;
+  }
+
+  /** The selected column: a day, or a parking column when the map's week is
+   * outside the trip. */
+  get column(): number | undefined {
+    const off = this.planner.offTrip;
+    if (off) return off === 'before' ? 0 : this.args.trip.days.length + 1;
+    return this.planner.highlightedDay;
+  }
+
+  /** The parking columns at both ends, for a week before or after the trip. */
+  get parking() {
+    const y = TOP + TEMP_H / 2;
+    return (['before', 'after'] as const).map((side) => {
+      const x = colX(side === 'before' ? 0 : this.args.trip.days.length + 1);
+      const cx = x + COL / 2;
+      return {
+        x,
+        cx,
+        y,
+        label: side === 'before' ? 'Before' : 'After',
+        transform: `rotate(-90 ${cx} ${y})`,
+        isActive: this.planner.offTrip === side,
+      };
+    });
+  }
+
+  /** Shown above the chart when the map's week is outside the trip. */
+  get offTripNote() {
+    const off = this.planner.offTrip;
+    if (!off) return '';
+    const days = this.args.trip.days;
+    return off === 'before'
+      ? `Before your trip, which starts on ${fmtDate(days[0]!.date)}`
+      : `After your trip, which ends on ${fmtDate(days[days.length - 1]!.date)}`;
   }
 
   get height() {
@@ -134,8 +173,8 @@ export default class ItineraryChart extends Component<{
       const rainH = noData ? 0 : day.weather.rainChance * RAIN_H;
       return {
         day,
-        x: colX(i),
-        barX: colX(i) + 3,
+        x: colX(day.n),
+        barX: colX(day.n) + 3,
         yHigh: this.y(high),
         barH: Math.max(2, this.y(low) - this.y(high)),
         rainY: this.rainTop + RAIN_H - rainH,
@@ -173,6 +212,8 @@ export default class ItineraryChart extends Component<{
   /** What a screen reader says for the selected day. */
   get valueText() {
     const d = this.detail;
+    if (this.offTripNote)
+      return `${this.planner.weekSlot.label}: ${this.offTripNote}`;
     if (!d) return 'No day selected';
     const w = d.weather;
     return `${this.detailTitle}, ${this.detailRoute}, high ${fmtTemp(w.high)}, night ${fmtTemp(d.nightLow)}, rain chance ${fmtPct(w.rainChance)}`;
@@ -184,7 +225,8 @@ export default class ItineraryChart extends Component<{
     const step = KEY_STEPS[e.key];
     if (!step) return;
     e.preventDefault();
-    const n = step(this.planner.highlightedDay ?? 0, days.length);
+    // From a parking column, the first step goes to the nearest day.
+    const n = step(this.column ?? 0, days.length);
     const day = days[Math.min(days.length, Math.max(1, n)) - 1];
     if (day) this.planner.highlightDay(day);
   };
@@ -193,6 +235,7 @@ export default class ItineraryChart extends Component<{
   barW = COL - 6;
   colW = COL;
   left = LEFT;
+  firstDayX = colX(1);
 
   <template>
     <div class="flex min-h-0 flex-col gap-2" ...attributes>
@@ -217,6 +260,11 @@ export default class ItineraryChart extends Component<{
                   this.detail.weather.rainMm
                 }}</dd></div>
           </dl>
+        {{else if this.offTripNote}}
+          <div class="min-w-0">
+            <p class="wt-title">{{this.planner.weekSlot.label}}</p>
+            <p class="wt-muted text-xs">{{this.offTripNote}}</p>
+          </div>
         {{/if}}
       </div>
       {{! The chart is the way to pick a day: click a column, or focus it and
@@ -234,7 +282,7 @@ export default class ItineraryChart extends Component<{
         aria-valuenow={{this.planner.highlightedDay}}
         aria-valuetext={{this.valueText}}
         {{on "keydown" this.onKey}}
-        {{scrollToDay this.planner.highlightedDay}}
+        {{scrollToColumn this.column}}
       >
         <svg
           width={{this.width}}
@@ -259,11 +307,30 @@ export default class ItineraryChart extends Component<{
             >{{g.label}}</text>
           {{/each}}
           <text
-            x={{this.left}}
+            x={{this.firstDayX}}
             y={{this.rainTop}}
             dy="-5"
             class="wt-axis wt-axis-title"
           >Chance of a rainy day (over {{this.planner.rainThreshold}} mm)</text>
+          {{#each this.parking as |p|}}
+            <g class="wt-park {{if p.isActive 'is-active'}}">
+              <rect
+                x={{p.x}}
+                y="0"
+                width={{this.colW}}
+                height={{this.height}}
+                class="wt-park-slot"
+              />
+              <text
+                x={{p.cx}}
+                y={{p.y}}
+                transform={{p.transform}}
+                text-anchor="middle"
+                dominant-baseline="central"
+                class="wt-park-label"
+              >{{p.label}}</text>
+            </g>
+          {{/each}}
           {{#each this.bars as |b|}}
             {{! Clicking a column picks its day; keyboards use the slider above. }}
             {{! template-lint-disable no-invalid-interactive }}

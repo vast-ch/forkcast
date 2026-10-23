@@ -672,6 +672,26 @@ body {
   stroke: #9fb3c4;
   stroke-width: 1;
 }
+/* The parking columns at both ends of the day chart: where the map's week is
+   when it lies before or after the trip. */
+.wt-park-slot {
+  fill: transparent;
+  stroke: var(--wt-line);
+  stroke-dasharray: 3 3;
+}
+.wt-park-label {
+  font-family: var(--wt-font-data);
+  font-size: 9px;
+  fill: var(--wt-muted);
+}
+.wt-park.is-active .wt-park-slot {
+  fill: rgb(160 32 240 / 14%);
+  stroke: var(--wt-pick);
+}
+.wt-park.is-active .wt-park-label {
+  fill: var(--wt-pick);
+  font-weight: 600;
+}
 /* Written along the month line; the halo keeps it readable over the bars. */
 .wt-month-name {
   font-family: var(--wt-font-data);

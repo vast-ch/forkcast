@@ -240,6 +240,24 @@ export default class PlannerService extends Service {
     this.highlightedDay = days.find(inWeek)?.n;
   }
 
+  /**
+   * Where the map's week lies when the trip has no day in it: before the trip
+   * or after it, whichever end is nearer in the year. Undefined while the week
+   * is inside the trip (or there is no trip).
+   */
+  get offTrip(): 'before' | 'after' | undefined {
+    const days = this.trip?.days;
+    const first = days?.[0];
+    const last = days?.[days.length - 1];
+    if (!days || !first || !last) return undefined;
+    const w = this.week;
+    if (days.some((d) => weekOfDate(d.date) === w)) return undefined;
+    const n = WEEKS.length;
+    const toStart = (weekOfDate(first.date) - w + n) % n;
+    const fromEnd = (w - weekOfDate(last.date) + n) % n;
+    return toStart <= fromEnd ? 'before' : 'after';
+  }
+
   /** Highlight a trip day and show its week on the map. */
   highlightDay(day: TripDay): void {
     this.highlightedDay = day.n;

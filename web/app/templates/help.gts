@@ -56,14 +56,14 @@ export default class Help extends Component {
             the number of rainy days if you switch to that. When you zoom out,
             neighbouring dots merge into one showing their average, so they stay
             readable. Forkcast opens on Europe and the current week (drag the
-            slider under “Map”: it moves a quarter of a month,
-            about a week, at a time); the other continents are drawn as light
-            shapes, and clicking one adds its climate (a one-off download of 1–5
-            MB). You can show several at once, for a trip that crosses from one
-            into another. Point at the map to read the averages for that spot in
-            the week shown (its rain in total, and how many of its days are
-            rainy); point at your route to see the day you would be there and
-            the weather expected on that date.
+            slider under “Map”: it moves a quarter of a month, about a week, at
+            a time); the other continents are drawn as light shapes, and
+            clicking one adds its climate (a one-off download of 1–5 MB). You
+            can show several at once, for a trip that crosses from one into
+            another. Point at the map to read the averages for that spot in the
+            week shown (its rain in total, and how many of its days are rainy);
+            point at your route to see the day you would be there and the
+            weather expected on that date.
           </p>
         </section>
 
@@ -245,7 +245,9 @@ export default class Help extends Component {
             In the chart, each bar runs from the night low to the day high and
             is coloured by the high, with the day's number above it. The blue
             bar underneath is the chance of a rainy day. Shaded columns are rest
-            days, with the weather where you stay. Click a day, or focus the
+            days, with the weather where you stay. When the map shows a week
+            your trip doesn't reach, the Before or After column at the end of
+            the chart is highlighted instead of a day. Click a day, or focus the
             chart and use the arrow keys, to see its numbers and its stretch on
             the map.
           </p>

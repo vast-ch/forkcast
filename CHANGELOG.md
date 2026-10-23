@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Moving the week on the map now moves the day chart with it: it picks your trip's first day in that week, or no day if the trip isn't there then.
+- Moving the week on the map now moves the day chart with it: it picks your trip's first day in that week. A week outside the trip is shown in a "Before" or "After" column at either end of the chart, whichever end of the trip it is nearer to.
 - The sidebar's "Climate on the map" section is now called "Map" and comes last, after Route and Trip.
 - The line in the day chart where a new month starts is labelled with the month's full name, written along it.
 
