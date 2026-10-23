@@ -11,12 +11,36 @@ import { temperatureRaster, rainDots } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
 import { climateOn, tempSwatch } from 'forkcast/utils/climate';
 import { fmtShortDate } from 'forkcast/utils/format';
-import { OWN_COLOR } from 'forkcast/services/planner';
+import {
+  OWN_COLOR,
+  type RainMetric,
+  type TempMetric,
+} from 'forkcast/services/planner';
 
 /** The night stops' rings and the highlighted day's stretch: a vivid purple
  * that stands out on every temperature colour (it glows a little, see
  * .wt-stop and .wt-day-stretch in app.css). */
 const ROUTE_ACCENT = '#a020f0';
+
+/** Room around a route when the map is fitted to it. */
+const FIT = { padding: [30, 30] as [number, number] };
+
+/** Tooltips that follow the pointer along a shape. */
+const STICKY_TIP: L.TooltipOptions = { sticky: true, direction: 'top' };
+
+/** Map panes, bottom to top, and whether they take pointer events. The
+ * selected route and the stops are in Leaflet's own overlay pane (400). */
+const PANES: [name: string, zIndex: number, isInteractive: boolean][] = [
+  ['land', 200, false],
+  ['others', 210, true],
+  ['climate', 300, false],
+  ['rain', 350, false],
+  ['borders', 380, false],
+  // Other routes: above the climate layers, below the selected route.
+  ['overview', 390, true],
+];
+
+type GroupLayer = 'others' | 'overview' | 'temp' | 'rain' | 'routes' | 'stops';
 
 interface MapState {
   /** Quarter-month shown, 0–47, and its position in the year */
@@ -24,8 +48,8 @@ interface MapState {
   phase: number;
   showTemp: boolean;
   showRain: boolean;
-  tempMetric: string;
-  rainMetric: string;
+  tempMetric: TempMetric;
+  rainMetric: RainMetric;
   rainThreshold: number;
   route?: Route;
   trip?: Trip;
@@ -103,17 +127,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       '<span class="wt-attr-full">Climate: contains modified <a href="https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land" target="_blank" rel="noopener">Copernicus Climate Change Service</a> information 2026 (ERA5-Land), <a href="https://crudata.uea.ac.uk/cru/data/hrg/" target="_blank" rel="noopener">CRU TS 4.10</a> · Borders: Natural Earth · Routes: contains information from <a href="https://www.eurovelo.com" target="_blank" rel="noopener">EuroVelo GPX tracks</a> downloaded 2026-10-23, under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>; © OpenStreetMap contributors, BRouter</span>' +
         '<span class="wt-attr-short">Contains modified Copernicus C3S information 2026 · CRU · EuroVelo (ODbL) · © OpenStreetMap · <a href="/help#sources">Sources</a></span>',
     );
-    map.createPane('land').style.zIndex = '200';
-    map.createPane('others').style.zIndex = '210';
-    map.createPane('climate').style.zIndex = '300';
-    map.createPane('rain').style.zIndex = '350';
-    map.createPane('borders').style.zIndex = '380';
-    // Other routes: above the climate layers, below the selected route (400).
-    map.createPane('overview').style.zIndex = '390';
-    map.getPane('borders')!.style.pointerEvents = 'none';
-    map.getPane('climate')!.style.pointerEvents = 'none';
-    map.getPane('rain')!.style.pointerEvents = 'none';
-    map.getPane('land')!.style.pointerEvents = 'none';
+    for (const [name, zIndex, isInteractive] of PANES) {
+      const pane = map.createPane(name);
+      pane.style.zIndex = String(zIndex);
+      if (!isInteractive) pane.style.pointerEvents = 'none';
+    }
 
     let frame = 0;
     map.on('mousemove', (e: L.LeafletMouseEvent) => {
@@ -137,13 +155,28 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     const ro = new ResizeObserver(() => {
       map.invalidateSize();
       if (this.fit && performance.now() < this.fit.until) {
-        map.fitBounds(this.fit.bounds, { padding: [30, 30] });
+        map.fitBounds(this.fit.bounds, FIT);
       }
     });
     ro.observe(element);
     registerDestructor(this, () => ro.disconnect());
     // The container may still be resizing as the layout settles.
     setTimeout(() => map.invalidateSize(), 0);
+  }
+
+  /** Replace a layer group with a freshly built one (`build` may leave it empty). */
+  replace(key: GroupLayer, build: (group: L.LayerGroup) => void): void {
+    this.layers[key]?.remove();
+    const group = L.layerGroup();
+    build(group);
+    this.layers[key] = group.addTo(this.map!);
+  }
+
+  /** A click handler that does nothing while a route is being drawn. */
+  unlessDrawing(f: () => void): () => void {
+    return () => {
+      if (!this.owner?.planner.isDrawing) f();
+    };
   }
 
   changed(key: string, value: unknown): boolean {
@@ -156,7 +189,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   fitTo(bounds: L.LatLngBounds) {
     this.fit = { bounds, until: performance.now() + 2000 };
     this.map!.invalidateSize();
-    this.map!.fitBounds(bounds, { padding: [30, 30] });
+    this.map!.fitBounds(bounds, FIT);
   }
 
   /** Cells per rain dot, so a dot spans at least ~9 px at the current zoom. */
@@ -190,48 +223,44 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     }
 
     // Continents not shown yet: plain shapes that add their climate on click.
-    if (
-      atlas.world &&
-      this.changed('others', `${ids}-${atlas.continents.length}`)
-    ) {
-      this.layers.others?.remove();
-      const group = L.layerGroup();
-      for (const c of atlas.continents) {
-        if (atlas.loadedIds.includes(c.id)) continue;
-        const rings = worldRings(atlas.world[c.id] ?? '');
-        if (!rings.length) continue;
-        const mb = (c.gzipBytes / 1e6).toFixed(1);
-        L.polygon(rings, {
-          pane: 'others',
-          className: `wt-other wt-other-${c.id}`,
-          weight: 1,
-        })
-          .bindTooltip(`${c.name}: click to add its climate (${mb} MB)`, {
-            sticky: true,
-            direction: 'top',
+    const world = atlas.world;
+    if (world && this.changed('others', `${ids}-${atlas.continents.length}`)) {
+      this.replace('others', (group) => {
+        for (const c of atlas.continents) {
+          if (atlas.loadedIds.includes(c.id)) continue;
+          const rings = worldRings(world[c.id] ?? '');
+          if (!rings.length) continue;
+          const mb = (c.gzipBytes / 1e6).toFixed(1);
+          L.polygon(rings, {
+            pane: 'others',
+            className: `wt-other wt-other-${c.id}`,
+            weight: 1,
           })
-          .on('click', () => {
-            if (!this.owner?.planner.isDrawing) this.owner?.loadContinent(c.id);
-          })
-          .addTo(group);
-      }
-      this.layers.others = group.addTo(map);
+            .bindTooltip(
+              `${c.name}: click to add its climate (${mb} MB)`,
+              STICKY_TIP,
+            )
+            .on(
+              'click',
+              this.unlessDrawing(() => this.owner?.planner.addContinent(c.id)),
+            )
+            .addTo(group);
+        }
+      });
     }
 
     if (loaded.length) {
       const grids = loaded.map((l) => l.climate);
       const tempKey = `${ids}-${s.week}-${s.tempMetric}-${s.showTemp}`;
       if (this.changed('temp', tempKey)) {
-        this.layers.temp?.remove();
-        this.layers.temp = undefined;
-        if (s.showTemp) {
+        this.replace('temp', (group) => {
+          if (!s.showTemp) return;
           // One image per continent; cells an earlier one covers are left out.
-          const group = L.layerGroup();
           grids.forEach((g, k) => {
             const r = temperatureRaster(
               g,
               s.phase,
-              s.tempMetric as 'high' | 'low',
+              s.tempMetric,
               grids.slice(0, k),
             );
             L.imageOverlay(r.url, r.bounds, {
@@ -239,25 +268,22 @@ class LeafletModifier extends Modifier<LeafletSignature> {
               interactive: false,
             }).addTo(group);
           });
-          this.layers.temp = group.addTo(map);
-        }
+        });
       }
       const block = this.rainBlock(grids[0]!.step);
       const rainKey = `${ids}-${s.week}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
       if (this.changed('rain', rainKey)) {
-        this.layers.rain?.remove();
-        this.layers.rain = undefined;
-        if (s.showRain) {
+        this.replace('rain', (group) => {
+          if (!s.showRain) return;
           const renderer = (this.rainRenderer ??= L.canvas({
             pane: 'rain',
             padding: 0.3,
           }));
-          const group = L.layerGroup();
           grids.forEach((g, k) => {
             for (const d of rainDots(
               g,
               s.phase,
-              s.rainMetric as 'mm' | 'days',
+              s.rainMetric,
               s.rainThreshold,
               block,
               grids.slice(0, k),
@@ -274,8 +300,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
               }).addTo(group);
             }
           });
-          this.layers.rain = group.addTo(map);
-        }
+        });
       }
     }
 
@@ -284,41 +309,38 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     if (
       this.changed('overview', `${ids}-${selectedId}-${atlas.overview.length}`)
     ) {
-      this.layers.overview?.remove();
-      const group = L.layerGroup();
-      const names = new Map(atlas.presets.map((r) => [r.id, r.name]));
-      for (const r of atlas.overview) {
-        if (r.id === selectedId || !atlas.loadedIds.includes(r.continent))
-          continue;
-        L.polyline(
-          r.lat.map((lat, i) => [lat, r.lon[i]!] as [number, number]),
-          {
-            pane: 'overview',
-            color: r.color,
-            weight: 2.5,
-            opacity: 0.75,
-            dashArray: '6 5',
-            className: 'wt-overview-route',
-          },
-        )
-          .bindTooltip(names.get(r.id) ?? r.id, {
-            sticky: true,
-            direction: 'top',
-          })
-          .on('click', () => {
-            if (!this.owner?.planner.isDrawing)
-              void this.owner?.planner.selectRoute(r.id);
-          })
-          .addTo(group);
-      }
-      this.layers.overview = group.addTo(map);
+      this.replace('overview', (group) => {
+        const names = new Map(atlas.presets.map((r) => [r.id, r.name]));
+        for (const r of atlas.overview) {
+          if (r.id === selectedId || !atlas.loadedIds.includes(r.continent))
+            continue;
+          L.polyline(
+            r.lat.map((lat, i) => [lat, r.lon[i]!] as [number, number]),
+            {
+              pane: 'overview',
+              color: r.color,
+              weight: 2.5,
+              opacity: 0.75,
+              dashArray: '6 5',
+              className: 'wt-overview-route',
+            },
+          )
+            .bindTooltip(names.get(r.id) ?? r.id, STICKY_TIP)
+            .on(
+              'click',
+              this.unlessDrawing(
+                () => void this.owner?.planner.selectRoute(r.id),
+              ),
+            )
+            .addTo(group);
+        }
+      });
     }
 
     if (this.changed('route', s.route)) {
-      this.layers.routes?.remove();
-      const group = L.layerGroup();
-      const r = s.route;
-      if (r) {
+      this.replace('routes', (group) => {
+        const r = s.route;
+        if (!r) return;
         const latlngs = r.points.map(latLng);
         L.polyline(latlngs, {
           color: '#fff',
@@ -331,8 +353,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           weight: 4,
           interactive: false,
         }).addTo(group);
-      }
-      this.layers.routes = group.addTo(map);
+      });
       if (s.route && this.changed('fitted', s.route.id)) {
         this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
       }
@@ -342,11 +363,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       this.changed('trip', s.trip) ||
       this.changed('highlight', s.highlightedDay)
     ) {
-      this.layers.stops?.remove();
-      const group = L.layerGroup();
-      const trip = s.trip;
-      if (trip && s.route) {
-        const start = s.route.points[0]!;
+      this.replace('stops', (group) => {
+        const { trip, route } = s;
+        if (!trip || !route) return;
+        const start = route.points[0]!;
         L.circleMarker(latLng(start), {
           radius: 6,
           color: '#fff',
@@ -378,11 +398,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         if (s.highlightedDay) {
           const d = trip.days.find((x) => x.n === s.highlightedDay);
           if (d && !d.isRest) {
-            const seg = s.route.points.filter(
+            const seg = route.points.filter(
               (p) => p.km >= d.fromKm && p.km <= d.toKm,
             );
-            const a = pointAt(s.route.points, d.fromKm);
-            const b = pointAt(s.route.points, d.toKm);
+            const a = pointAt(route.points, d.fromKm);
+            const b = pointAt(route.points, d.toKm);
             L.polyline([latLng(a), ...seg.map(latLng), latLng(b)], {
               color: ROUTE_ACCENT,
               weight: 6,
@@ -392,8 +412,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             }).addTo(group);
           }
         }
-      }
-      this.layers.stops = group.addTo(map);
+      });
     }
 
     if (this.changed('drawn', `${s.isDrawing}-${s.drawnCount}`)) {
@@ -413,15 +432,16 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   }
 }
 
-/**
- * Rings of a continent from world.json, whose SVG paths use x = lon + 180 and
- * y = 90 − lat ("M x,y L x,y … Z" per ring).
- */
 /** A point as Leaflet's [lat, lng]. */
 const latLng = (p: { lat: number; lon: number }): [number, number] => [
   p.lat,
   p.lon,
 ];
+
+/**
+ * Rings of a continent from world.json, whose SVG paths use x = lon + 180 and
+ * y = 90 − lat ("M x,y L x,y … Z" per ring).
+ */
 
 function worldRings(d: string): [number, number][][] {
   return d
@@ -509,10 +529,6 @@ export default class WheelMap extends Component<WheelMapSignature> {
       }
     }
     this.planner.hover = { lat, lon, month, onRoute };
-  };
-
-  loadContinent = (id: string) => {
-    this.planner.addContinent(id);
   };
 
   onLeave = () => {
