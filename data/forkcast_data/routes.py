@@ -25,6 +25,7 @@ from pathlib import Path
 
 from . import anchors, continents, eurovelo, geocode, pipeline
 from .anchors import ROUTES
+from .eurovelo import haversine_km
 from .pipeline import CACHE as CACHE_ROOT, OUT, Stamp, code_hash, ensure, http_get, log
 
 CACHE = CACHE_ROOT / "brouter"
@@ -32,12 +33,6 @@ GEOCODED = geocode.CACHE
 OUT_DIR = OUT / "routes"
 BROUTER = "https://brouter.de/brouter"
 SIMPLIFY_M = 40  # Douglas-Peucker tolerance
-
-
-def haversine_km(a, b):
-    lat1, lon1, lat2, lon2 = map(math.radians, (a[0], a[1], b[0], b[1]))
-    h = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
-    return 6371.0088 * 2 * math.asin(math.sqrt(h))
 
 
 def _lonlats(a, b) -> str:
