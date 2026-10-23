@@ -497,12 +497,15 @@ export default class SidePanel extends Component<SidePanelSignature> {
           </section>
         {{/if}}
 
+        {{! On phones the overview sits right under the day chart and needs no
+            heading; the heading belongs with the trip settings. }}
         <section
-          aria-labelledby="h-trip"
+          aria-labelledby={{if this.showSettings "h-trip"}}
+          aria-label={{unless this.showSettings "Trip summary"}}
           class="wt-sec-trip flex flex-col gap-3"
         >
-          <h2 id="h-trip" class="wt-h2">Trip</h2>
           {{#if this.showSettings}}
+            <h2 id="h-trip" class="wt-h2">Trip</h2>
             <div class="grid grid-cols-3 gap-2">
               <div class="col-span-3">
                 <Input
