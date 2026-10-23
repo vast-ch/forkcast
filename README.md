@@ -2,7 +2,7 @@
 
 What the weather usually does along your bike route, day by day.
 
-Wheelther puts 15 years of climate records on a map of Europe and North Africa: average day highs or night lows as colour, and rain (mm, or rainy days over 1, 5 or 10 mm) as dots on top, for any month. The in-app help page (`/help`) explains the numbers. Pick a route (all 17 EuroVelo routes and a demo route Interlaken – Málaga are built in, or draw your own, or import a GPX), set a start date, how far you ride per day, and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat), and it lays out the trip day by day with the expected high, night low and chance of rain for where you will be on each date.
+Wheelther puts 15 years of climate records on a map, one continent at a time (pick it on the world map at `/`; only that continent is downloaded): average day highs or night lows as colour, and rain (mm, or rainy days over 1, 5 or 10 mm) as dots on top, for any month. The in-app help page (`/help`) explains the numbers. Pick a route (all 17 EuroVelo routes and a demo route Interlaken – Málaga are built in, or draw your own, or import a GPX), set a start date, how far you ride per day, and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat), and it lays out the trip day by day with the expected high, night low and chance of rain for where you will be on each date.
 
 ## Run it
 
@@ -21,7 +21,7 @@ docker compose --profile tools run --rm data routes # or one step: climate | rou
 |---|---|
 | `web/` | The app: Ember 7.3 (`.gts`, TypeScript), Vite + Embroider, Leaflet, Tailwind 4, Frontile. pnpm. |
 | `data/` | Python (uv) builders for the data files the app loads. |
-| `data/out/` | Built data, committed: `climate.json`, `countries.json`, `routes/index.json` plus one `routes/<id>.json` per route (loaded when picked). Mounted into the dev server and copied into the production image as `/data/`. |
+| `data/out/` | Built data, committed: `manifest.json` (continents and their routes), `world.json` (picker map), `<continent>/climate.bin` + `climate.json` (int16 grid + header), `<continent>/countries.json`, and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
 | `data/eurovelo/` | The official EuroVelo GPX tracks (gzipped, ODbL), with their licence. |
 | `data/cache/` | Downloads and BRouter responses (git-ignored). |
 | `compose.yaml` | `ui` (dev), `web` (prod, profile `prod`), `data` (builder, profile `tools`). |
@@ -35,3 +35,10 @@ docker compose --profile tools run --rm data routes # or one step: climate | rou
 - **Basemap:** Natural Earth 1:50m country outlines via `world-atlas`. The app draws its own basemap, so it needs no tile server.
 
 These are climate normals, not forecasts: they say what is typical, not what a given year will bring.
+
+## Static site
+
+There is no backend. The production image is nginx serving the built app:
+
+- Everything under `/assets/` (code and data) has a content hash in its name and is served with `Cache-Control: public, max-age=31536000, immutable`; `index.html` is `no-cache`, so new releases are picked up.
+- Every setting lives in the URL query string; values at their defaults are left out. Your own route is encoded in the URL too (polyline encoding, simplified to at most 600 points).

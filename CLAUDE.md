@@ -10,9 +10,11 @@ Wheelther monorepo: `web/` (Ember app) and `data/` (Python data builders). See R
 
 ## Web app structure
 
-- Routes: `index` is the planner (map, panel, chart), `help` is the help page (`app/templates/help.gts`) where explanations of the data and calculations live; keep the planner UI free of long notes.
-- `app/services/atlas.ts` loads climate, borders and the route index from `/data/`; a route's track loads on demand (`loadRoute`).
-- `app/services/planner.ts` holds all UI state (month, layers, selected route, trip settings, user routes) and persists it to localStorage. Derived `route` and `trip` are `@cached`.
+- Routes: `index` is the continent picker (world map), `continent` (`/:continent_id`) is the planner (map, panel, chart), `help` is the help page (`app/templates/help.gts`) where explanations of the data and calculations live; keep the planner UI free of long notes.
+- Settings live in the URL: `app/controllers/continent.ts` declares them as query parameters with defaults from `app/utils/settings.ts` (Ember omits defaults from the URL); `planner.ts` reads and writes them. Add a new setting in both places. No localStorage.
+- Data files are imported through `app/utils/assets.ts` (`import.meta.glob` over `/data-out`, the mounted `data/out`), never fetched by fixed path, so they get hashed names and can be cached for a year.
+- `app/services/atlas.ts` loads the manifest and picker map first, a continent's climate grid and borders when it is opened, and a route's track when it is picked.
+- `app/services/planner.ts` is the single place components get state from; derived `route` and `trip` are `@cached`.
 - `app/utils/climate.ts` samples the climate grid (bilinear in space, linear between mid-month values in time) and owns the temperature colour scale.
 - `app/utils/itinerary.ts` splits a route into riding and rest days and attaches weather. `app/utils/route.ts` is geometry and GPX.
 - `app/components/wheel-map.gts` wraps Leaflet in a class modifier; `sync()` diffs the state and only rebuilds layers that changed. The temperature layer is rendered into a Web-Mercator canvas (`app/utils/layers.ts`); rain dots are metre-sized circles on a canvas renderer.
@@ -23,7 +25,7 @@ Wheelther monorepo: `web/` (Ember app) and `data/` (Python data builders). See R
 
 - EuroVelo routes: `data/wheelther_data/eurovelo.py` (catalogue, GPX → route, variant/gap handling). Raw tracks in `data/eurovelo/` (ODbL; the attribution notice must stay in the help page and map attribution). Refresh with `build.sh download`.
 - Hand-made routes are the town lists in `data/wheelther_data/anchors.py` (the first is the app's default). Coordinates come from `geocoded.json`; after adding stops run `uv run python -m wheelther_data.geocode` (Nominatim, only looks up missing ones), then the `routes` step.
-- Trip defaults (start 1 January, demo route, ride 5 / rest 1, rainy day > 5 mm) live in `planner.ts`; bump `STORAGE_KEY` when defaults must override what browsers have saved.
+- Continents (ids, names, bounding boxes) are in `data/wheelther_data/continents.py`; climate, borders and the manifest are built per continent from them.
 - Climate: CRU TS file paths are pinned in `data/build.sh` (version 4.10, 2011–2025).
 
 ## Commits and changelog
