@@ -328,6 +328,7 @@ body {
    the thumb, month names below the track. */
 .wt-range-wrap {
   position: relative;
+  isolation: isolate;
   padding: 1.4rem 0.5rem 1.1rem;
 }
 /* Both scales are inset by the padding plus half the thumb, so 0 % and
@@ -347,6 +348,19 @@ body {
   position: absolute;
   transform: translateX(-50%);
   white-space: nowrap;
+}
+/* Month starts: drawn behind the input, taller than the track, so they
+   show above and below it and the thumb slides over them. The input is
+   1.5rem high below 1.4rem of padding, so the track's centre is at 2.15rem. */
+.wt-range-scale.is-ticks {
+  top: calc(2.15rem - 7px);
+  height: 14px;
+  z-index: -1;
+}
+.wt-range-tick {
+  width: 1px;
+  height: 100%;
+  background: #9fb3c4;
 }
 .wt-range-value {
   font-size: 0.8rem;

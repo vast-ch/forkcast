@@ -57,10 +57,12 @@ export default class SidePanel extends Component<SidePanelSignature> {
   @tracked importError?: string;
 
   /** The month grid: each month with its four quarter-month segments. */
-  /** Month labels under the slider, each centred on its four steps. */
+  /** Month labels under the slider, each centred on its four steps, and a
+   * tick at each month's first step. */
   months = MONTHS.map((label, i) => ({
     label,
     style: css('left: ', ((i * 4 + 1.5) / 47) * 100, '%'),
+    tickStyle: css('left: ', ((i * 4) / 47) * 100, '%'),
   }));
 
   get weekValue() {
@@ -299,6 +301,11 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 aria-label="Time of year"
                 aria-valuetext={{this.planner.weekSlot.label}}
               />
+              <div class="wt-range-scale is-ticks" aria-hidden="true">
+                {{#each this.months as |m|}}
+                  <span class="wt-range-tick" style={{m.tickStyle}}></span>
+                {{/each}}
+              </div>
               <div class="wt-range-scale is-bottom" aria-hidden="true">
                 {{#each this.months as |m|}}
                   <span
