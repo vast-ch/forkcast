@@ -192,6 +192,12 @@ body {
   color: var(--wt-accent);
   font-weight: 500;
 }
+/* A line between the panel's sections (climate, route, trip, day by day). */
+.wt-panel-scroll > section + section {
+  border-top: 1px solid var(--wt-line);
+  padding-top: 1.5rem;
+}
+
 .wt-h2 {
   font-family: var(--wt-font-display);
   font-weight: 700;
