@@ -193,13 +193,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
       this.planner.set('restDays', n);
   };
 
-  get pattern() {
-    const { rideDays, restDays } = this.planner;
-    if (restDays === 0) return 'Riding every day, no rest days.';
-    const d = (n: number) => `${n} day${n === 1 ? '' : 's'}`;
-    return `Ride ${d(rideDays)}, rest ${d(restDays)}, repeat.`;
-  }
-
   selectDay = (d: TripDay) => {
     this.planner.set(
       'highlightedDay',
@@ -550,7 +543,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   max="30"
                 />
               </div>
-              <p class="wt-muted col-span-3 text-xs">{{this.pattern}}</p>
             </div>
           {{/if}}
 
