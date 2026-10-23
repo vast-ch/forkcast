@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type PlannerService from 'forkcast/services/planner';
-import { MONTHS, tempColor } from 'forkcast/utils/climate';
+import { tempColor } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
@@ -22,8 +22,8 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
     return this.planner.hover;
   }
 
-  get monthName() {
-    return MONTHS[this.planner.month];
+  get weekLabel() {
+    return this.planner.weekSlot.label;
   }
 
   get coords() {
@@ -95,7 +95,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <p class="wt-muted mt-1">Beyond the end of the planned days.</p>
           {{/if}}
         {{else if this.hover.month}}
-          <p class="wt-eyebrow">{{this.monthName}} average · {{this.coords}}</p>
+          <p class="wt-eyebrow">{{this.weekLabel}} average · {{this.coords}}</p>
           <dl class="wt-readout mt-2">
             <dt>Day high</dt>
             <dd>
@@ -118,7 +118,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             area).</p>
         {{/if}}
       {{else}}
-        <p class="wt-eyebrow">{{this.monthName}} average</p>
+        <p class="wt-eyebrow">{{this.weekLabel}} average</p>
         <p class="wt-muted mt-1">Point at the map for the climate, or at the
           route for the weather on that day of your trip.</p>
       {{/if}}

@@ -16,13 +16,12 @@ const toLat = (y: number) =>
 function hasCell(
   g: ClimateGrid,
   v: 'tmx' | 'tmn' | 'pre',
-  month: number,
   lat: number,
   lon: number,
 ): boolean {
   const row = Math.round((g.lat0 - lat) / g.step);
   const col = Math.round((lon - g.lon0) / g.step);
-  return !Number.isNaN(g.cell(v, month, row, col));
+  return !Number.isNaN(g.cell(v, 0, row, col));
 }
 
 export interface Raster {
@@ -42,7 +41,8 @@ function frame(grid: ClimateGrid, pxPerDeg: number) {
 /** Smooth temperature field, transparent over the sea. */
 export function temperatureRaster(
   grid: ClimateGrid,
-  month: number,
+  /** Position in the year, 0 … 1 */
+  phase: number,
   metric: TempMetric,
   /** Grids drawn before this one: cells they cover are left to them. */
   earlier: ClimateGrid[] = [],
@@ -61,10 +61,11 @@ export function temperatureRaster(
       const lon = f.west + ((px + 0.5) / f.width) * (f.east - f.west);
       const fx = (lon - grid.lon0) / grid.step;
       // Inside a land cell only (no coastal extrapolation), bilinear between land cells.
-      const own = grid.cell(v, month, Math.round(fy), Math.round(fx));
+      // Land cells only (the land mask is the same in every month).
+      const own = grid.cell(v, 0, Math.round(fy), Math.round(fx));
       if (Number.isNaN(own)) continue;
-      if (earlier.some((g) => hasCell(g, v, month, lat, lon))) continue;
-      const t = grid.sample(v, month, lat, lon);
+      if (earlier.some((g) => hasCell(g, v, lat, lon))) continue;
+      const t = grid.sampleAt(v, phase, lat, lon);
       const [r, g, b] = tempRgb(t);
       const i = (py * f.width + px) * 4;
       img.data[i] = r;
@@ -96,7 +97,8 @@ export interface RainDot {
  */
 export function rainDots(
   grid: ClimateGrid,
-  month: number,
+  /** Position in the year, 0 … 1 */
+  phase: number,
   metric: RainMetric,
   threshold: number,
   /** Merge block × block cells into one dot (their average), for zoomed-out views */
@@ -107,10 +109,11 @@ export function rainDots(
   // A dot fills its block at 250 mm/month or 20 rainy days.
   const full = metric === 'mm' ? 250 : 20;
   const cellM = (grid.step * Math.PI * 6371000) / 180;
+  // Rates at this moment, scaled to an average month (30.44 days).
   const value = (row: number, col: number) =>
     metric === 'mm'
-      ? grid.cell('pre', month, row, col)
-      : grid.cellRainyDays(month, row, col, threshold);
+      ? Math.max(0, grid.cellAt('pre', phase, row, col)) * 30.44
+      : grid.cellRainChanceAt(phase, row, col, threshold) * 30.44;
   const dots: RainDot[] = [];
   // Blocks are aligned to the worldwide grid, not to this continent's corner,
   // so neighbouring continents merge cells into the same pattern of dots.
@@ -139,7 +142,7 @@ export function rainDots(
       if (val <= 0) continue;
       const lat = grid.lat0 - (r0 + (block - 1) / 2) * grid.step;
       const lonC = grid.lon0 + (c0 + (block - 1) / 2) * grid.step;
-      if (earlier.some((g) => hasCell(g, 'pre', month, lat, lonC))) continue;
+      if (earlier.some((g) => hasCell(g, 'pre', lat, lonC))) continue;
       const half =
         (cellM * block * Math.min(1, Math.cos((lat * Math.PI) / 180))) / 2;
       dots.push({

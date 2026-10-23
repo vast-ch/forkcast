@@ -9,10 +9,12 @@ import type PlannerService from 'forkcast/services/planner';
 import { dayAtKm, type Trip } from 'forkcast/utils/itinerary';
 import { temperatureRaster, rainDots } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
-import { MONTHS, tempColor } from 'forkcast/utils/climate';
+import { tempColor } from 'forkcast/utils/climate';
 
 interface MapState {
-  month: number;
+  /** Quarter-month shown, 0–47, and its position in the year */
+  week: number;
+  phase: number;
   showTemp: boolean;
   showRain: boolean;
   tempMetric: string;
@@ -211,7 +213,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
 
     if (loaded.length) {
       const grids = loaded.map((l) => l.climate);
-      const tempKey = `${ids}-${s.month}-${s.tempMetric}-${s.showTemp}`;
+      const tempKey = `${ids}-${s.week}-${s.tempMetric}-${s.showTemp}`;
       if (this.changed('temp', tempKey)) {
         this.layers.temp?.remove();
         this.layers.temp = undefined;
@@ -221,7 +223,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           grids.forEach((g, k) => {
             const r = temperatureRaster(
               g,
-              s.month,
+              s.phase,
               s.tempMetric as 'high' | 'low',
               grids.slice(0, k),
             );
@@ -234,7 +236,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         }
       }
       const block = this.rainBlock(grids[0]!.step);
-      const rainKey = `${ids}-${s.month}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
+      const rainKey = `${ids}-${s.week}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
       if (this.changed('rain', rainKey)) {
         this.layers.rain?.remove();
         this.layers.rain = undefined;
@@ -247,7 +249,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           grids.forEach((g, k) => {
             for (const d of rainDots(
               g,
-              s.month,
+              s.phase,
               s.rainMetric as 'mm' | 'days',
               s.rainThreshold,
               block,
@@ -446,7 +448,8 @@ export default class WheelMap extends Component<WheelMapSignature> {
   get state(): MapState {
     const p = this.planner;
     return {
-      month: p.month,
+      week: p.week,
+      phase: p.weekSlot.phase,
       showTemp: p.showTemp,
       showRain: p.showRain,
       tempMetric: p.tempMetric,
@@ -466,7 +469,12 @@ export default class WheelMap extends Component<WheelMapSignature> {
     const lat = latlng.lat;
     const lon = latlng.lng;
     const month = grid.covers(lat, lon)
-      ? grid.month(this.planner.month, lat, lon, this.planner.rainThreshold)
+      ? grid.at(
+          this.planner.weekSlot.phase,
+          lat,
+          lon,
+          this.planner.rainThreshold,
+        )
       : null;
     let onRoute: NonNullable<PlannerService['hover']>['onRoute'];
     const route = this.planner.route;
@@ -524,7 +532,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
     const day = this.planner.hover?.onRoute?.day;
     if (day) {
       this.planner.set('highlightedDay', day.n);
-      this.planner.set('month', day.date.getMonth());
+      this.planner.showDate(day.date);
     }
   };
 
@@ -534,14 +542,14 @@ export default class WheelMap extends Component<WheelMapSignature> {
     }
   };
 
-  get monthName() {
-    return MONTHS[this.planner.month];
+  get weekLabel() {
+    return this.planner.weekSlot.label;
   }
 
   <template>
     <div
       class="wt-map h-full w-full"
-      aria-label="Map of {{this.monthName}} climate and routes"
+      aria-label="Map of the climate around {{this.weekLabel}} and routes"
       {{LeafletModifier map=this state=this.state}}
       ...attributes
     ></div>

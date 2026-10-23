@@ -99,6 +99,10 @@ export const MONTHS = [
   'Dec',
 ] as const;
 
+function clamp01(x: number): number {
+  return Number.isNaN(x) ? x : Math.min(1, Math.max(0, x));
+}
+
 const DAYS_IN_MONTH = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 /** The stored rainy-day count for a threshold (1, 5 or 10 mm). */
@@ -114,6 +118,75 @@ function decoder(header: ClimateHeader, v: ClimateVar): (x: number) => number {
   return (x) => x / scale;
 }
 
+/** Number of yearly waves in the seasonal curve: 12-, 6- and 4-month cycles. */
+const HARMONICS = 3;
+const TERMS = 1 + 2 * HARMONICS;
+/**
+ * A month's average flattens each wave a little compared with its value at
+ * mid-month (by sin(πk/12) / (πk/12) for the k-th wave). The fitted waves are
+ * scaled back up by that factor, so peaks are not too mild.
+ */
+const FLATTENING = Array.from({ length: HARMONICS }, (_, i) => {
+  const x = (Math.PI * (i + 1)) / 12;
+  return Math.sin(x) / x;
+});
+
+/** Position in the year, 0 … 1 (0 = 1 January 00:00). */
+export function phaseOfDate(date: Date): number {
+  const start = new Date(date.getFullYear(), 0, 1);
+  const end = new Date(date.getFullYear() + 1, 0, 1);
+  return (date.getTime() - start.getTime()) / (end.getTime() - start.getTime());
+}
+
+/** Middle of a calendar month (0–11) as a position in the year. */
+export function phaseOfMonth(month: number): number {
+  return (month + 0.5) / 12;
+}
+
+/**
+ * Smooth seasonal curve through 12 monthly averages: the yearly mean plus
+ * HARMONICS waves. Writes TERMS coefficients for one cell into `out` at `at`.
+ */
+function fitSeason(values: number[], out: Float32Array, at: number): void {
+  let mean = 0;
+  for (const v of values) mean += v;
+  out[at] = mean / 12;
+  for (let k = 1; k <= HARMONICS; k++) {
+    let a = 0;
+    let b = 0;
+    for (let m = 0; m < 12; m++) {
+      const t = 2 * Math.PI * k * phaseOfMonth(m);
+      a += values[m]! * Math.cos(t);
+      b += values[m]! * Math.sin(t);
+    }
+    const f = FLATTENING[k - 1]!;
+    out[at + 2 * k - 1] = a / 6 / f;
+    out[at + 2 * k] = b / 6 / f;
+  }
+}
+
+function evalSeason(c: Float32Array, at: number, phase: number): number {
+  let v = c[at]!;
+  for (let k = 1; k <= HARMONICS; k++) {
+    const t = 2 * Math.PI * k * phase;
+    v += c[at + 2 * k - 1]! * Math.cos(t) + c[at + 2 * k]! * Math.sin(t);
+  }
+  return v;
+}
+
+/** Lapse rate at a position in the year, blended between mid-month values. */
+function lapseRateAt(phase: number): number {
+  const x = phase * 12 - 0.5;
+  const m0 = Math.floor(x);
+  const t = x - m0;
+  const a = LAPSE_RATES[((m0 % 12) + 12) % 12]!;
+  const b = LAPSE_RATES[(((m0 + 1) % 12) + 12) % 12]!;
+  return a + (b - a) * t;
+}
+
+/** Seasonal quantities smoothed as daily rates: per-month totals are divided by the month's days first. */
+type SeasonVar = 'tmx' | 'tmn' | 'pre' | 'r1' | 'r5' | 'r10' | 'wet';
+
 export default class ClimateGrid implements ClimateSource {
   readonly source: string;
   readonly years: [number, number];
@@ -123,6 +196,8 @@ export default class ClimateGrid implements ClimateSource {
   readonly lat0: number;
   readonly step: number;
   private data: Record<ClimateVar, Float32Array[]>;
+  /** Seasonal-curve coefficients per variable: TERMS values per cell. */
+  private season: Partial<Record<SeasonVar, Float32Array>> = {};
 
   /** True when the grid has counted rainy days (ERA5-Land), not just CRU wet days. */
   readonly hasRainyDayCounts: boolean;
@@ -172,6 +247,144 @@ export default class ClimateGrid implements ClimateSource {
     this.data = data;
     this.hasRainyDayCounts = header.vars.includes('r5');
     this.hasElevation = (header.static ?? []).includes('elev');
+    this.fitSeasons(header.vars, cells);
+  }
+
+  /**
+   * Fit each cell's seasonal curve. Temperatures as they are; rain as mm per
+   * day and rainy days as the share of days, so months of different lengths
+   * compare fairly.
+   */
+  private fitSeasons(vars: ClimateVar[], cells: number): void {
+    const monthly = new Array<number>(12);
+    for (const v of vars) {
+      if (v === 'elev') continue;
+      const perDay = v !== 'tmx' && v !== 'tmn';
+      const c = new Float32Array(cells * TERMS);
+      for (let i = 0; i < cells; i++) {
+        let ok = true;
+        for (let m = 0; m < 12; m++) {
+          const x = this.data[v][m]![i]!;
+          if (Number.isNaN(x)) {
+            ok = false;
+            break;
+          }
+          monthly[m] = perDay ? x / DAYS_IN_MONTH[m]! : x;
+        }
+        if (ok) fitSeason(monthly, c, i * TERMS);
+        else c[i * TERMS] = Number.NaN;
+      }
+      this.season[v] = c;
+    }
+  }
+
+  /**
+   * Smoothed value of one cell at a position in the year: °C for tmx/tmn,
+   * mm per day for pre, share of days for r1/r5/r10/wet.
+   */
+  cellAt(v: SeasonVar, phase: number, row: number, col: number): number {
+    if (row < 0 || col < 0 || row >= this.rows || col >= this.cols) {
+      return Number.NaN;
+    }
+    const c = this.season[v];
+    if (!c) return Number.NaN;
+    const at = (row * this.cols + col) * TERMS;
+    if (Number.isNaN(c[at]!)) return Number.NaN;
+    return evalSeason(c, at, phase);
+  }
+
+  /** Bilinear sample of a smoothed value (see cellAt), coast-aware like sample(). */
+  sampleAt(v: SeasonVar, phase: number, lat: number, lon: number): number {
+    const fx = (lon - this.lon0) / this.step;
+    const fy = (this.lat0 - lat) / this.step;
+    const c0 = Math.floor(fx);
+    const r0 = Math.floor(fy);
+    const tx = fx - c0;
+    const ty = fy - r0;
+    let sum = 0;
+    let wsum = 0;
+    for (const [dr, dc, w] of [
+      [0, 0, (1 - tx) * (1 - ty)],
+      [0, 1, tx * (1 - ty)],
+      [1, 0, (1 - tx) * ty],
+      [1, 1, tx * ty],
+    ] as const) {
+      const val = this.cellAt(v, phase, r0 + dr, c0 + dc);
+      if (!Number.isNaN(val) && w > 0) {
+        sum += val * w;
+        wsum += w;
+      }
+    }
+    if (wsum > 0) return sum / wsum;
+    const row = Math.round(fy);
+    const col = Math.round(fx);
+    for (let r = 1; r <= 2; r++) {
+      for (let dr = -r; dr <= r; dr++) {
+        for (let dc = -r; dc <= r; dc++) {
+          const val = this.cellAt(v, phase, row + dr, col + dc);
+          if (!Number.isNaN(val)) return val;
+        }
+      }
+    }
+    return Number.NaN;
+  }
+
+  /** Rainy-day share of one cell at a position in the year. */
+  cellRainChanceAt(
+    phase: number,
+    row: number,
+    col: number,
+    threshold: number,
+  ): number {
+    const v: SeasonVar = this.hasRainyDayCounts
+      ? (countVar(threshold) as SeasonVar)
+      : 'wet';
+    const share = this.cellAt(v, phase, row, col);
+    if (this.hasRainyDayCounts || Number.isNaN(share)) return clamp01(share);
+    // CRU grids: estimate from the smoothed rain rate and wet-day share.
+    const days = 30.44;
+    return clamp01(
+      rainyDays(
+        this.cellAt('pre', phase, row, col) * days,
+        share * days,
+        threshold,
+      ) / days,
+    );
+  }
+
+  /**
+   * The weather at a point and a position in the year (0 … 1), from the
+   * smooth seasonal curves. Monthly fields hold the rate at that moment
+   * scaled to an average month (30.44 days).
+   */
+  at(
+    phase: number,
+    lat: number,
+    lon: number,
+    threshold: number,
+    ele?: number | null,
+  ): DayClimate {
+    const shift = this.altitudeShiftAt(lat, lon, ele, phase);
+    const rain = Math.max(0, this.sampleAt('pre', phase, lat, lon));
+    let chance: number;
+    if (this.hasRainyDayCounts) {
+      chance = clamp01(
+        this.sampleAt(countVar(threshold) as SeasonVar, phase, lat, lon),
+      );
+    } else {
+      const days = 30.44;
+      const wet = this.sampleAt('wet', phase, lat, lon) * days;
+      chance = clamp01(rainyDays(rain * days, wet, threshold) / days);
+    }
+    return {
+      high: this.sampleAt('tmx', phase, lat, lon) + shift,
+      low: this.sampleAt('tmn', phase, lat, lon) + shift,
+      rainMm: rain,
+      rainChance: chance,
+      monthRainMm: rain * 30.44,
+      monthWetDays: chance * 30.44,
+      altitudeShift: shift,
+    };
   }
 
   get bounds(): [[number, number], [number, number]] {
@@ -237,12 +450,7 @@ export default class ClimateGrid implements ClimateSource {
     return !Number.isNaN(this.sample('tmx', 0, lat, lon));
   }
 
-  /** Monthly normals at a point (month 0..11); rainy days counted from `threshold` mm. */
-  /**
-   * Monthly normals at a point (month 0..11); rainy days counted from
-   * `threshold` mm. With `ele` (m) and a grid that knows its cells' heights,
-   * high and low are shifted by the lapse rate for the height difference.
-   */
+  /** The weather at mid-month (month 0–11), from the smooth seasonal curves. */
   month(
     month: number,
     lat: number,
@@ -250,21 +458,20 @@ export default class ClimateGrid implements ClimateSource {
     threshold: number,
     ele?: number | null,
   ): DayClimate {
-    const days = DAYS_IN_MONTH[month]!;
-    const shift = this.altitudeShift(lat, lon, ele, month);
-    const pre = this.sample('pre', month, lat, lon);
-    const rainy = this.hasRainyDayCounts
-      ? this.sample(countVar(threshold), month, lat, lon)
-      : rainyDays(pre, this.sample('wet', month, lat, lon), threshold);
-    return {
-      high: this.sample('tmx', month, lat, lon) + shift,
-      low: this.sample('tmn', month, lat, lon) + shift,
-      rainMm: pre / days,
-      rainChance: Number.isNaN(pre) ? Number.NaN : Math.min(1, rainy / days),
-      monthRainMm: pre,
-      monthWetDays: Number.isNaN(pre) ? Number.NaN : rainy,
-      altitudeShift: shift,
-    };
+    return this.at(phaseOfMonth(month), lat, lon, threshold, ele);
+  }
+
+  /** °C to add at a position in the year for a point at `ele` m, compared with its grid cell's mean height. */
+  altitudeShiftAt(
+    lat: number,
+    lon: number,
+    ele: number | null | undefined,
+    phase: number,
+  ): number {
+    if (!this.hasElevation || ele === null || ele === undefined) return 0;
+    const cell = this.sample('elev', 0, lat, lon);
+    if (Number.isNaN(cell)) return 0;
+    return -lapseRateAt(phase) * (ele - cell);
   }
 
   /** °C to add in `month` (0–11) for a point at `ele` m, compared with its grid cell's mean height. */
@@ -295,11 +502,7 @@ export default class ClimateGrid implements ClimateSource {
     return rainyDays(pre, this.cell('wet', month, row, col), threshold);
   }
 
-  /**
-   * Expected weather on a specific date. Monthly means are treated as values at
-   * mid-month and interpolated linearly in between, so 31 Jan is about halfway
-   * between January and February.
-   */
+  /** Expected weather on a specific date, from the smooth seasonal curves. */
   on(
     date: Date,
     lat: number,
@@ -307,30 +510,7 @@ export default class ClimateGrid implements ClimateSource {
     threshold: number,
     ele?: number | null,
   ): DayClimate {
-    const m = date.getMonth();
-    const mid = DAYS_IN_MONTH[m]! / 2;
-    const day = date.getDate() - 0.5;
-    let m2: number;
-    let t: number;
-    if (day < mid) {
-      m2 = (m + 11) % 12;
-      t = (mid - day) / ((DAYS_IN_MONTH[m2]! + DAYS_IN_MONTH[m]!) / 2);
-    } else {
-      m2 = (m + 1) % 12;
-      t = (day - mid) / ((DAYS_IN_MONTH[m]! + DAYS_IN_MONTH[m2]!) / 2);
-    }
-    const a = this.month(m, lat, lon, threshold, ele);
-    const b = this.month(m2, lat, lon, threshold, ele);
-    const mix = (x: number, y: number) => x + (y - x) * t;
-    return {
-      high: mix(a.high, b.high),
-      low: mix(a.low, b.low),
-      rainMm: mix(a.rainMm, b.rainMm),
-      rainChance: mix(a.rainChance, b.rainChance),
-      monthRainMm: a.monthRainMm,
-      monthWetDays: a.monthWetDays,
-      altitudeShift: a.altitudeShift,
-    };
+    return this.at(phaseOfDate(date), lat, lon, threshold, ele);
   }
 }
 
@@ -392,6 +572,13 @@ export interface ClimateSource {
     threshold: number,
     ele?: number | null,
   ): DayClimate;
+  at(
+    phase: number,
+    lat: number,
+    lon: number,
+    threshold: number,
+    ele?: number | null,
+  ): DayClimate;
 }
 
 const NO_DATA: DayClimate = {
@@ -444,5 +631,17 @@ export class ClimateSet implements ClimateSource {
     ele?: number | null,
   ): DayClimate {
     return this.gridAt(lat, lon)?.on(date, lat, lon, threshold, ele) ?? NO_DATA;
+  }
+
+  at(
+    phase: number,
+    lat: number,
+    lon: number,
+    threshold: number,
+    ele?: number | null,
+  ): DayClimate {
+    return (
+      this.gridAt(lat, lon)?.at(phase, lat, lon, threshold, ele) ?? NO_DATA
+    );
   }
 }

@@ -151,7 +151,7 @@ export default class ItineraryChart extends Component<{
       this.planner.highlightedDay === day.n ? undefined : day.n,
     );
     // Follow the trip with the map's climate month.
-    this.planner.set('month', day.date.getMonth());
+    this.planner.showDate(day.date);
   };
 
   fmtTemp = fmtTemp;
