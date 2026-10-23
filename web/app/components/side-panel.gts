@@ -8,8 +8,6 @@ import { SegmentedControl } from 'frontile/buttons';
 import { Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
-import type { RainMetric, TempMetric } from 'forkcast/services/planner';
-import type { RainThreshold } from 'forkcast/utils/climate';
 import { MONTHS } from 'forkcast/utils/climate';
 import {
   css,
@@ -19,12 +17,15 @@ import {
   fmtTemp,
 } from 'forkcast/utils/format';
 import { errorMessage, not } from 'forkcast/utils/helpers';
-import { LIMITS } from 'forkcast/utils/settings';
+import { LIMITS, type LimitedKey } from 'forkcast/utils/settings';
 import { LAST_WEEK } from 'forkcast/utils/weeks';
 import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
 import Logo from 'forkcast/components/logo';
 import HelpLink from 'forkcast/components/help-link';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
+
+type MapSetting =
+  'showTemp' | 'showRain' | 'tempMetric' | 'rainMetric' | 'rainThreshold';
 
 interface SidePanelSignature {
   Args: {
@@ -66,7 +67,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
   }));
 
   lastWeek = LAST_WEEK;
-  limits = LIMITS;
 
   get weekValue() {
     return String(this.planner.week);
@@ -113,27 +113,43 @@ export default class SidePanel extends Component<SidePanelSignature> {
     return this.atlas.loadingRouteId === this.planner.routeId;
   }
 
+  /** The trip at a glance, as label and value pairs. */
   get summary() {
     const t = this.trip;
-    if (!t) return undefined;
-    return {
-      days: t.days.length,
-      riding: t.ridingDays,
-      rest: t.restDays,
-      end: fmtDate(t.end),
-      avgHigh: fmtTemp(t.avgHigh),
-      coldest: t.coldestNight ? fmtTemp(t.coldestNight.nightLow) : '–',
-      coldestOn: t.coldestNight ? fmtShortDate(t.coldestNight.date) : '–',
-      rainy: Math.round(t.rainyDays),
-    };
+    if (!t) return [];
+    const cold = t.coldestNight;
+    return [
+      ['Days', t.days.length],
+      ['Arrive', fmtDate(t.end)],
+      ['Riding days', t.ridingDays],
+      ['Rest days', t.restDays],
+      ['Average high', fmtTemp(t.avgHigh)],
+      ['Rainy riding days', Math.round(t.rainyDays)],
+      ['Coldest night', cold ? fmtTemp(cold.nightLow) : '–'],
+      ['Coldest night on', cold ? fmtShortDate(cold.date) : '–'],
+    ].map(([label, value]) => ({ label, value }));
+  }
+
+  /** The numeric trip settings, with their allowed ranges. */
+  get tripFields() {
+    const p = this.planner;
+    return [
+      { key: 'km', label: 'km per day', value: p.kmPerDay },
+      { key: 'ride', label: 'Ride days', value: p.rideDays },
+      { key: 'rest', label: 'Rest days', value: p.restDays },
+    ].map((f) => ({
+      ...f,
+      value: String(f.value),
+      limits: LIMITS[f.key as LimitedKey],
+      onChange: (v: string) => p.setLimited(f.key as LimitedKey, v),
+    }));
   }
 
   onWeekInput = (value: string) => this.planner.set('week', Number(value));
-  setTempMetric = (v: TempMetric) => this.planner.set('tempMetric', v);
-  setRainMetric = (v: RainMetric) => this.planner.set('rainMetric', v);
-  setRainThreshold = (v: RainThreshold) => this.planner.set('rainThreshold', v);
-  toggle = (key: 'showTemp' | 'showRain', value: boolean) =>
-    this.planner.set(key, value);
+  /** For the map's switches and segmented controls: `(fn this.setMap "showRain")`. */
+  // Each control passes its own setting's type of value; `fn` can't carry that.
+  setMap = (key: MapSetting, value: unknown) =>
+    this.planner.set(key, value as never);
   toggleReversed = () => this.planner.toggleReversed();
 
   selectRoute = (e: Event) => {
@@ -142,8 +158,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
   deleteSelected = () => this.planner.deleteOwnRoute();
   setStart = (v: string) => this.planner.setStart(v);
-  setLimited = (key: keyof typeof LIMITS, v: string) =>
-    this.planner.setLimited(key, v);
 
   startDrawing = () => {
     this.drawnName = '';
@@ -253,11 +267,11 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 @label="Temperature"
                 @size="sm"
                 @isSelected={{this.planner.showTemp}}
-                @onChange={{fn this.toggle "showTemp"}}
+                @onChange={{fn this.setMap "showTemp"}}
               />
               <SegmentedControl
                 @value={{this.planner.tempMetric}}
-                @onChange={{this.setTempMetric}}
+                @onChange={{fn this.setMap "tempMetric"}}
                 @size="sm"
                 aria-label="Temperature shown"
                 as |Ctl|
@@ -271,11 +285,11 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 @label="Rain"
                 @size="sm"
                 @isSelected={{this.planner.showRain}}
-                @onChange={{fn this.toggle "showRain"}}
+                @onChange={{fn this.setMap "showRain"}}
               />
               <SegmentedControl
                 @value={{this.planner.rainMetric}}
-                @onChange={{this.setRainMetric}}
+                @onChange={{fn this.setMap "rainMetric"}}
                 @size="sm"
                 aria-label="Rain shown"
                 as |Ctl|
@@ -288,7 +302,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
               <span class="text-sm">Rainy day &gt;</span>
               <SegmentedControl
                 @value={{this.planner.rainThreshold}}
-                @onChange={{this.setRainThreshold}}
+                @onChange={{fn this.setMap "rainThreshold"}}
                 @size="sm"
                 aria-label="Rain needed for a rainy day"
                 as |Ctl|
@@ -448,59 +462,28 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   @onChange={{this.setStart}}
                 />
               </div>
-              <div>
-                <Input
-                  @label="km per day"
-                  @type="number"
-                  @size="sm"
-                  @value="{{this.planner.kmPerDay}}"
-                  @onChange={{fn this.setLimited "km"}}
-                  min={{this.limits.km.min}}
-                  max={{this.limits.km.max}}
-                  step={{this.limits.km.step}}
-                />
-              </div>
-              <div>
-                <Input
-                  @label="Ride days"
-                  @type="number"
-                  @size="sm"
-                  @value="{{this.planner.rideDays}}"
-                  @onChange={{fn this.setLimited "ride"}}
-                  min={{this.limits.ride.min}}
-                  max={{this.limits.ride.max}}
-                  step={{this.limits.ride.step}}
-                />
-              </div>
-              <div>
-                <Input
-                  @label="Rest days"
-                  @type="number"
-                  @size="sm"
-                  @value="{{this.planner.restDays}}"
-                  @onChange={{fn this.setLimited "rest"}}
-                  min={{this.limits.rest.min}}
-                  max={{this.limits.rest.max}}
-                  step={{this.limits.rest.step}}
-                />
-              </div>
+              {{#each this.tripFields as |f|}}
+                <div>
+                  <Input
+                    @label={{f.label}}
+                    @type="number"
+                    @size="sm"
+                    @value={{f.value}}
+                    @onChange={{f.onChange}}
+                    min={{f.limits.min}}
+                    max={{f.limits.max}}
+                    step={{f.limits.step}}
+                  />
+                </div>
+              {{/each}}
             </div>
           {{/if}}
 
-          {{#if this.showOverview}}{{#if this.summary}}
+          {{#if this.showOverview}}{{#if this.summary.length}}
               <dl class="wt-summary">
-                <div><dt>Days</dt><dd>{{this.summary.days}}</dd></div>
-                <div><dt>Arrive</dt><dd>{{this.summary.end}}</dd></div>
-                <div><dt>Riding days</dt><dd>{{this.summary.riding}}</dd></div>
-                <div><dt>Rest days</dt><dd>{{this.summary.rest}}</dd></div>
-                <div><dt>Average high</dt><dd
-                  >{{this.summary.avgHigh}}</dd></div>
-                <div><dt>Rainy riding days</dt><dd
-                  >{{this.summary.rainy}}</dd></div>
-                <div><dt>Coldest night</dt><dd
-                  >{{this.summary.coldest}}</dd></div>
-                <div><dt>Coldest night on</dt><dd
-                  >{{this.summary.coldestOn}}</dd></div>
+                {{#each this.summary as |item|}}
+                  <div><dt>{{item.label}}</dt><dd>{{item.value}}</dd></div>
+                {{/each}}
               </dl>
             {{/if}}{{/if}}
         </section>
