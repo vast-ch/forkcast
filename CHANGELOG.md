@@ -11,6 +11,7 @@
 
 ### Changed
 
+- On phones, Forkcast now has its own layout: the map first, then your trip day by day, with every setting in a Settings drawer. Tapping the route picks that day, and drawing a route works with a small toolbar on the map.
 - The rain bars under the day chart are now labelled: they show the chance of a rainy day (over your chosen amount), on a 0–100 % scale.
 - "Ride it the other way" is now a small button with up-down arrows next to the route picker.
 - Days are simply the route cut into equal stretches of your daily distance; the nearby town names are gone.

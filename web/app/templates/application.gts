@@ -1,6 +1,7 @@
 import { pageTitle } from 'ember-page-title';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
+import { PortalTarget } from 'frontile/overlays';
 import type AtlasService from 'forkcast/services/atlas';
 
 export default class Application extends Component {
@@ -18,5 +19,7 @@ export default class Application extends Component {
     {{else}}
       {{outlet}}
     {{/if}}
+    {{! Frontile renders overlays (the phone settings drawer) here. }}
+    <PortalTarget class="relative z-[2001]" />
   </template>
 }

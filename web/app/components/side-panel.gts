@@ -26,7 +26,31 @@ import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 
 const eq = (a: unknown, b: unknown) => a === b;
 
-export default class SidePanel extends Component<{ Element: HTMLElement }> {
+interface SidePanelSignature {
+  Args: {
+    /** 'all' (desktop sidebar), 'settings' (phone drawer) or 'overview' (phone page) */
+    part?: 'all' | 'settings' | 'overview';
+  };
+  Element: HTMLElement;
+}
+
+export default class SidePanel extends Component<SidePanelSignature> {
+  get part() {
+    return this.args.part ?? 'all';
+  }
+
+  get showHeader() {
+    return this.part === 'all';
+  }
+
+  get showSettings() {
+    return this.part !== 'overview';
+  }
+
+  get showOverview() {
+    return this.part !== 'settings';
+  }
+
   @service declare planner: PlannerService;
   @service declare atlas: AtlasService;
 
@@ -211,316 +235,342 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
 
   <template>
     <aside class="wt-panel flex min-h-0 flex-col" ...attributes>
-      <header class="wt-brand px-5 pt-5 pb-4">
-        <div class="flex items-baseline justify-between gap-3">
-          <h1 class="wt-logo-heading"><LinkTo
-              @route="index"
-              aria-label="Forkcast home"
-            ><Logo /></LinkTo></h1>
-          <LinkTo @route="help" class="wt-help-link">How it works</LinkTo>
-        </div>
-        <p class="mt-2 flex items-baseline justify-between gap-3 text-sm">
-          <span class="font-medium">{{this.atlas.continent.name}}</span>
-          <LinkTo @route="index" class="wt-help-link">Change continent</LinkTo>
-        </p>
-      </header>
+      {{#if this.showHeader}}
+        <header class="wt-brand px-5 pt-5 pb-4">
+          <div class="flex items-baseline justify-between gap-3">
+            <h1 class="wt-logo-heading"><LinkTo
+                @route="index"
+                aria-label="Forkcast home"
+              ><Logo /></LinkTo></h1>
+            <LinkTo @route="help" class="wt-help-link">How it works</LinkTo>
+          </div>
+          <p class="mt-2 flex items-baseline justify-between gap-3 text-sm">
+            <span class="font-medium">{{this.atlas.continent.name}}</span>
+            <LinkTo @route="index" class="wt-help-link">Change continent</LinkTo>
+          </p>
+        </header>
+      {{/if}}
 
-      <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6">
-        <section aria-labelledby="h-month" class="flex flex-col gap-3">
-          <h2 id="h-month" class="wt-h2">Climate on the map</h2>
-          <div class="wt-months" role="radiogroup" aria-label="Month">
-            {{#each this.months as |m|}}
-              <button
-                type="button"
-                role="radio"
-                aria-checked={{if (eq m.i this.planner.month) "true" "false"}}
-                class="wt-month {{if (eq m.i this.planner.month) 'is-active'}}"
-                {{on "click" (fn this.setMonth m.i)}}
-              >{{m.label}}</button>
-            {{/each}}
-          </div>
-
-          <div class="flex items-center justify-between gap-3">
-            <Switch
-              @label="Temperature"
-              @size="sm"
-              @isSelected={{this.planner.showTemp}}
-              @onChange={{fn this.toggle "showTemp"}}
-            />
-            <SegmentedControl
-              @value={{this.planner.tempMetric}}
-              @onChange={{this.setTempMetric}}
-              @size="sm"
-              aria-label="Temperature shown"
-              as |Ctl|
-            >
-              <Ctl.Item @value="high">Day high</Ctl.Item>
-              <Ctl.Item @value="low">Night low</Ctl.Item>
-            </SegmentedControl>
-          </div>
-          <div class="flex items-center justify-between gap-3">
-            <Switch
-              @label="Rain"
-              @size="sm"
-              @isSelected={{this.planner.showRain}}
-              @onChange={{fn this.toggle "showRain"}}
-            />
-            <SegmentedControl
-              @value={{this.planner.rainMetric}}
-              @onChange={{this.setRainMetric}}
-              @size="sm"
-              aria-label="Rain shown"
-              as |Ctl|
-            >
-              <Ctl.Item @value="mm">mm</Ctl.Item>
-              <Ctl.Item @value="days">Rainy days</Ctl.Item>
-            </SegmentedControl>
-          </div>
-          <div class="flex items-center justify-between gap-3">
-            <span class="text-sm">Rainy day &gt;</span>
-            <SegmentedControl
-              @value={{this.planner.rainThreshold}}
-              @onChange={{this.setRainThreshold}}
-              @size="sm"
-              aria-label="Rain needed for a rainy day"
-              as |Ctl|
-            >
-              <Ctl.Item @value={{1}}>1 mm</Ctl.Item>
-              <Ctl.Item @value={{5}}>5 mm</Ctl.Item>
-              <Ctl.Item @value={{10}}>10 mm</Ctl.Item>
-            </SegmentedControl>
-          </div>
-        </section>
-
-        <section aria-labelledby="h-route" class="flex flex-col gap-3">
-          <h2 id="h-route" class="wt-h2">Route</h2>
-          <div class="flex flex-col gap-1.5">
-            <label for="route-picker" class="sr-only">Route</label>
-            {{#if this.groups.length}}
-              <div class="flex items-stretch gap-2">
-                <div class="wt-select min-w-0 flex-1">
-                  <span
-                    class="wt-route-swatch"
-                    style={{css
-                      "background: "
-                      (if this.selected this.selected.color "transparent")
-                    }}
-                  ></span>
-                  <select id="route-picker" {{on "change" this.selectRoute}}>
-                    {{#each this.groups as |g|}}
-                      <optgroup label={{g.label}}>
-                        {{#each g.routes as |r|}}
-                          <option
-                            value={{r.id}}
-                            selected={{r.isSelected}}
-                          >{{r.label}}</option>
-                        {{/each}}
-                      </optgroup>
-                    {{/each}}
-                  </select>
-                </div>
+      <div
+        class="wt-panel-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6"
+      >
+        {{#if this.showSettings}}
+          <section
+            aria-labelledby="h-month"
+            class="wt-sec-climate flex flex-col gap-3"
+          >
+            <h2 id="h-month" class="wt-h2">Climate on the map</h2>
+            <div class="wt-months" role="radiogroup" aria-label="Month">
+              {{#each this.months as |m|}}
                 <button
                   type="button"
-                  class="wt-reverse {{if this.planner.isReversed 'is-active'}}"
-                  aria-pressed={{if this.planner.isReversed "true" "false"}}
-                  aria-label="Ride it the other way"
-                  title="Ride it the other way"
-                  {{on "click" this.toggleReversed}}
-                ><ArrowsDownUp class="size-5" aria-hidden="true" /></button>
-              </div>
-            {{else}}
-              <p class="wt-empty">No preset routes here yet. Draw a route on the
-                map or import a GPX file.</p>
-            {{/if}}
-            <p class="wt-muted flex flex-wrap items-center gap-x-2 text-xs">
-              {{#if this.isLoadingRoute}}
-                Loading the track…
-              {{else if this.route}}
-                {{#if this.route.url}}
-                  <a
-                    href={{this.route.url}}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="underline"
-                  >Route page</a>
-                {{/if}}
-                {{#unless this.route.isPreset}}
+                  role="radio"
+                  aria-checked={{if (eq m.i this.planner.month) "true" "false"}}
+                  class="wt-month
+                    {{if (eq m.i this.planner.month) 'is-active'}}"
+                  {{on "click" (fn this.setMonth m.i)}}
+                >{{m.label}}</button>
+              {{/each}}
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <Switch
+                @label="Temperature"
+                @size="sm"
+                @isSelected={{this.planner.showTemp}}
+                @onChange={{fn this.toggle "showTemp"}}
+              />
+              <SegmentedControl
+                @value={{this.planner.tempMetric}}
+                @onChange={{this.setTempMetric}}
+                @size="sm"
+                aria-label="Temperature shown"
+                as |Ctl|
+              >
+                <Ctl.Item @value="high">Day high</Ctl.Item>
+                <Ctl.Item @value="low">Night low</Ctl.Item>
+              </SegmentedControl>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <Switch
+                @label="Rain"
+                @size="sm"
+                @isSelected={{this.planner.showRain}}
+                @onChange={{fn this.toggle "showRain"}}
+              />
+              <SegmentedControl
+                @value={{this.planner.rainMetric}}
+                @onChange={{this.setRainMetric}}
+                @size="sm"
+                aria-label="Rain shown"
+                as |Ctl|
+              >
+                <Ctl.Item @value="mm">mm</Ctl.Item>
+                <Ctl.Item @value="days">Rainy days</Ctl.Item>
+              </SegmentedControl>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm">Rainy day &gt;</span>
+              <SegmentedControl
+                @value={{this.planner.rainThreshold}}
+                @onChange={{this.setRainThreshold}}
+                @size="sm"
+                aria-label="Rain needed for a rainy day"
+                as |Ctl|
+              >
+                <Ctl.Item @value={{1}}>1 mm</Ctl.Item>
+                <Ctl.Item @value={{5}}>5 mm</Ctl.Item>
+                <Ctl.Item @value={{10}}>10 mm</Ctl.Item>
+              </SegmentedControl>
+            </div>
+          </section>
+        {{/if}}
+
+        {{#if this.showSettings}}
+          <section
+            aria-labelledby="h-route"
+            class="wt-sec-route flex flex-col gap-3"
+          >
+            <h2 id="h-route" class="wt-h2">Route</h2>
+            <div class="flex flex-col gap-1.5">
+              <label for="route-picker" class="sr-only">Route</label>
+              {{#if this.groups.length}}
+                <div class="flex items-stretch gap-2">
+                  <div class="wt-select min-w-0 flex-1">
+                    <span
+                      class="wt-route-swatch"
+                      style={{css
+                        "background: "
+                        (if this.selected this.selected.color "transparent")
+                      }}
+                    ></span>
+                    <select id="route-picker" {{on "change" this.selectRoute}}>
+                      {{#each this.groups as |g|}}
+                        <optgroup label={{g.label}}>
+                          {{#each g.routes as |r|}}
+                            <option
+                              value={{r.id}}
+                              selected={{r.isSelected}}
+                            >{{r.label}}</option>
+                          {{/each}}
+                        </optgroup>
+                      {{/each}}
+                    </select>
+                  </div>
                   <button
                     type="button"
-                    class="wt-link-danger"
-                    {{on "click" this.deleteSelected}}
-                  >Delete this route</button>
-                {{/unless}}
+                    class="wt-reverse
+                      {{if this.planner.isReversed 'is-active'}}"
+                    aria-pressed={{if this.planner.isReversed "true" "false"}}
+                    aria-label="Ride it the other way"
+                    title="Ride it the other way"
+                    {{on "click" this.toggleReversed}}
+                  ><ArrowsDownUp class="size-5" aria-hidden="true" /></button>
+                </div>
+              {{else}}
+                <p class="wt-empty">No preset routes here yet. Draw a route on
+                  the map or import a GPX file.</p>
               {{/if}}
-            </p>
-          </div>
+              <p class="wt-muted flex flex-wrap items-center gap-x-2 text-xs">
+                {{#if this.isLoadingRoute}}
+                  Loading the track…
+                {{else if this.route}}
+                  {{#if this.route.url}}
+                    <a
+                      href={{this.route.url}}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="underline"
+                    >Route page</a>
+                  {{/if}}
+                  {{#unless this.route.isPreset}}
+                    <button
+                      type="button"
+                      class="wt-link-danger"
+                      {{on "click" this.deleteSelected}}
+                    >Delete this route</button>
+                  {{/unless}}
+                {{/if}}
+              </p>
+            </div>
 
-          {{#if this.planner.isDrawing}}
-            <div class="wt-draw flex flex-col gap-2 p-3">
-              <p class="text-sm">Click the map to add points ({{this.planner.drawn.length}}
-                so far). Double-click or press Save to finish. Points are joined
-                with straight lines.</p>
-              <Input
-                @label="Name"
-                @size="sm"
-                @value={{this.drawnName}}
-                @onInput={{this.setDrawnName}}
-                placeholder="My route"
-              />
+            {{#if this.planner.isDrawing}}
+              <div class="wt-draw flex flex-col gap-2 p-3">
+                <p class="text-sm">Click the map to add points ({{this.planner.drawn.length}}
+                  so far). Double-click or press Save to finish. Points are
+                  joined with straight lines.</p>
+                <Input
+                  @label="Name"
+                  @size="sm"
+                  @value={{this.drawnName}}
+                  @onInput={{this.setDrawnName}}
+                  placeholder="My route"
+                />
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="wt-btn is-primary"
+                    disabled={{this.cannotSave}}
+                    {{on "click" this.finishDrawing}}
+                  >Save route</button>
+                  <button
+                    type="button"
+                    class="wt-btn"
+                    {{on "click" this.undoPoint}}
+                  >Undo point</button>
+                  <button
+                    type="button"
+                    class="wt-btn is-ghost"
+                    {{on "click" this.cancelDrawing}}
+                  >Cancel</button>
+                </div>
+              </div>
+            {{else}}
               <div class="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  class="wt-btn is-primary"
-                  disabled={{this.cannotSave}}
-                  {{on "click" this.finishDrawing}}
-                >Save route</button>
-                <button
-                  type="button"
                   class="wt-btn"
-                  {{on "click" this.undoPoint}}
-                >Undo point</button>
+                  {{on "click" this.startDrawing}}
+                >Draw a route</button>
+                <label class="wt-btn">
+                  Import GPX
+                  <input
+                    type="file"
+                    accept=".gpx,application/gpx+xml"
+                    class="sr-only"
+                    {{on "change" this.importGpx}}
+                  />
+                </label>
                 <button
                   type="button"
                   class="wt-btn is-ghost"
-                  {{on "click" this.cancelDrawing}}
-                >Cancel</button>
+                  {{on "click" this.exportGpx}}
+                >Export GPX</button>
               </div>
-            </div>
-          {{else}}
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="wt-btn"
-                {{on "click" this.startDrawing}}
-              >Draw a route</button>
-              <label class="wt-btn">
-                Import GPX
-                <input
-                  type="file"
-                  accept=".gpx,application/gpx+xml"
-                  class="sr-only"
-                  {{on "change" this.importGpx}}
-                />
-              </label>
-              <button
-                type="button"
-                class="wt-btn is-ghost"
-                {{on "click" this.exportGpx}}
-              >Export GPX</button>
-            </div>
-          {{/if}}
-          {{#if this.importError}}
-            <p class="wt-error text-sm" role="alert">{{this.importError}}</p>
-          {{/if}}
-        </section>
+            {{/if}}
+            {{#if this.importError}}
+              <p class="wt-error text-sm" role="alert">{{this.importError}}</p>
+            {{/if}}
+          </section>
+        {{/if}}
 
-        <section aria-labelledby="h-trip" class="flex flex-col gap-3">
+        <section
+          aria-labelledby="h-trip"
+          class="wt-sec-trip flex flex-col gap-3"
+        >
           <h2 id="h-trip" class="wt-h2">Trip</h2>
-          <div class="grid grid-cols-3 gap-2">
-            <div class="col-span-3">
-              <Input
-                @label="Start"
-                @type="date"
-                @size="sm"
-                @value={{this.planner.start}}
-                @onChange={{this.setStart}}
-              />
+          {{#if this.showSettings}}
+            <div class="grid grid-cols-3 gap-2">
+              <div class="col-span-3">
+                <Input
+                  @label="Start"
+                  @type="date"
+                  @size="sm"
+                  @value={{this.planner.start}}
+                  @onChange={{this.setStart}}
+                />
+              </div>
+              <div>
+                <Input
+                  @label="km per day"
+                  @type="number"
+                  @size="sm"
+                  @value="{{this.planner.kmPerDay}}"
+                  @onChange={{this.setKmPerDay}}
+                  min="5"
+                  max="400"
+                  step="5"
+                />
+              </div>
+              <div>
+                <Input
+                  @label="Ride days"
+                  @type="number"
+                  @size="sm"
+                  @value="{{this.planner.rideDays}}"
+                  @onChange={{this.setRideDays}}
+                  min="1"
+                  max="60"
+                />
+              </div>
+              <div>
+                <Input
+                  @label="Rest days"
+                  @type="number"
+                  @size="sm"
+                  @value="{{this.planner.restDays}}"
+                  @onChange={{this.setRestDays}}
+                  min="0"
+                  max="30"
+                />
+              </div>
+              <p class="wt-muted col-span-3 text-xs">{{this.pattern}}</p>
             </div>
-            <div>
-              <Input
-                @label="km per day"
-                @type="number"
-                @size="sm"
-                @value="{{this.planner.kmPerDay}}"
-                @onChange={{this.setKmPerDay}}
-                min="5"
-                max="400"
-                step="5"
-              />
-            </div>
-            <div>
-              <Input
-                @label="Ride days"
-                @type="number"
-                @size="sm"
-                @value="{{this.planner.rideDays}}"
-                @onChange={{this.setRideDays}}
-                min="1"
-                max="60"
-              />
-            </div>
-            <div>
-              <Input
-                @label="Rest days"
-                @type="number"
-                @size="sm"
-                @value="{{this.planner.restDays}}"
-                @onChange={{this.setRestDays}}
-                min="0"
-                max="30"
-              />
-            </div>
-            <p class="wt-muted col-span-3 text-xs">{{this.pattern}}</p>
-          </div>
-
-          {{#if this.summary}}
-            <dl class="wt-summary">
-              <div><dt>Days</dt><dd>{{this.summary.days}}</dd><dd
-                  class="wt-muted text-xs"
-                >{{this.summary.riding}}
-                  riding,
-                  {{this.summary.rest}}
-                  rest</dd></div>
-              <div><dt>Arrive</dt><dd>{{this.summary.end}}</dd></div>
-              <div><dt>Average high</dt><dd>{{this.summary.avgHigh}}</dd><dd
-                  class="wt-muted text-xs"
-                >on riding days</dd></div>
-              <div><dt>Rainy riding days</dt><dd>{{this.summary.rainy}}</dd><dd
-                  class="wt-muted text-xs"
-                >about {{this.summary.rainyPct}}</dd></div>
-              <div class="col-span-2"><dt>Coldest night</dt><dd
-                >{{this.summary.coldest}}</dd></div>
-            </dl>
           {{/if}}
+
+          {{#if this.showOverview}}{{#if this.summary}}
+              <dl class="wt-summary">
+                <div><dt>Days</dt><dd>{{this.summary.days}}</dd><dd
+                    class="wt-muted text-xs"
+                  >{{this.summary.riding}}
+                    riding,
+                    {{this.summary.rest}}
+                    rest</dd></div>
+                <div><dt>Arrive</dt><dd>{{this.summary.end}}</dd></div>
+                <div><dt>Average high</dt><dd>{{this.summary.avgHigh}}</dd><dd
+                    class="wt-muted text-xs"
+                  >on riding days</dd></div>
+                <div><dt>Rainy riding days</dt><dd
+                  >{{this.summary.rainy}}</dd><dd class="wt-muted text-xs">about
+                    {{this.summary.rainyPct}}</dd></div>
+                <div class="col-span-2"><dt>Coldest night</dt><dd
+                  >{{this.summary.coldest}}</dd></div>
+              </dl>
+            {{/if}}{{/if}}
         </section>
 
         {{#if this.trip}}
-          <section aria-labelledby="h-days" class="flex flex-col gap-2">
-            <h2 id="h-days" class="wt-h2">Day by day</h2>
-            <div class="wt-days" role="table" aria-label="Days of the trip">
-              <div role="row" class="wt-days-head">
-                <span role="columnheader">Day</span>
-                <span role="columnheader">Date</span>
-                <span role="columnheader" class="text-right">km</span>
-                <span role="columnheader" class="text-right">High</span>
-                <span role="columnheader" class="text-right">Night</span>
-                <span role="columnheader" class="text-right">Rain</span>
-              </div>
-              {{#each this.dayRows as |row|}}
-                <div
-                  role="row"
-                  tabindex="0"
-                  class="wt-days-row
-                    {{if row.isActive 'is-active'}}
-                    {{if row.d.isRest 'is-rest'}}"
-                  {{on "click" (fn this.selectDay row.d)}}
-                >
-                  <span role="cell">{{row.d.n}}</span>
-                  <span role="cell"><span
-                      class="wt-muted"
-                    >{{row.weekday}}</span>
-                    {{row.date}}</span>
-                  <span role="cell" class="text-right">{{row.km}}</span>
-                  <span role="cell" class="text-right"><span
-                      class="wt-chip"
-                      style={{css "background: " row.color}}
-                    ></span>{{row.high}}</span>
-                  <span role="cell" class="text-right">{{row.low}}</span>
-                  <span role="cell" class="text-right">{{row.rain}}</span>
+          {{#if this.showOverview}}
+            <section
+              aria-labelledby="h-days"
+              class="wt-sec-days flex flex-col gap-2"
+            >
+              <h2 id="h-days" class="wt-h2">Day by day</h2>
+              <div class="wt-days" role="table" aria-label="Days of the trip">
+                <div role="row" class="wt-days-head">
+                  <span role="columnheader">Day</span>
+                  <span role="columnheader">Date</span>
+                  <span role="columnheader" class="text-right">km</span>
+                  <span role="columnheader" class="text-right">High</span>
+                  <span role="columnheader" class="text-right">Night</span>
+                  <span role="columnheader" class="text-right">Rain</span>
                 </div>
-              {{/each}}
-            </div>
-          </section>
+                {{#each this.dayRows as |row|}}
+                  <div
+                    role="row"
+                    tabindex="0"
+                    class="wt-days-row
+                      {{if row.isActive 'is-active'}}
+                      {{if row.d.isRest 'is-rest'}}"
+                    {{on "click" (fn this.selectDay row.d)}}
+                  >
+                    <span role="cell">{{row.d.n}}</span>
+                    <span role="cell"><span
+                        class="wt-muted"
+                      >{{row.weekday}}</span>
+                      {{row.date}}</span>
+                    <span role="cell" class="text-right">{{row.km}}</span>
+                    <span role="cell" class="text-right"><span
+                        class="wt-chip"
+                        style={{css "background: " row.color}}
+                      ></span>{{row.high}}</span>
+                    <span role="cell" class="text-right">{{row.low}}</span>
+                    <span role="cell" class="text-right">{{row.rain}}</span>
+                  </div>
+                {{/each}}
+              </div>
+            </section>
+          {{/if}}
         {{/if}}
       </div>
     </aside>

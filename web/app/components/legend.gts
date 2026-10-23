@@ -60,7 +60,7 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
 
   <template>
     <div
-      class="wt-card flex flex-wrap items-end gap-x-6 gap-y-3 px-3 py-2.5 text-xs"
+      class="wt-card wt-legend flex flex-wrap items-end gap-x-6 gap-y-3 px-3 py-2.5 text-xs"
       ...attributes
     >
       {{#if this.planner.showTemp}}

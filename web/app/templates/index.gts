@@ -83,7 +83,7 @@ export default class IndexTemplate extends Component {
           {{/each}}
         </svg>
         <figcaption class="wt-world-caption" aria-live="polite">
-          {{if this.caption this.caption "Click a continent"}}
+          {{if this.caption this.caption "Pick a continent"}}
         </figcaption>
       </figure>
 

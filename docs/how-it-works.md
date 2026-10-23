@@ -52,6 +52,23 @@ lose nothing, and there is no account or storage to manage. Defaults are left
 out so links stay short. There is deliberately no localStorage: one source of
 truth, visible in the address bar.
 
+## Phones
+
+Below 900 px wide (`web/app/services/media.ts`) the planner switches layout
+instead of squeezing the sidebar: a slim bar (logo, continent, help, Settings),
+the map, then the trip (summary, day chart, day list). All settings (month,
+layers, route, trip) live in a Frontile Drawer opened from the bar; it is the
+same `SidePanel` component rendering only its settings part. Tapping the route
+selects a day: touch screens have no hover, so the map works out what is under
+the tap before handling it. Drawing a route closes the drawer and shows a
+floating toolbar on the map (points, Undo, Save, Cancel). The map attribution
+is shortened to one line with a link to the help page's sources.
+
+**Why:** on a phone the map and the day-by-day weather are what you look at;
+the settings are changed now and then. Leaflet's own z-indexes are contained
+(`isolation: isolate` on the map's section) so the drawer and the bar stay on
+top.
+
 ## The map
 
 - **Leaflet** with our own basemap: country outlines from Natural Earth
