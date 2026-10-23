@@ -24,6 +24,8 @@
   --wt-rain: #112f6e;
   --wt-danger: #b42318;
   --wt-sun: #f2b632;
+  /* The selected day, on the map and in the chart (ROUTE_ACCENT in wheel-map.gts) */
+  --wt-pick: #a020f0;
   --wt-font-display:
     "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --wt-font-body:
@@ -631,7 +633,7 @@ body {
   fill: var(--wt-muted);
 }
 .wt-day.is-active .wt-day-num {
-  fill: var(--wt-ink);
+  fill: var(--wt-pick);
   font-weight: 600;
 }
 .wt-day {
@@ -643,19 +645,20 @@ body {
 .wt-day:hover .wt-day-hit {
   fill: rgb(13 107 120 / 8%);
 }
-.wt-day.is-active .wt-day-hit {
-  fill: rgb(23 33 43 / 10%);
-}
 .wt-day.is-rest .wt-day-hit {
   fill: rgb(23 33 43 / 4%);
+}
+/* After the rest-day shading, so a selected rest day shows as selected. */
+.wt-day.is-active .wt-day-hit {
+  fill: rgb(160 32 240 / 14%);
 }
 .wt-temp-bar {
   stroke: rgb(0 0 0 / 18%);
   stroke-width: 0.5;
 }
 .wt-day.is-active .wt-temp-bar {
-  stroke: var(--wt-ink);
-  stroke-width: 1.5;
+  stroke: var(--wt-pick);
+  stroke-width: 2;
 }
 .wt-rain-bar {
   fill: var(--wt-rain);

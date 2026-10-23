@@ -4,12 +4,13 @@
 
 ### Changed
 
+- Rest days in the day chart show their temperatures and chance of rain too, for where you stay; they are still the shaded columns.
 - A new logo: a bicycle wheel rising over the horizon like the sun, in the top left, as the browser tab icon and as the home-screen icon.
 - The day list is gone: the chart under the map now shows each day's number along its top (rest days included, in place of the old "R") instead of dates under it, and you pick a day there, by clicking or with the arrow keys. The selected day's distance, climbing and weather appear above the chart.
 - A new trip starts today instead of on 1 January.
 - Picking a start date selects the trip's first day, so the chart, the map and its week start there.
 - Clicking an overnight stop on the map now also moves the map to that day's week, as picking the day in the chart or the list already did.
-- The overnight stops along your route have a glowing purple ring, and the stretch of the day you pick on the map is the same purple, so both stand out on every temperature colour.
+- The overnight stops along your route have a glowing purple ring, and the day you pick is the same purple on the map (its stretch) and in the day chart (its column), so it stands out on every temperature colour.
 
 ### Fixed
 

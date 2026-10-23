@@ -273,25 +273,23 @@ export default class ItineraryChart extends Component<{
                 text-anchor="middle"
                 class="wt-day-num"
               >{{b.day.n}}</text>
-              {{#unless b.day.isRest}}
-                <rect
-                  x={{b.barX}}
-                  y={{b.yHigh}}
-                  width={{this.barW}}
-                  height={{b.barH}}
-                  class="wt-temp-bar"
-                  style={{css "fill: " b.color}}
-                  rx="2"
-                />
-                <rect
-                  x={{b.barX}}
-                  y={{b.rainY}}
-                  width={{this.barW}}
-                  height={{b.rainH}}
-                  class="wt-rain-bar"
-                  rx="1"
-                />
-              {{/unless}}
+              <rect
+                x={{b.barX}}
+                y={{b.yHigh}}
+                width={{this.barW}}
+                height={{b.barH}}
+                class="wt-temp-bar"
+                style={{css "fill: " b.color}}
+                rx="2"
+              />
+              <rect
+                x={{b.barX}}
+                y={{b.rainY}}
+                width={{this.barW}}
+                height={{b.rainH}}
+                class="wt-rain-bar"
+                rx="1"
+              />
             </g>
           {{/each}}
         </svg>
