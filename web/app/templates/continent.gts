@@ -56,10 +56,6 @@ export default class ContinentTemplate extends Component {
           <LinkTo @route="index" aria-label="Forkcast home" class="min-w-0">
             <Logo class="wt-logo-small" />
           </LinkTo>
-          <LinkTo
-            @route="index"
-            class="wt-phone-continent"
-          >{{this.atlas.continent.name}}</LinkTo>
           <LinkTo @route="help" class="wt-help-link">Help</LinkTo>
           <button
             type="button"

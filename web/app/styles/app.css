@@ -92,12 +92,8 @@ body {
 .wt-logo-small {
   font-size: 1.25rem;
 }
-.wt-phone-continent {
+.wt-phone-bar > a:first-child {
   margin-right: auto;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--wt-muted);
-  white-space: nowrap;
 }
 .wt-phone-bar .wt-btn {
   gap: 0.35rem;

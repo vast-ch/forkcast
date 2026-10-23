@@ -43,6 +43,11 @@ export default class SidePanel extends Component<SidePanelSignature> {
     return this.part === 'all';
   }
 
+  /** Rendered in the phone settings drawer. */
+  get isDrawer() {
+    return this.part === 'settings';
+  }
+
   get showSettings() {
     return this.part !== 'overview';
   }
@@ -254,6 +259,12 @@ export default class SidePanel extends Component<SidePanelSignature> {
       <div
         class="wt-panel-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6"
       >
+        {{#if this.isDrawer}}
+          <p class="flex items-baseline justify-between gap-3 text-sm">
+            <span class="font-medium">{{this.atlas.continent.name}}</span>
+            <LinkTo @route="index" class="wt-help-link">Change continent</LinkTo>
+          </p>
+        {{/if}}
         {{#if this.showSettings}}
           <section
             aria-labelledby="h-month"
