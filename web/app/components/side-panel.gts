@@ -18,7 +18,7 @@ import {
   fmtShortDate,
   fmtTemp,
 } from 'forkcast/utils/format';
-import { not } from 'forkcast/utils/helpers';
+import { errorMessage, not } from 'forkcast/utils/helpers';
 import { LIMITS } from 'forkcast/utils/settings';
 import { LAST_WEEK } from 'forkcast/utils/weeks';
 import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
@@ -172,7 +172,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
         coords,
       );
     } catch (err) {
-      this.importError = err instanceof Error ? err.message : String(err);
+      this.importError = errorMessage(err);
     }
   };
 

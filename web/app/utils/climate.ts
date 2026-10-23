@@ -1,6 +1,8 @@
 // Climate normals on a regular lat/lon grid, one file per continent (built by
 // data/forkcast_data/era5land.py).
 
+import { isMissing } from './helpers';
+
 /** How a stored byte maps to a value. */
 export type Encoding =
   | { kind: 'linear'; scale: number; offset: number }
@@ -437,9 +439,7 @@ export function tempSwatch(
   t: number | null | undefined,
   fallback = 'transparent',
 ): string {
-  return t === null || t === undefined || Number.isNaN(t)
-    ? fallback
-    : tempColor(t);
+  return isMissing(t) ? fallback : tempColor(t);
 }
 
 /** What the trip planner and the map read from: one grid or several combined. */

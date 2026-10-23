@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type PlannerService from 'forkcast/services/planner';
 import { tempSwatch } from 'forkcast/utils/climate';
+import { isMissing } from 'forkcast/utils/helpers';
 import {
   css,
   fmtDayTitle,
@@ -12,7 +13,7 @@ import {
 } from 'forkcast/utils/format';
 
 const round = (n: number | null | undefined) =>
-  n === null || n === undefined || Number.isNaN(n) ? '–' : Math.round(n);
+  isMissing(n) ? '–' : Math.round(n);
 
 /** Readout of the climate under the pointer, and of the trip day when over the route. */
 export default class HoverCard extends Component<{ Element: HTMLDivElement }> {

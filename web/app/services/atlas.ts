@@ -6,6 +6,7 @@ import ClimateGrid, {
   type ClimateHeader,
 } from 'forkcast/utils/climate';
 import { fetchBuffer, fetchJson } from 'forkcast/utils/assets';
+import { errorMessage } from 'forkcast/utils/helpers';
 import {
   routeFromJson,
   type Route,
@@ -92,7 +93,7 @@ export default class AtlasService extends Service {
         this.overview = overview.routes;
       },
       (e: unknown) => {
-        this.error = e instanceof Error ? e.message : String(e);
+        this.error = errorMessage(e);
       },
     );
     return this.#manifest;
@@ -133,7 +134,7 @@ export default class AtlasService extends Service {
         wanted.map((c) => this.#fetchContinent(c)),
       );
     } catch (e) {
-      this.error = e instanceof Error ? e.message : String(e);
+      this.error = errorMessage(e);
     } finally {
       this.loadingContinentIds = [];
     }
@@ -159,7 +160,7 @@ export default class AtlasService extends Service {
       return route;
     } catch (e) {
       this.#routeLoads.delete(id);
-      this.error = e instanceof Error ? e.message : String(e);
+      this.error = errorMessage(e);
       return undefined;
     } finally {
       if (this.loadingRouteId === id) this.loadingRouteId = undefined;

@@ -1,7 +1,8 @@
 import { htmlSafe } from '@ember/template';
+import { isMissing } from './helpers';
 
 export const fmtTemp = (t: number | undefined | null): string =>
-  t === undefined || t === null || Number.isNaN(t) ? '–' : `${Math.round(t)}°`;
+  isMissing(t) ? '–' : `${Math.round(t)}°`;
 
 export const fmtKm = (km: number): string =>
   km >= 100 ? `${Math.round(km).toLocaleString()} km` : `${km.toFixed(1)} km`;
