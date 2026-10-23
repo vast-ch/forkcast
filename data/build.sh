@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: ./build.sh [all|climate|routes|basemap|download]
+# Usage: ./build.sh [all|climate|routes|basemap|manifest|download]
 #   download refreshes the official EuroVelo GPX tracks in eurovelo/ (not part of `all`).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -14,14 +14,15 @@ climate() {
       [ -s "cache/cru/$f" ] || curl -sSf -o "cache/cru/$f" "$CRU_DIR/$v/$f"
     done
   done
-  uv run python -m wheelther_data.climate cache/cru --from 2011 --to 2025 --out out/climate.json
+  uv run python -m wheelther_data.climate cache/cru --from 2011 --to 2025
 }
 routes() { uv run python -m wheelther_data.routes; }
 download() { uv run python -m wheelther_data.eurovelo download; }
 basemap() { uv run python -m wheelther_data.basemap; }
+manifest() { uv run python -m wheelther_data.manifest; }
 
 case "${1:-all}" in
-  all) basemap; routes; climate ;;
-  climate|routes|basemap|download) "$1" ;;
-  *) echo "Usage: $0 [all|climate|routes|basemap|download]" >&2; exit 1 ;;
+  all) basemap; routes; climate; manifest ;;
+  climate|routes|basemap|manifest|download) "$1" ;;
+  *) echo "Usage: $0 [all|climate|routes|basemap|manifest|download]" >&2; exit 1 ;;
 esac
