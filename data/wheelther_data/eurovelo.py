@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 GPX_DIR = ROOT / "eurovelo"
-COUNTRIES = ROOT / "out" / "countries.json"
+COUNTRIES = ROOT / "out" / "europe" / "countries.json"
 NS = {"g": "http://www.topografix.com/GPX/1/1"}
 JOIN_KM = 1.0  # stages closer than this are simply joined
 
@@ -122,8 +122,7 @@ def read_stages(path):
                 ele = p.findtext("g:ele", namespaces=NS)
                 pts.append([float(p.get("lat")), float(p.get("lon")), float(ele) if ele else None])
         if len(pts) >= 2:
-            ends = [s.strip() for s in re.split(r"\s+[–-]\s+", title, maxsplit=1)]
-            stages.append({"n": num, "title": title, "status": status, "from": ends[0], "to": ends[-1], "pts": pts})
+            stages.append({"n": num, "title": title, "status": status, "pts": pts})
     stages.sort(key=lambda s: s["n"])
     return stages
 
@@ -232,9 +231,6 @@ def chain(stages):
             continue
         st = stages[edge[1]]
         pts = st["pts"] if ends[edge[1]][0] == u else st["pts"][::-1]
-        oriented = dict(st)
-        if pts is not st["pts"]:
-            oriented["from"], oriented["to"] = st["to"], st["from"]
         if not points:
             start_idx = 0
             body = [[*p, 0] for p in pts]
@@ -252,7 +248,7 @@ def chain(stages):
                 body = [[*p, 0] for p in pts[1:]]
         pending_gap = None
         points.extend(body)
-        spans.append((oriented, start_idx, len(points) - 1))
+        spans.append((st, start_idx, len(points) - 1))
     return points, spans, gaps
 
 
@@ -284,18 +280,12 @@ def build(simplify, out_dir):
         pos = {j: k for k, j in enumerate(idx)}
         ferry = [pos[j] for j in idx if points[j][3] == 1]
         unmapped = [pos[j] for j in idx if points[j][3] == 2]
-        towns = []
-        stage_list = []
-        for st, a, b in spans:
-            if not towns or towns[-1]["name"] != st["from"]:
-                towns.append({"name": st["from"], "km": round(km_full[a], 1), "lat": points[a][0], "lon": points[a][1]})
-            towns.append({"name": st["to"], "km": round(km_full[b], 1), "lat": points[b][0], "lon": points[b][1]})
-            stage_list.append({"n": st["n"], "title": st["title"], "status": st["status"], "from_km": round(km_full[a], 1), "to_km": round(km_full[b], 1)})
         total = round(km_full[-1], 1)
         route = {
             "id": f"ev{number}",
             "name": f"EuroVelo {number} – {name}",
             "group": "EuroVelo",
+            "continent": "europe",
             "color": color,
             "url": f"https://en.eurovelo.com/ev{number}",
             "source": "EuroVelo GPX tracks (www.EuroVelo.com, downloaded 2026-10-23), ODbL",
@@ -306,8 +296,6 @@ def build(simplify, out_dir):
             "km_at": km_at,
             "ferry": ferry,
             "unmapped": unmapped,
-            "towns": towns,
-            "stages": stage_list,
         }
         (out_dir / f"ev{number}.json").write_text(json.dumps(route, separators=(",", ":"), ensure_ascii=False))
         ferries = sum(1 for g in gaps if g["ferry"])
@@ -317,7 +305,7 @@ def build(simplify, out_dir):
             f"{ferries} ferries  {len(unm)} land gaps ({sum(g['km'] for g in unm):.0f} km)",
             flush=True,
         )
-        index.append({k: route[k] for k in ("id", "name", "group", "color", "url", "km")})
+        index.append({k: route[k] for k in ("id", "name", "group", "continent", "color", "url", "km")})
     return index
 
 

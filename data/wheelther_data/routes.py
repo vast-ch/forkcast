@@ -94,7 +94,6 @@ def simplify(points, tol_m):
 
 def build_route(route, geo):
     points = []  # [lat, lon, ele, km, ferry]
-    towns = []
     km = 0.0
     stops = route["stops"]
     for i, stop in enumerate(stops):
@@ -102,10 +101,8 @@ def build_route(route, geo):
         ll = geo.get(f"{cc}|{name}")
         if ll is None:
             raise SystemExit(f"Not geocoded: {cc}|{name}")
-        towns.append({"name": name.split(",")[0], "km": None, "lat": ll[0], "lon": ll[1]})
         if i == 0:
             points.append([ll[0], ll[1], None, 0.0, False])
-            towns[-1]["km"] = 0.0
             continue
         prev = geo[f"{stops[i - 1][0]}|{stops[i - 1][1]}"]
         ferry = len(stop) > 2 and stop[2] == "ferry"
@@ -116,12 +113,12 @@ def build_route(route, geo):
             if not ferry:
                 km += haversine_km(last, p)
             points.append([p[0], p[1], p[2], km, ferry])
-        towns[-1]["km"] = round(km, 1)
         print(f"  {route['id']}: {stops[i - 1][1]} -> {name}{' (ferry)' if ferry else ''}  {km:7.1f} km", flush=True)
     return {
         "id": route["id"],
         "name": route["name"],
         "group": route.get("group", "Demo"),
+        "continent": route.get("continent", "europe"),
         "color": route["color"],
         "url": route["url"],
         "source": "Routed with BRouter (trekking profile) on OpenStreetMap data",
@@ -132,7 +129,6 @@ def build_route(route, geo):
         "ele": [None if p[2] is None else round(p[2]) for p in points],
         "km_at": [round(p[3], 2) for p in points],
         "ferry": [i for i, p in enumerate(points) if p[4]],
-        "towns": towns,
     }
 
 
@@ -146,7 +142,7 @@ def main():
         print(route["name"], flush=True)
         r = build_route(route, geo)
         (OUT_DIR / f"{r['id']}.json").write_text(json.dumps(r, separators=(",", ":"), ensure_ascii=False))
-        index.append({k: r[k] for k in ("id", "name", "group", "color", "url", "km")})
+        index.append({k: r[k] for k in ("id", "name", "group", "continent", "color", "url", "km")})
     print("EuroVelo (official GPX tracks)", flush=True)
     index += eurovelo.build(simplify_indices, OUT_DIR)
     (OUT_DIR / "index.json").write_text(json.dumps({"routes": index}, separators=(",", ":"), ensure_ascii=False))
