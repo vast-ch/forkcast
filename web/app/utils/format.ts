@@ -14,8 +14,8 @@ export const fmtMm = (mm: number): string =>
   Number.isNaN(mm)
     ? '–'
     : mm < 10
-      ? `${mm.toFixed(1)} mm`
-      : `${Math.round(mm)} mm`;
+      ? `${mm.toFixed(1)}mm`
+      : `${Math.round(mm)}mm`;
 
 export const fmtDate = (d: Date): string =>
   d.toLocaleDateString(undefined, {
