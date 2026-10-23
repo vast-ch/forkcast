@@ -2,7 +2,15 @@
 
 What the weather usually does along your bike route, day by day.
 
-Forkcast puts 15 years of climate records on a map, one continent at a time (it opens on Europe; click other continents on the map to add them): average day highs or night lows as colour, and rain (mm, or rainy days over 1, 5 or 10 mm) as dots on top, for any month. The in-app help page (`/help`) explains the numbers. Pick a route (all 17 EuroVelo routes and a demo route Interlaken – Málaga are built in, or draw your own, or import a GPX), set a start date, how far you ride per day, and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat), and it lays out the trip day by day with the expected high, night low and chance of rain for where you will be on each date.
+A bikepacking weather planner built on climate records rather than forecasts, so you can plan a trip months ahead.
+
+- **The map:** 15 years of climate records for any week of the year: average day highs or night lows as colour, rain (mm, or rainy days over 1, 5 or 10mm) as dots on top. It opens on Europe; click another continent to add it.
+- **Routes:** all 17 EuroVelo routes and a demo route, Interlaken – Málaga, are built in. You can also draw your own or import a GPX, and export any route as GPX.
+- **The trip:** set a start date, km per day, average speed and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat).
+- **Each day:** the expected high, night low and chance of rain where you'll be on that date, plus climbing, riding time and hours of daylight. A 🔦 marks days with more riding than daylight.
+- **In sync:** the day chart and the map's week move together, and the whole plan lives in the link, so a bookmark or a shared URL reopens it.
+
+The in-app help page (`/help`) explains where the numbers come from and how far to trust them.
 
 How the app works and why it is built this way: [docs/how-it-works.md](docs/how-it-works.md). How the data is made: [data/README.md](data/README.md).
 
@@ -48,6 +56,7 @@ How the data is downloaded and built, and how the pipeline decides what to redo,
 - **EuroVelo routes:** the official GPX tracks from [EuroVelo.com](https://www.eurovelo.com) (ODbL, see `data/eurovelo/README.md`). Variants and spurs are resolved by taking the shortest path through the stages; holes between stages over the sea count as ferries.
 - **Demo route:** Interlaken → Rhône valley → Spain's east coast → Málaga, routed town to town with [BRouter](https://brouter.de) (trekking profile).
 - **Borders:** Natural Earth (public domain).
+- **Daylight:** calculated from the sun's position for each day's start and end; no data needed.
 
 These are climate normals, not forecasts: they say what is typical, not what a given year will bring.
 
