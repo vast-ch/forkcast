@@ -25,9 +25,7 @@ and the same for tmn with the coldest hour. ERA5-Land keeps the fine detail
 coast) the offset is taken from the nearest cells that have one.
 
 Altitude: each cell's mean height (from ERA5-Land's own terrain, averaged
-from 0.1° to the 0.25° cells) is stored too. The app shifts temperatures by
-−6.5 °C per 1,000 m between a route point and its cell (the standard lapse
-rate), so a valley town or a pass gets its own temperature, not the cell's.
+from 0.1° to the 0.25° cells) is stored too. The app shifts temperatures by a seasonal lapse rate (4.4–6.8 °C per 1,000 m) between a route point and its cell, so a valley town or a pass gets its own temperature, not the cell's.
 
 Output per continent: out/<continent>/climate.bin and climate.json. The grid is
 0.25°. Values are one byte each (uint8, 255 = no data), laid out
@@ -138,6 +136,7 @@ def hourly_extremes(y0: int, y1: int):
 
 # Means over cells with no land at all are expected (open sea); they stay NaN.
 warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
+warnings.filterwarnings("ignore", "All-NaN slice encountered", RuntimeWarning)
 
 
 def _fill_nearest(a: np.ndarray, passes: int = 12) -> np.ndarray:
