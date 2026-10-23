@@ -17,13 +17,25 @@ docker compose --profile tools run --rm data        # data pipeline: download wh
 docker compose --profile tools run --rm data status # see data/README.md for steps and --fresh
 ```
 
+### Static build
+
+```sh
+docker compose exec ui pnpm build                   # writes web/dist
+```
+
+`web/dist` is the whole site, data included (about 54 MB; a visitor only downloads the continents they show, 0.7–4.8 MB gzipped each): upload it to any static host.
+
+- **Serve it from the domain root.** Asset URLs are absolute (`/assets/…`); a sub-path such as `example.com/forkcast/` needs `rootURL` in `web/config/environment.js` and Vite's `base` changed to match.
+- **Deep links work without rewrite rules:** the build writes `help/index.html` (and a `404.html` fallback) as copies of `index.html`. Settings live in the query string, so the planner's links are all `/`.
+- **Caching:** everything under `/assets/` has a content hash in its name and can be cached for a year (`immutable`); `index.html` (and `help/index.html`) should be `no-cache`. `web/nginx.conf` does exactly that.
+
 ## Layout
 
 | Path | What |
 |---|---|
 | `web/` | The app: Ember 7.3 (`.gts`, TypeScript), Vite + Embroider, Leaflet, Tailwind 4, Frontile. pnpm. |
 | `data/` | Python (uv) builders for the data files the app loads. |
-| `data/out/` | Built data, committed: `manifest.json` (continents and their routes), `world.json` (picker map), `<continent>/climate.bin` + `climate.json` (int16 grid + header), `<continent>/countries.json`, and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
+| `data/out/` | Built data, committed: `manifest.json` (continents and their routes), `world.json` (picker map), `<continent>/climate.bin` + `climate.json` (byte grid + header), `<continent>/countries.json`, and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
 | `data/eurovelo/` | The official EuroVelo GPX tracks (gzipped, ODbL), with their licence. |
 | `data/cache/` | Downloads and BRouter responses (git-ignored). |
 | `compose.yaml` | `ui` (dev), `web` (prod, profile `prod`), `data` (builder, profile `tools`). |
