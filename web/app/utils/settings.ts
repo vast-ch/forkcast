@@ -1,3 +1,5 @@
+import { weekOfDate } from './weeks';
+
 // Every setting lives in the URL query string, so a bookmark or reload restores
 // it. Ember leaves a parameter out of the URL while it has its default value.
 
@@ -10,8 +12,8 @@ export function nextJanuary(today = new Date()): string {
 export const DEFAULTS = {
   /** Continents whose climate is shown, comma-separated; Europe by default */
   continents: 'europe',
-  /** Month shown on the map, 1–12; the current month by default */
-  month: new Date().getMonth() + 1,
+  /** Quarter-month shown on the map, 1–48 (see utils/weeks.ts); the current one by default */
+  week: weekOfDate(new Date()) + 1,
   /** Temperature shown: day high or night low */
   temp: 'high' as 'high' | 'low',
   /** Show the temperature colours */

@@ -11,7 +11,7 @@ export default class IndexController extends Controller {
   queryParams = SETTING_KEYS;
 
   @tracked continents = DEFAULTS.continents;
-  @tracked month = DEFAULTS.month;
+  @tracked week = DEFAULTS.week;
   @tracked temp = DEFAULTS.temp;
   @tracked heat = DEFAULTS.heat;
   @tracked rain = DEFAULTS.rain;

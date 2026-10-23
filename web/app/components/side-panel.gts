@@ -11,6 +11,7 @@ import type AtlasService from 'forkcast/services/atlas';
 import type { RainMetric, TempMetric } from 'forkcast/services/planner';
 import type { RainThreshold } from 'forkcast/utils/climate';
 import { MONTHS, tempColor } from 'forkcast/utils/climate';
+import { WEEKS } from 'forkcast/utils/weeks';
 import {
   css,
   fmtDate,
@@ -22,9 +23,8 @@ import {
 import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
 import type { TripDay } from 'forkcast/utils/itinerary';
 import Logo from 'forkcast/components/logo';
+import scrollIntoView from 'forkcast/modifiers/scroll-into-view';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
-
-const eq = (a: unknown, b: unknown) => a === b;
 
 interface SidePanelSignature {
   Args: {
@@ -57,7 +57,18 @@ export default class SidePanel extends Component<SidePanelSignature> {
   @tracked drawnName = '';
   @tracked importError?: string;
 
-  months = MONTHS.map((label, i) => ({ label, i }));
+  /** The month grid: each month with its four quarter-month segments. */
+  get months() {
+    const active = this.planner.week;
+    return MONTHS.map((label, i) => ({
+      label,
+      isActive: Math.floor(active / 4) === i,
+      weeks: WEEKS.filter((w) => w.month === i).map((w) => ({
+        ...w,
+        isActive: w.index === active,
+      })),
+    }));
+  }
 
   get trip() {
     return this.planner.trip;
@@ -132,7 +143,24 @@ export default class SidePanel extends Component<SidePanelSignature> {
     return this.planner.drawn.length < 2;
   }
 
-  setMonth = (i: number) => this.planner.set('month', i);
+  setWeek = (w: number) => this.planner.set('week', w);
+
+  previousWeek = () => this.setWeek((this.planner.week + 47) % 48);
+
+  nextWeek = () => this.setWeek((this.planner.week + 1) % 48);
+
+  /** Left/right arrows step a week, like a radio group; focus follows. */
+  weekKey = (e: KeyboardEvent) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    // Read the group now: the event's currentTarget is gone after dispatch.
+    const group = e.currentTarget as HTMLElement;
+    if (e.key === 'ArrowLeft') this.previousWeek();
+    else this.nextWeek();
+    requestAnimationFrame(() =>
+      group.querySelector<HTMLElement>('.wt-week.is-active')?.focus(),
+    );
+  };
   setTempMetric = (v: TempMetric) => this.planner.set('tempMetric', v);
   setRainMetric = (v: RainMetric) => this.planner.set('rainMetric', v);
   setRainThreshold = (v: RainThreshold) => this.planner.set('rainThreshold', v);
@@ -188,7 +216,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
       'highlightedDay',
       this.planner.highlightedDay === d.n ? undefined : d.n,
     );
-    this.planner.set('month', d.date.getMonth());
+    this.planner.showDate(d.date);
   };
 
   startDrawing = () => {
@@ -256,18 +284,56 @@ export default class SidePanel extends Component<SidePanelSignature> {
             class="wt-sec-climate flex flex-col gap-3"
           >
             <h2 id="h-month" class="wt-h2">Climate on the map</h2>
-            <div class="wt-months" role="radiogroup" aria-label="Month">
-              {{#each this.months as |m|}}
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={{if (eq m.i this.planner.month) "true" "false"}}
-                  class="wt-month
-                    {{if (eq m.i this.planner.month) 'is-active'}}"
-                  {{on "click" (fn this.setMonth m.i)}}
-                >{{m.label}}</button>
-              {{/each}}
+            <div class="wt-carousel">
+              <button
+                type="button"
+                class="wt-carousel-step"
+                aria-label="Previous week"
+                {{on "click" this.previousWeek}}
+              >‹</button>
+              {{! Arrow keys for the radios inside are handled on the group. }}
+              {{! template-lint-disable no-invalid-interactive }}
+              <div
+                class="wt-months"
+                role="radiogroup"
+                aria-label="Time of year"
+                {{on "keydown" this.weekKey}}
+              >
+                {{#each this.months as |m|}}
+                  <div
+                    class="wt-month {{if m.isActive 'is-active'}}"
+                    {{scrollIntoView m.isActive}}
+                  >
+                    <span
+                      class="wt-month-name"
+                      aria-hidden="true"
+                    >{{m.label}}</span>
+                    <span class="wt-weeks">
+                      {{#each m.weeks as |w|}}
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={{if w.isActive "true" "false"}}
+                          aria-label={{w.label}}
+                          title={{w.label}}
+                          tabindex={{if w.isActive "0" "-1"}}
+                          class="wt-week {{if w.isActive 'is-active'}}"
+                          {{on "click" (fn this.setWeek w.index)}}
+                        ></button>
+                      {{/each}}
+                    </span>
+                  </div>
+                {{/each}}
+              </div>
+              <button
+                type="button"
+                class="wt-carousel-step"
+                aria-label="Next week"
+                {{on "click" this.nextWeek}}
+              >›</button>
             </div>
+            <p class="wt-muted -mt-1 text-xs" aria-live="polite">Showing
+              {{this.planner.weekSlot.label}}</p>
 
             <div class="flex items-center justify-between gap-3">
               <Switch

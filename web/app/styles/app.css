@@ -324,37 +324,90 @@ body {
   border: 1px solid rgb(255 255 255 / 60%);
 }
 
-/* Month picker: a calendar strip */
-.wt-months {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+/* Time-of-year carousel: one row of months, each with four quarter-month
+   segments; scrolls sideways, the chosen month stays centred. */
+.wt-carousel {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+.wt-carousel-step {
+  flex: none;
+  width: 1.75rem;
   border: 1px solid var(--wt-line);
   border-radius: 6px;
-  overflow: hidden;
-}
-.wt-month {
-  padding: 0.4rem 0;
-  font-size: 0.8rem;
-  font-weight: 500;
-  border-right: 1px solid var(--wt-line);
-  border-bottom: 1px solid var(--wt-line);
   background: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--wt-ink);
   cursor: pointer;
 }
-.wt-month:nth-child(6n) {
+.wt-carousel-step:hover {
+  border-color: var(--wt-ink);
+}
+.wt-carousel-step:focus-visible {
+  outline: 2px solid var(--wt-accent);
+  outline-offset: 1px;
+}
+.wt-months {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border: 1px solid var(--wt-line);
+  border-radius: 6px;
+}
+.wt-months::-webkit-scrollbar {
+  display: none;
+}
+.wt-month {
+  flex: none;
+  width: 4.25rem;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding: 0.3rem 0.35rem 0.35rem;
+  border-right: 1px solid var(--wt-line);
+  background: #fff;
+}
+.wt-month:last-child {
   border-right: 0;
 }
-.wt-month:nth-child(n + 7) {
-  border-bottom: 0;
-}
-.wt-month:hover {
+.wt-month.is-active {
   background: var(--wt-accent-soft);
 }
-.wt-month.is-active {
-  background: var(--wt-ink);
-  color: #fff;
+.wt-month-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
 }
-.wt-month:focus-visible,
+.wt-weeks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+}
+.wt-week {
+  height: 0.7rem;
+  border: 0;
+  border-radius: 2px;
+  background: var(--wt-line);
+  cursor: pointer;
+}
+.wt-week:hover {
+  background: #9fb3c4;
+}
+.wt-week.is-active {
+  background: var(--wt-ink);
+}
+.wt-week:focus-visible {
+  outline: 2px solid var(--wt-accent);
+  outline-offset: 1px;
+}
+.wt-month-name:focus-visible,
 .wt-route:focus-visible,
 .wt-days-row:focus-visible,
 .wt-day:focus-visible {

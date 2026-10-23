@@ -18,6 +18,7 @@ import {
   OWN_ROUTE_ID,
   type SettingKey,
 } from 'forkcast/utils/settings';
+import { WEEKS, weekOfDate, type WeekSlot } from 'forkcast/utils/weeks';
 
 export type TempMetric = 'high' | 'low';
 export type RainMetric = 'mm' | 'days';
@@ -84,12 +85,28 @@ export default class PlannerService extends Service {
     this.write('continents', [...this.continents, id].join(','));
   }
 
-  /** Map month, 0–11 */
-  get month(): number {
-    return Math.min(11, Math.max(0, Number(this.read('month')) - 1 || 0));
+  /** Quarter-month shown on the map, 0–47 */
+  get week(): number {
+    const w = Math.round(Number(this.read('week'))) - 1;
+    return w >= 0 && w < 48 ? w : DEFAULTS.week - 1;
   }
-  set month(m: number) {
-    this.write('month', m + 1);
+  set week(w: number) {
+    this.write('week', w + 1);
+  }
+
+  /** The map's quarter-month, with its dates and position in the year. */
+  get weekSlot(): WeekSlot {
+    return WEEKS[this.week]!;
+  }
+
+  /** Month (0–11) of the quarter-month shown on the map. */
+  get month(): number {
+    return this.weekSlot.month;
+  }
+
+  /** Show the quarter-month a date falls in. */
+  showDate(date: Date): void {
+    this.week = weekOfDate(date);
   }
 
   get tempMetric(): TempMetric {
