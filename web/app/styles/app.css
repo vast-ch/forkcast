@@ -568,10 +568,14 @@ body {
   text-transform: uppercase;
   color: var(--wt-muted);
 }
+/* Values in the body font with tabular figures: monospace made dates like
+   "Thu 4 Feb" look like a different typeface from the numbers. */
 .wt-summary dd {
   margin: 0;
-  font-family: var(--wt-font-data);
-  font-size: 0.95rem;
+  font-family: var(--wt-font-body);
+  font-size: 1rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .wt-inline-stats {
