@@ -395,18 +395,21 @@ body {
 .wt-inline-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.25rem;
+  gap: 0.2rem 0.9rem;
+  font-size: 0.8rem;
+}
+.wt-inline-stats > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
 }
 .wt-inline-stats dt {
-  font-size: 0.65rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--wt-muted);
 }
 .wt-inline-stats dd {
   margin: 0;
   font-family: var(--wt-font-data);
-  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 /* Day list */

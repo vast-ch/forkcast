@@ -47,6 +47,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   last: Partial<Record<string, unknown>> = {};
   rainRenderer?: L.Canvas;
   lastState?: MapState;
+  fit?: { bounds: L.LatLngBounds; until: number };
 
   constructor(
     owner: Owner,
@@ -110,6 +111,16 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     });
     map.on('dblclick', () => this.owner?.onDoubleClick());
     this.map = map;
+    // The container keeps resizing while the page lays out (the day chart
+    // appears under it a moment later); keep the map sized and the fit right.
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize();
+      if (this.fit && performance.now() < this.fit.until) {
+        map.fitBounds(this.fit.bounds, { padding: [30, 30] });
+      }
+    });
+    ro.observe(element);
+    registerDestructor(this, () => ro.disconnect());
     // The container may still be resizing as the layout settles.
     setTimeout(() => map.invalidateSize(), 0);
   }
@@ -118,6 +129,13 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     if (this.last[key] === value) return false;
     this.last[key] = value;
     return true;
+  }
+
+  /** Fit the view to `bounds`, and keep it fitted while the layout settles. */
+  fitTo(bounds: L.LatLngBounds) {
+    this.fit = { bounds, until: performance.now() + 2000 };
+    this.map!.invalidateSize();
+    this.map!.fitBounds(bounds, { padding: [30, 30] });
   }
 
   /** Cells per rain dot, so a dot spans at least ~9 px at the current zoom. */
@@ -216,10 +234,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }
       this.layers.routes = group.addTo(map);
       if (s.route && this.changed('fitted', s.route.id)) {
-        map.fitBounds(
-          L.latLngBounds(s.route.points.map((p) => [p.lat, p.lon])),
-          { padding: [30, 30] },
-        );
+        this.fitTo(L.latLngBounds(s.route.points.map((p) => [p.lat, p.lon])));
       }
     }
 
