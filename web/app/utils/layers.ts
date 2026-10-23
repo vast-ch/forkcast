@@ -83,23 +83,40 @@ export function rainDots(
   month: number,
   metric: RainMetric,
   threshold: number,
+  /** Merge block × block cells into one dot (their average), for zoomed-out views */
+  block = 1,
 ): RainDot[] {
-  // A dot fills its cell at 250 mm/month or 20 rainy days.
+  // A dot fills its block at 250 mm/month or 20 rainy days.
   const full = metric === 'mm' ? 250 : 20;
   const cellM = (grid.step * Math.PI * 6371000) / 180;
+  const value = (row: number, col: number) =>
+    metric === 'mm'
+      ? grid.cell('pre', month, row, col)
+      : grid.cellRainyDays(month, row, col, threshold);
   const dots: RainDot[] = [];
-  for (let row = 0; row < grid.rows; row++) {
-    const lat = grid.lat0 - row * grid.step;
-    const half = (cellM * Math.min(1, Math.cos((lat * Math.PI) / 180))) / 2;
-    for (let col = 0; col < grid.cols; col++) {
-      const val =
-        metric === 'mm'
-          ? grid.cell('pre', month, row, col)
-          : grid.cellRainyDays(month, row, col, threshold);
-      if (Number.isNaN(val) || val <= 0) continue;
+  for (let r0 = 0; r0 < grid.rows; r0 += block) {
+    for (let c0 = 0; c0 < grid.cols; c0 += block) {
+      let sum = 0;
+      let n = 0;
+      for (let r = r0; r < Math.min(grid.rows, r0 + block); r++) {
+        for (let c = c0; c < Math.min(grid.cols, c0 + block); c++) {
+          const v = value(r, c);
+          if (!Number.isNaN(v)) {
+            sum += v;
+            n++;
+          }
+        }
+      }
+      // Skip mostly-sea blocks so coasts don't sprout dots offshore.
+      if (n === 0 || n < (block * block) / 3) continue;
+      const val = sum / n;
+      if (val <= 0) continue;
+      const lat = grid.lat0 - (r0 + (block - 1) / 2) * grid.step;
+      const half =
+        (cellM * block * Math.min(1, Math.cos((lat * Math.PI) / 180))) / 2;
       dots.push({
         lat,
-        lon: grid.lon0 + col * grid.step,
+        lon: grid.lon0 + (c0 + (block - 1) / 2) * grid.step,
         radius: half * Math.sqrt(Math.min(1.3, val / full)) * 0.85,
       });
     }

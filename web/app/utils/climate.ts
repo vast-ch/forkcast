@@ -1,7 +1,8 @@
 // Climate normals on a regular lat/lon grid (built by data/wheelther_data/climate.py).
 // Values are monthly means of CRU TS 4.10, averaged over `years`.
 
-export interface ClimateGridJson {
+/** Header of a continent's climate grid (data/out/<continent>/climate.json). */
+export interface ClimateHeader {
   source: string;
   years: [number, number];
   lon0: number; // centre of the first column
@@ -9,11 +10,9 @@ export interface ClimateGridJson {
   step: number;
   cols: number;
   rows: number;
+  vars: ClimateVar[];
   scale: Record<ClimateVar, number>;
-  tmx: (number | null)[][];
-  tmn: (number | null)[][];
-  pre: (number | null)[][];
-  wet: (number | null)[][];
+  nodata: number;
 }
 
 export type ClimateVar = 'tmx' | 'tmn' | 'pre' | 'wet';
@@ -83,26 +82,34 @@ export default class ClimateGrid {
   readonly step: number;
   private data: Record<ClimateVar, Float32Array[]>;
 
-  constructor(json: ClimateGridJson) {
-    this.source = json.source;
-    this.years = json.years;
-    this.cols = json.cols;
-    this.rows = json.rows;
-    this.lon0 = json.lon0;
-    this.lat0 = json.lat0;
-    this.step = json.step;
-    const unpack = (v: ClimateVar) =>
-      json[v].map((month) =>
-        Float32Array.from(month, (x) =>
-          x === null ? Number.NaN : x / json.scale[v],
-        ),
-      );
-    this.data = {
-      tmx: unpack('tmx'),
-      tmn: unpack('tmn'),
-      pre: unpack('pre'),
-      wet: unpack('wet'),
-    };
+  /**
+   * @param header grid geometry and scales
+   * @param buffer little-endian int16 values laid out [variable][month][row][col]
+   */
+  constructor(header: ClimateHeader, buffer: ArrayBuffer) {
+    this.source = header.source;
+    this.years = header.years;
+    this.cols = header.cols;
+    this.rows = header.rows;
+    this.lon0 = header.lon0;
+    this.lat0 = header.lat0;
+    this.step = header.step;
+    const raw = new Int16Array(buffer);
+    const cells = header.rows * header.cols;
+    const data = {} as Record<ClimateVar, Float32Array[]>;
+    header.vars.forEach((v, vi) => {
+      const scale = header.scale[v];
+      data[v] = Array.from({ length: 12 }, (_, m) => {
+        const out = new Float32Array(cells);
+        const off = (vi * 12 + m) * cells;
+        for (let i = 0; i < cells; i++) {
+          const x = raw[off + i]!;
+          out[i] = x === header.nodata ? Number.NaN : x / scale;
+        }
+        return out;
+      });
+    });
+    this.data = data;
   }
 
   get bounds(): [[number, number], [number, number]] {

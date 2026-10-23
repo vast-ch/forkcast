@@ -79,9 +79,7 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
       end: fmtDate(t.end),
       avgHigh: fmtTemp(t.avgHigh),
       coldest: t.coldestNight
-        ? `${fmtTemp(t.coldestNight.nightLow)} on ${fmtShortDate(t.coldestNight.date)}${
-            t.coldestNight.sleepTown ? ` near ${t.coldestNight.sleepTown}` : ''
-          }`
+        ? `${fmtTemp(t.coldestNight.nightLow)} on ${fmtShortDate(t.coldestNight.date)}`
         : '–',
       rainy: Math.round(t.rainyDays),
       rainyPct: fmtPct(t.rainyDays / (t.ridingDays || 1)),
@@ -122,7 +120,7 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
   };
 
   deleteSelected = () => {
-    this.planner.deleteRoute(this.planner.routeId);
+    this.planner.deleteOwnRoute();
   };
 
   setStart = (v: string) => {
@@ -184,7 +182,7 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
     try {
       const xml = await file.text();
       const coords = parseGpx(xml);
-      this.planner.addRoute(
+      this.planner.setOwnRoute(
         gpxName(xml) ?? file.name.replace(/\.gpx$/i, ''),
         coords,
       );
@@ -211,8 +209,10 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
           <h1 class="wt-logo">Wheel<span>ther</span></h1>
           <LinkTo @route="help" class="wt-help-link">How it works</LinkTo>
         </div>
-        <p class="wt-muted mt-1 text-sm">What the weather usually does along
-          your bike route, day by day.</p>
+        <p class="mt-2 flex items-baseline justify-between gap-3 text-sm">
+          <span class="font-medium">{{this.atlas.continent.name}}</span>
+          <LinkTo @route="index" class="wt-help-link">Change continent</LinkTo>
+        </p>
       </header>
 
       <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6">
@@ -286,27 +286,32 @@ export default class SidePanel extends Component<{ Element: HTMLElement }> {
           <h2 id="h-route" class="wt-h2">Route</h2>
           <div class="flex flex-col gap-1.5">
             <label for="route-picker" class="sr-only">Route</label>
-            <div class="wt-select">
-              <span
-                class="wt-route-swatch"
-                style={{css
-                  "background: "
-                  (if this.selected this.selected.color "transparent")
-                }}
-              ></span>
-              <select id="route-picker" {{on "change" this.selectRoute}}>
-                {{#each this.groups as |g|}}
-                  <optgroup label={{g.label}}>
-                    {{#each g.routes as |r|}}
-                      <option
-                        value={{r.id}}
-                        selected={{r.isSelected}}
-                      >{{r.label}}</option>
-                    {{/each}}
-                  </optgroup>
-                {{/each}}
-              </select>
-            </div>
+            {{#if this.groups.length}}
+              <div class="wt-select">
+                <span
+                  class="wt-route-swatch"
+                  style={{css
+                    "background: "
+                    (if this.selected this.selected.color "transparent")
+                  }}
+                ></span>
+                <select id="route-picker" {{on "change" this.selectRoute}}>
+                  {{#each this.groups as |g|}}
+                    <optgroup label={{g.label}}>
+                      {{#each g.routes as |r|}}
+                        <option
+                          value={{r.id}}
+                          selected={{r.isSelected}}
+                        >{{r.label}}</option>
+                      {{/each}}
+                    </optgroup>
+                  {{/each}}
+                </select>
+              </div>
+            {{else}}
+              <p class="wt-empty">No preset routes here yet. Draw a route on the
+                map or import a GPX file.</p>
+            {{/if}}
             <p class="wt-muted flex flex-wrap items-center gap-x-2 text-xs">
               {{#if this.isLoadingRoute}}
                 Loading the track…

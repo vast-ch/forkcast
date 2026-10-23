@@ -46,6 +46,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   } = {};
   last: Partial<Record<string, unknown>> = {};
   rainRenderer?: L.Canvas;
+  lastState?: MapState;
 
   constructor(
     owner: Owner,
@@ -67,8 +68,8 @@ class LeafletModifier extends Modifier<LeafletSignature> {
 
   setup(element: HTMLDivElement) {
     const map = L.map(element, {
-      center: [43.5, 9],
-      zoom: 5,
+      center: [20, 0],
+      zoom: 3,
       minZoom: 3,
       maxZoom: 11,
       zoomSnap: 0.5,
@@ -76,6 +77,13 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       attributionControl: true,
       doubleClickZoom: false,
     });
+    const bbox = this.owner?.atlas.continent?.bbox;
+    if (bbox) {
+      map.fitBounds([
+        [bbox[1], bbox[0]],
+        [bbox[3], bbox[2]],
+      ]);
+    }
     map.attributionControl.setPrefix(false);
     map.attributionControl.addAttribution(
       'Climate: <a href="https://crudata.uea.ac.uk/cru/data/hrg/" target="_blank" rel="noopener">CRU TS 4.10</a> · Borders: Natural Earth · Routes: contains information from <a href="https://www.eurovelo.com" target="_blank" rel="noopener">EuroVelo GPX tracks</a> downloaded 2026-10-23, under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>; © OpenStreetMap contributors, BRouter',
@@ -96,6 +104,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     });
     map.on('mouseout', () => this.owner?.onLeave());
     map.on('click', (e: L.LeafletMouseEvent) => this.owner?.onClick(e.latlng));
+    // Rain dots merge into bigger ones when zoomed out; re-check on every zoom.
+    map.on('zoomend', () => {
+      if (this.lastState) this.sync(this.lastState);
+    });
     map.on('dblclick', () => this.owner?.onDoubleClick());
     this.map = map;
     // The container may still be resizing as the layout settles.
@@ -108,7 +120,14 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     return true;
   }
 
+  /** Cells per rain dot, so a dot spans at least ~9 px at the current zoom. */
+  rainBlock(step: number): number {
+    const pxPerDeg = (256 * 2 ** (this.map?.getZoom() ?? 5)) / 360;
+    return Math.max(1, Math.ceil(9 / (step * pxPerDeg)));
+  }
+
   sync(s: MapState) {
+    this.lastState = s;
     const map = this.map!;
     const atlas = this.owner!.atlas;
     const grid = atlas.climate;
@@ -143,7 +162,8 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           }).addTo(map);
         }
       }
-      const rainKey = `${s.month}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}`;
+      const block = this.rainBlock(grid.step);
+      const rainKey = `${s.month}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
       if (this.changed('rain', rainKey)) {
         this.layers.rain?.remove();
         this.layers.rain = undefined;
@@ -158,6 +178,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             s.month,
             s.rainMetric as 'mm' | 'days',
             s.rainThreshold,
+            block,
           )) {
             L.circle([d.lat, d.lon], {
               radius: d.radius,
@@ -238,7 +259,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             month: 'short',
           });
           m.bindTooltip(
-            `Night ${d.n} · ${date}${d.sleepTown ? ` · ${d.sleepTown}` : ''}${hasRestNext ? ' · rest day next' : ''}`,
+            `Night ${d.n} · ${date}${hasRestNext ? ' · rest day next' : ''}`,
             { direction: 'top', offset: [0, -4] },
           );
           m.on('click', () => this.owner?.planner.set('highlightedDay', d.n));

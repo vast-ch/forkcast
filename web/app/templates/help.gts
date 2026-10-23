@@ -22,14 +22,24 @@ export default class Help extends Component {
   }
 
   get routeCount() {
-    return this.atlas.presets.filter((r) => r.group === 'EuroVelo').length;
+    return this.atlas.continents
+      .flatMap((c) => c.routes)
+      .filter((r) => r.group === 'EuroVelo').length;
   }
 
   <template>
     {{pageTitle "How it works · Wheelther"}}
     <div class="wt-help-page">
       <header class="wt-help-header">
-        <LinkTo @route="index" class="wt-help-link">← Back to the map</LinkTo>
+        {{#if this.atlas.continent}}
+          <LinkTo
+            @route="continent"
+            @model={{this.atlas.continent.id}}
+            class="wt-help-link"
+          >← Back to the map</LinkTo>
+        {{else}}
+          <LinkTo @route="index" class="wt-help-link">← Back to the map</LinkTo>
+        {{/if}}
         <h1 class="wt-logo mt-3">Wheel<span>ther</span></h1>
         <p class="wt-help-lede">What the weather usually does along your bike
           route, day by day. Here is where the numbers come from and how to read
@@ -40,6 +50,7 @@ export default class Help extends Component {
         <a href="#map">The map</a>
         <a href="#rain">Rainy days</a>
         <a href="#trip">Trip and days</a>
+        <a href="#links">Bookmarks</a>
         <a href="#routes">Routes</a>
         <a href="#limits">Limits</a>
         <a href="#sources">Sources and licences</a>
@@ -133,13 +144,23 @@ export default class Help extends Component {
             <li><strong>Climbing</strong>
               adds up every ascent along the day's stretch, from the route's
               elevation data.</li>
-            <li>Town names next to days are the nearest stage town within 40 km.</li>
           </ul>
           <p>
             In the chart, each bar runs from the night low to the day high and
             is coloured by the high. The blue bar underneath is the chance of a
             rainy day. Shaded columns are rest days. Click a day, in the chart
             or in the day list, to show its stretch on the map.
+          </p>
+        </section>
+
+        <section id="links">
+          <h2>Bookmarks and sharing</h2>
+          <p>
+            Everything you set (continent, month, layers, route, start date,
+            distances, rest pattern, the highlighted day and your own route) is
+            kept in the page address. Bookmark it or send the link, and the same
+            plan opens again. Settings left at their defaults are not written to
+            the address, so links stay short.
           </p>
         </section>
 
@@ -160,9 +181,11 @@ export default class Help extends Component {
             cycle-friendly roads.
           </p>
           <p>
-            Your own routes can be drawn on the map (points joined with straight
-            lines) or imported from a GPX file. They are saved in this browser
-            only. "Export GPX" saves the selected route as a file.
+            Your own route can be drawn on the map (points joined with straight
+            lines) or imported from a GPX file. It is kept in the page address,
+            simplified to at most 600 points, so a bookmark brings it back.
+            Drawing or importing another one replaces it. "Export GPX" saves the
+            selected route as a file.
           </p>
         </section>
 
