@@ -132,10 +132,10 @@ export default class ItineraryChart extends Component<{
   get detailRoute() {
     const d = this.detail;
     if (!d) return '';
-    if (d.isRest) return `Rest day${d.sleepTown ? ` in ${d.sleepTown}` : ''}`;
+    if (d.isRest) return 'Rest day';
     return `${fmtKm(d.distance)} · km ${Math.round(d.fromKm)}–${Math.round(d.toKm)}${
       d.climb !== null ? ` · ${Math.round(d.climb)} m climbing` : ''
-    }${d.sleepTown ? ` · night near ${d.sleepTown}` : ''}`;
+    }`;
   }
 
   select = (day: TripDay) => {

@@ -3,13 +3,7 @@
 
 import type ClimateGrid from './climate';
 import type { DayClimate } from './climate';
-import {
-  climbBetween,
-  pointAt,
-  townNear,
-  type Route,
-  type RoutePoint,
-} from './route';
+import { climbBetween, pointAt, type Route, type RoutePoint } from './route';
 
 export interface TripSettings {
   /** First day of the trip, ISO date (yyyy-mm-dd) */
@@ -34,7 +28,6 @@ export interface TripDay {
   climb: number | null;
   /** Where the night is spent (end of the day's ride) */
   sleep: RoutePoint;
-  sleepTown?: string;
   /** Weather at the middle of the day's ride (or at the rest stop) */
   weather: DayClimate;
   /** Low at the overnight stop */
@@ -103,7 +96,6 @@ export function planTrip(
         distance: 0,
         climb: 0,
         sleep: here,
-        sleepTown: townNear(route, km),
         weather,
         nightLow: weather.low,
       });
@@ -121,7 +113,6 @@ export function planTrip(
       distance: to - km,
       climb: climbBetween(route.points, km, to),
       sleep,
-      sleepTown: townNear(route, to),
       weather: climate.on(date, mid.lat, mid.lon, settings.rainThreshold),
       nightLow: climate.on(date, sleep.lat, sleep.lon, settings.rainThreshold)
         .low,
