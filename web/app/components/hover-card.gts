@@ -33,12 +33,11 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
     return c ? fmtMm(c.rainMm * this.planner.weekSlot.days) : '';
   }
 
-  /** Expected rainy days out of the week's days, e.g. "2.6 of 8". */
+  /** Expected rainy days in the week shown, e.g. "2.6". */
   get weekRainyDays() {
     const c = this.hover?.climate;
     if (!c || isMissing(c.rainChance)) return '–';
-    const days = this.planner.weekSlot.days;
-    return `${(c.rainChance * days).toFixed(1)} of ${days}`;
+    return (c.rainChance * this.planner.weekSlot.days).toFixed(1);
   }
 
   get coords() {
