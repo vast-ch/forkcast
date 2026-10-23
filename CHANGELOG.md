@@ -4,11 +4,15 @@
 
 ### Added
 
+- A new name and look: Wheelther is now **Forkcast**, with a logo (a bike fork with the sun between its legs) in the top left and as the browser tab icon.
+- The help page now explains where the weather data comes from, how each number is calculated, and how far to trust it, with real figures for how much the weather varies from year to year.
 - The whole world, one continent at a time. Wheelther now opens on a world map with each continent in its own colour: click yours and only its climate data is downloaded (between 0.3 and 1.8 MB).
 - Every setting is kept in the page address: month, layers, route, start date, distances, ride and rest days, the rainy-day threshold, the highlighted day, and your own drawn or imported route. Bookmark or share the link and the same plan opens again. Settings left at their defaults stay out of the address.
 
 ### Changed
 
+- The rain bars under the day chart are now labelled: they show the chance of a rainy day (over your chosen amount), on a 0–100 % scale.
+- "Ride it the other way" is now a small button with up-down arrows next to the route picker.
 - Days are simply the route cut into equal stretches of your daily distance; the nearby town names are gone.
 - Your own route is now kept in the page address instead of in the browser, one at a time. Drawing or importing a new one replaces it.
 - The app and its data now download once and are then kept by your browser for up to a year, so opening it again is fast. New releases are still picked up straight away.
