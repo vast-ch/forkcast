@@ -1,5 +1,10 @@
-// Climate normals on a regular lat/lon grid (built by data/wheelther_data/climate.py).
-// Values are monthly means of CRU TS 4.10, averaged over `years`.
+// Climate normals on a regular lat/lon grid, one file per continent (built by
+// data/wheelther_data/era5land.py, or climate.py for the older CRU grid).
+
+/** How a stored byte maps to a value (ERA5-Land grids). */
+export type Encoding =
+  | { kind: 'linear'; scale: number; offset: number }
+  | { kind: 'sqrt'; scale: number };
 
 /** Header of a continent's climate grid (data/out/<continent>/climate.json). */
 export interface ClimateHeader {
@@ -10,12 +15,19 @@ export interface ClimateHeader {
   step: number;
   cols: number;
   rows: number;
+  /** "u8": one byte per value with `encoding`; otherwise int16 with `scale` (CRU) */
+  dtype?: 'u8';
   vars: ClimateVar[];
-  scale: Record<ClimateVar, number>;
+  scale?: Partial<Record<ClimateVar, number>>;
+  encoding?: Partial<Record<ClimateVar, Encoding>>;
   nodata: number;
 }
 
-export type ClimateVar = 'tmx' | 'tmn' | 'pre' | 'wet';
+/**
+ * tmx/tmn: mean daily max/min °C; pre: mm per month;
+ * wet: days ≥ 0.1 mm (CRU); r1/r5/r10: days ≥ 1/5/10 mm (ERA5-Land).
+ */
+export type ClimateVar = 'tmx' | 'tmn' | 'pre' | 'wet' | 'r1' | 'r5' | 'r10';
 
 /** Expected weather for one place on one day of the year. */
 export interface DayClimate {
@@ -72,6 +84,19 @@ export const MONTHS = [
 
 const DAYS_IN_MONTH = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
+/** The stored rainy-day count for a threshold (1, 5 or 10 mm). */
+function countVar(threshold: number): ClimateVar {
+  return threshold <= 1 ? 'r1' : threshold >= 10 ? 'r10' : 'r5';
+}
+
+function decoder(header: ClimateHeader, v: ClimateVar): (x: number) => number {
+  const e = header.encoding?.[v];
+  if (e?.kind === 'sqrt') return (x) => (x / e.scale) ** 2;
+  if (e?.kind === 'linear') return (x) => x / e.scale + e.offset;
+  const scale = header.scale?.[v] ?? 1;
+  return (x) => x / scale;
+}
+
 export default class ClimateGrid {
   readonly source: string;
   readonly years: [number, number];
@@ -82,9 +107,13 @@ export default class ClimateGrid {
   readonly step: number;
   private data: Record<ClimateVar, Float32Array[]>;
 
+  /** True when the grid has counted rainy days (ERA5-Land), not just CRU wet days. */
+  readonly hasRainyDayCounts: boolean;
+
   /**
-   * @param header grid geometry and scales
-   * @param buffer little-endian int16 values laid out [variable][month][row][col]
+   * @param header grid geometry and how values are stored
+   * @param buffer values laid out [variable][month][row][col]: uint8 with a
+   *   per-variable encoding, or little-endian int16 divided by `scale`
    */
   constructor(header: ClimateHeader, buffer: ArrayBuffer) {
     this.source = header.source;
@@ -94,22 +123,24 @@ export default class ClimateGrid {
     this.lon0 = header.lon0;
     this.lat0 = header.lat0;
     this.step = header.step;
-    const raw = new Int16Array(buffer);
+    const raw =
+      header.dtype === 'u8' ? new Uint8Array(buffer) : new Int16Array(buffer);
     const cells = header.rows * header.cols;
     const data = {} as Record<ClimateVar, Float32Array[]>;
     header.vars.forEach((v, vi) => {
-      const scale = header.scale[v];
+      const decode = decoder(header, v);
       data[v] = Array.from({ length: 12 }, (_, m) => {
         const out = new Float32Array(cells);
         const off = (vi * 12 + m) * cells;
         for (let i = 0; i < cells; i++) {
           const x = raw[off + i]!;
-          out[i] = x === header.nodata ? Number.NaN : x / scale;
+          out[i] = x === header.nodata ? Number.NaN : decode(x);
         }
         return out;
       });
     });
     this.data = data;
+    this.hasRainyDayCounts = header.vars.includes('r5');
   }
 
   get bounds(): [[number, number], [number, number]] {
@@ -184,11 +215,9 @@ export default class ClimateGrid {
   ): DayClimate {
     const days = DAYS_IN_MONTH[month]!;
     const pre = this.sample('pre', month, lat, lon);
-    const rainy = rainyDays(
-      pre,
-      this.sample('wet', month, lat, lon),
-      threshold,
-    );
+    const rainy = this.hasRainyDayCounts
+      ? this.sample(countVar(threshold), month, lat, lon)
+      : rainyDays(pre, this.sample('wet', month, lat, lon), threshold);
     return {
       high: this.sample('tmx', month, lat, lon),
       low: this.sample('tmn', month, lat, lon),
@@ -206,6 +235,9 @@ export default class ClimateGrid {
     col: number,
     threshold: number,
   ): number {
+    if (this.hasRainyDayCounts) {
+      return this.cell(countVar(threshold), month, row, col);
+    }
     const pre = this.cell('pre', month, row, col);
     if (Number.isNaN(pre)) return Number.NaN;
     return rainyDays(pre, this.cell('wet', month, row, col), threshold);
