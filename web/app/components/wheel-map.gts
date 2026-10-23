@@ -86,8 +86,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       ]);
     }
     map.attributionControl.setPrefix(false);
+    // Full credits on wide screens; a short line with a link to the help page's
+    // sources on phones, where the full text would cover the map.
     map.attributionControl.addAttribution(
-      'Climate: <a href="https://crudata.uea.ac.uk/cru/data/hrg/" target="_blank" rel="noopener">CRU TS 4.10</a> · Borders: Natural Earth · Routes: contains information from <a href="https://www.eurovelo.com" target="_blank" rel="noopener">EuroVelo GPX tracks</a> downloaded 2026-10-23, under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>; © OpenStreetMap contributors, BRouter',
+      '<span class="wt-attr-full">Climate: contains modified <a href="https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land" target="_blank" rel="noopener">Copernicus Climate Change Service</a> information 2026 (ERA5-Land), <a href="https://crudata.uea.ac.uk/cru/data/hrg/" target="_blank" rel="noopener">CRU TS 4.10</a> · Borders: Natural Earth · Routes: contains information from <a href="https://www.eurovelo.com" target="_blank" rel="noopener">EuroVelo GPX tracks</a> downloaded 2026-10-23, under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>; © OpenStreetMap contributors, BRouter</span>' +
+        '<span class="wt-attr-short">Contains modified Copernicus C3S information 2026 · CRU · EuroVelo (ODbL) · © OpenStreetMap · <a href="/help#sources">Sources</a></span>',
     );
     map.createPane('land').style.zIndex = '200';
     map.createPane('climate').style.zIndex = '300';
@@ -104,7 +107,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       frame = requestAnimationFrame(() => this.owner?.onHover(e.latlng, map));
     });
     map.on('mouseout', () => this.owner?.onLeave());
-    map.on('click', (e: L.LeafletMouseEvent) => this.owner?.onClick(e.latlng));
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      // Touch screens have no hover: work out what is under the tap first.
+      this.owner?.onHover(e.latlng, map);
+      this.owner?.onClick(e.latlng);
+    });
     // Rain dots merge into bigger ones when zoomed out; re-check on every zoom.
     map.on('zoomend', () => {
       if (this.lastState) this.sync(this.lastState);
