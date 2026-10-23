@@ -2,6 +2,8 @@
 
 Forkcast monorepo: `web/` (Ember app) and `data/` (Python data builders). See README.md for what it does and how to run it.
 
+The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/README.md` (data). Keep both, and the help page (`web/app/templates/help.gts`, written for riders), in sync when behaviour or data changes.
+
 ## Commands
 
 - The web app runs in the `ui` dev container. Run pnpm via `docker compose exec ui <cmd>` (e.g. `docker compose exec ui pnpm lint:types`), never on the host. pnpm only; never npm/yarn/npx.

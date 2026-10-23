@@ -45,6 +45,11 @@ which download to run.
 
 ## How it decides what to do
 
+Why this matters: a full run downloads about 8 GB from servers that queue and
+throttle requests, and some steps take a while. Interrupting it, changing one
+step, or rerunning it should cost only what actually changed, and a broken or
+half-written file must never be mistaken for a good one.
+
 **Downloads** are checked, not just looked for. Each file is fetched to
 `<name>.part`, validated, and only then renamed into place, so an interrupted
 download never looks finished. The checks are:
@@ -92,11 +97,117 @@ the pipeline sends them one at a time. A year of rain takes about 3–5 minutes;
 temperature can wait in the queue longer. Everything already downloaded is
 kept, so stopping and restarting loses at most the file in progress.
 
-## How the climate grids are made
+## How the climate grids are made, and why
 
-See the docstring of `forkcast_data/era5land.py` for the details. In short:
-rain totals and rainy-day counts (≥ 1, 5, 10 mm) come straight from ERA5-Land's
-daily totals. Highs and lows start from the warmest and coldest hour of
-ERA5-Land's average day for each month, then are shifted so that, averaged
-over each 0.5° cell, they match CRU's station-based mean daily maximum and
-minimum. Values are stored as one byte each on a 0.25° grid, per continent.
+The `climate` build (`forkcast_data/era5land.py`) produces, per continent, a
+0.25° grid with twelve months of: mean daily high and low, monthly rain, days
+with at least 1, 5 and 10 mm of rain, plus each cell's mean terrain height.
+
+### Sources
+
+**ERA5-Land** (Copernicus Climate Change Service, run by ECMWF) is a
+reanalysis: a weather model re-run over past decades and continuously
+corrected with observations, giving every hour of every day on a 0.1° grid
+(about 9 km) over all land. We use it because it is global, consistent across
+countries, recent, and fine enough to separate a coast from the hills behind
+it. Its weakness: like any model it smooths the extremes of a day.
+
+**CRU TS 4.10** (Climatic Research Unit, University of East Anglia) is built
+from weather-station records interpolated to 0.5° (about 50 km). Its monthly
+mean daily maximum and minimum are averages of what thermometers actually
+recorded. It is coarse, but the level of its highs and lows is right. The
+app's first version used it alone; now it calibrates ERA5-Land.
+
+### Rain
+
+- **What:** `total_precipitation` at 00:00 UTC for every day, 2011–2025.
+- **Why 00:00:** ERA5-Land accumulates rain from 00 UTC, so the 00:00 value is
+  the previous day's total. One field per day instead of 24 keeps the download
+  at about 220 MB per year. The cost is a shift to UTC days, which hardly
+  matters for monthly counts.
+- **Rainy days are counted, not estimated:** for each day and cell we check
+  whether the total reached 1, 5 and 10 mm and average the counts per month
+  over the years. (CRU only counts days ≥ 0.1 mm, which forced the app's first
+  version to estimate the other thresholds with an exponential model.)
+
+### Highs and lows
+
+- **What we download:** ERA5-Land's *monthly means for each hour of the day*:
+  for every month, 24 numbers per cell, the average temperature at 00:00,
+  01:00, … 23:00.
+- **Why not daily maxima and minima directly:** the CDS can compute them
+  (`derived-era5-land-daily-statistics`), but on request and through a long
+  queue: a single month waited over two hours without starting. The full
+  period would need around 360 such requests, i.e. weeks. The hourly monthly
+  means come from a fast, precomputed dataset (3–5 minutes per year).
+- **The catch:** the warmest hour of the *average* day is cooler than the
+  *average* daily maximum, because on real days the maximum falls at different
+  hours and varies in size. The same holds, the other way round, for the
+  minimum. In our data the gap is about 1.5–2 °C for highs and 1–1.8 °C for
+  lows, varying by place and season.
+- **The fix, calibration against CRU:** for each month and each 0.5° CRU
+  cell, compare CRU's mean daily maximum with ERA5-Land's warmest hour
+  averaged over the same cell. The difference (the offset) is filled in where
+  CRU has no cell (small islands, coasts) from the nearest cells that have
+  one, smoothed over neighbouring cells, interpolated to 0.25° and added to
+  ERA5-Land's warmest hour. The same is done for the lows with the coldest hour.
+  Result: ERA5-Land's spatial detail at CRU's measured level. The build logs
+  the median offset per month so a change in the sources shows up.
+
+### Altitude
+
+- **Why:** a 0.25° cell is about 25 km across; in mountains its mean height can
+  differ from a valley town or a pass on the route by hundreds of metres, and
+  air cools about 6.5 °C per 1,000 m. Without a correction, Interlaken (568 m)
+  read like its 920 m cell, more than 2 °C too cold.
+- **What we store:** each cell's mean height, from ERA5-Land's own 0.1°
+  terrain (the `orography` download, 52 MB, published by ECMWF), averaged to
+  0.25°.
+- **Where it is applied:** in the app, not here. Route points know their
+  height (from the GPX or BRouter tracks), so the app shifts a day's high and
+  low by −6.5 °C per 1,000 m between the route and the cell. The map itself
+  shows cell averages.
+- **Limits:** 6.5 °C per km is an average. In winter, cold air pools in
+  valleys at night, so valley lows can be colder than the correction says.
+
+### Size and format
+
+- **Why 0.25° and not ERA5-Land's native 0.1°:** six times fewer cells, so a
+  continent stays a download of a few MB. 0.25° (≈ 25 km) still separates
+  coasts and valleys far better than CRU's 0.5°; the altitude correction does
+  the rest for route points. The CDS regrids to 0.25° on its side, which also
+  cuts the downloads.
+- **Why one byte per value:** temperatures in 0.5 °C steps, rain on a square-root
+  scale (fine steps for dry months, up to about 1,000 mm), rainy days in eighths
+  of a day, height in 40 m steps. Each step is well below the real uncertainty
+  of the numbers, and it halves the size compared with 16-bit values.
+- **Why per continent:** users download only the part of the world they plan
+  in. The files get content-hashed names in the app build and are cached by
+  browsers for a year.
+
+### Period
+
+2011–2025: 15 years is long enough to average out unusual years and recent
+enough to include most of the warming so far. A full 30-year climate normal
+would be steadier but about 0.3 °C too cold for today in Europe. Change it
+with `--from` / `--to`.
+
+## Licences and attribution
+
+These notices are required and must stay in the app (help page "Sources and
+licences" and the map's attribution line) whenever the data is published:
+
+- **ERA5-Land** (Copernicus Licence): "Contains modified Copernicus Climate
+  Change Service information <year>; neither the European Commission nor ECMWF
+  is responsible for any use that may be made of the Copernicus information or
+  data it contains."
+- **EuroVelo tracks** (ODbL): "Contains information from EuroVelo GPX tracks
+  downloaded from www.EuroVelo.com on <date>, which is made available here
+  under the Open Database License (ODbL)." Derived route files stay under the
+  ODbL (see `eurovelo/README.md`).
+- **OpenStreetMap** (ODbL), via BRouter for the demo route: "© OpenStreetMap
+  contributors".
+- **CRU TS** (Open Database License, as linked from the CRU TS download
+  page): credit the Climatic Research Unit, University of East Anglia; the
+  climatology derived from it stays under the ODbL.
+- **Natural Earth**: public domain; credit is courteous, not required.
