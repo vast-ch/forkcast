@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.6.0 - 2026-10-24
+
 ### Added
 
 - Click the map's legend to fold it into a small chip, and click again to bring it back.
