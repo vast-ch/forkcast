@@ -10,6 +10,10 @@
 
 - Temperatures for a day and for a spot on the map sit in pills coloured like the map and the chart, so a cold night or a hot afternoon stands out at a glance.
 
+### Fixed
+
+- With both temperature and rain switched off, the map no longer shows an empty legend box.
+
 ## v0.6.1 - 2026-10-24
 
 ### Changed

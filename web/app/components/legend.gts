@@ -84,55 +84,68 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
     return `Legend: ${parts.join('; ')}. Hide the legend`;
   }
 
+  /** Nothing to explain when both layers are off. */
+  get hasContent() {
+    return this.planner.showTemp || this.planner.showRain;
+  }
+
   <template>
-    {{! The whole legend is the toggle: click to shrink it to a chip and back. }}
-    <button
-      type="button"
-      class="wt-card wt-legend flex flex-wrap items-end gap-x-6 gap-y-3 px-3 py-2.5 text-left text-xs
-        {{unless this.isOpen 'is-closed'}}"
-      aria-expanded={{if this.isOpen "true" "false"}}
-      aria-label={{this.buttonLabel}}
-      title={{if this.isOpen "Hide the legend" "Show the legend"}}
-      {{on "click" this.toggle}}
-      ...attributes
-    >
-      {{#if this.isOpen}}
-        {{#if this.planner.showTemp}}
-          <span class="block min-w-0">
-            <span
-              class="wt-legend-scale relative mt-0.5 block h-2.5 rounded-sm"
-              style={{css "background: " this.gradient}}
-            ></span>
-            <span class="wt-legend-scale relative block h-4 tabular-nums">
-              {{#each this.ticks as |tick|}}
-                <span
-                  class="wt-tick"
-                  style={{css "left: " tick.left "%"}}
-                >{{tick.t}}<span class="wt-tick-unit">°C</span></span>
+    {{#if this.hasContent}}
+      {{! The whole legend is the toggle: click to shrink it to a chip and back. }}
+      <button
+        type="button"
+        class="wt-card wt-legend flex flex-wrap items-end gap-x-6 gap-y-3 px-3 py-2.5 text-left text-xs
+          {{unless this.isOpen 'is-closed'}}"
+        aria-expanded={{if this.isOpen "true" "false"}}
+        aria-label={{this.buttonLabel}}
+        title={{if this.isOpen "Hide the legend" "Show the legend"}}
+        {{on "click" this.toggle}}
+        ...attributes
+      >
+        {{#if this.isOpen}}
+          {{#if this.planner.showTemp}}
+            <span class="block min-w-0">
+              <span
+                class="wt-legend-scale relative mt-0.5 block h-2.5 rounded-sm"
+                style={{css "background: " this.gradient}}
+              ></span>
+              <span class="wt-legend-scale relative block h-4 tabular-nums">
+                {{#each this.ticks as |tick|}}
+                  <span
+                    class="wt-tick"
+                    style={{css "left: " tick.left "%"}}
+                  >{{tick.t}}<span class="wt-tick-unit">°C</span></span>
+                {{/each}}
+              </span>
+            </span>
+          {{/if}}
+          {{#if this.planner.showRain}}
+            <span class="wt-legend-dots flex items-end gap-3 tabular-nums">
+              {{#each this.dots as |dot|}}
+                <span class="flex items-center gap-1">
+                  <span
+                    class="wt-dot"
+                    style={{css
+                      "width: "
+                      dot.size
+                      "px; height: "
+                      dot.size
+                      "px"
+                    }}
+                  ></span>
+                  {{dot.label}}
+                </span>
               {{/each}}
             </span>
-          </span>
+          {{/if}}
+        {{else}}
+          <span
+            class="block h-2 w-8 rounded-sm"
+            style={{css "background: " this.gradient}}
+          ></span>
+          <span class="wt-dot" style={{css "width: 8px; height: 8px"}}></span>
         {{/if}}
-        {{#if this.planner.showRain}}
-          <span class="wt-legend-dots flex items-end gap-3 tabular-nums">
-            {{#each this.dots as |dot|}}
-              <span class="flex items-center gap-1">
-                <span
-                  class="wt-dot"
-                  style={{css "width: " dot.size "px; height: " dot.size "px"}}
-                ></span>
-                {{dot.label}}
-              </span>
-            {{/each}}
-          </span>
-        {{/if}}
-      {{else}}
-        <span
-          class="block h-2 w-8 rounded-sm"
-          style={{css "background: " this.gradient}}
-        ></span>
-        <span class="wt-dot" style={{css "width: 8px; height: 8px"}}></span>
-      {{/if}}
-    </button>
+      </button>
+    {{/if}}
   </template>
 }
