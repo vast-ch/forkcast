@@ -6,6 +6,10 @@
 
 - Click the map's legend to fold it into a small chip, and click again to bring it back.
 
+### Changed
+
+- The start date is picked from a calendar that looks the same in every browser, with weeks starting on Monday, instead of the browser's own date field.
+
 ### Fixed
 
 - On phones the map's legend fits on one line again: a narrower colour scale, with every temperature mark including 0 and the °C written once, after the last.

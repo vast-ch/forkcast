@@ -3,10 +3,10 @@ import { weekOfDate } from './weeks';
 // Every setting lives in the URL query string, so a bookmark or reload restores
 // it. Ember leaves a parameter out of the URL while it has its default value.
 
-/** Today as an ISO date (yyyy-mm-dd), in local time. */
-export function isoToday(today = new Date()): string {
+/** A date (today by default) as an ISO date, yyyy-mm-dd, in local time. */
+export function isoDate(date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 export const DEFAULTS = {
@@ -27,7 +27,7 @@ export const DEFAULTS = {
   /** Selected route id; '' means the continent's default */
   route: '',
   /** First day of the trip; today by default */
-  start: isoToday(),
+  start: isoDate(),
   km: 80,
   /** Average riding speed, km/h, for each day's time in the saddle */
   speed: 21,

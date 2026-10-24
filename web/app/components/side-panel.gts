@@ -5,7 +5,7 @@ import { on } from '@ember/modifier';
 import { fn, hash } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
 import { SegmentedControl } from 'frontile/buttons';
-import { Input, Switch } from 'frontile/forms';
+import { DatePicker, Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
 import { MONTHS, RAIN_THRESHOLDS } from 'forkcast/utils/climate';
@@ -17,7 +17,7 @@ import {
   fmtTemp,
 } from 'forkcast/utils/format';
 import { errorMessage, not } from 'forkcast/utils/helpers';
-import { LIMITS, type LimitedKey } from 'forkcast/utils/settings';
+import { LIMITS, isoDate, type LimitedKey } from 'forkcast/utils/settings';
 import { LAST_WEEK } from 'forkcast/utils/weeks';
 import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
 import Logo from 'forkcast/components/logo';
@@ -67,6 +67,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
   }));
 
   lastWeek = LAST_WEEK;
+  /** "Sat 24 Oct 2026" in the picker's field. */
+  startFormat: Intl.DateTimeFormatOptions = {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  };
   rainThresholds = RAIN_THRESHOLDS;
 
   get weekValue() {
@@ -160,7 +167,10 @@ export default class SidePanel extends Component<SidePanelSignature> {
   };
 
   deleteSelected = () => this.planner.deleteOwnRoute();
-  setStart = (v: string) => this.planner.setStart(v);
+  /** From the date picker: a Date (or null if cleared, which it can't be here). */
+  setStart = (d: Date | null) => {
+    if (d) this.planner.setStart(isoDate(d));
+  };
 
   startDrawing = () => {
     this.drawnName = '';
@@ -360,12 +370,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
             <h2 id="h-trip" class="wt-h2">Trip</h2>
             <div class="grid grid-cols-2 gap-2">
               <div class="col-span-2">
-                <Input
+                <DatePicker
                   @label="Start"
-                  @type="date"
-                  @size="sm"
+                  @inputSize="sm"
                   @value={{this.planner.start}}
                   @onChange={{this.setStart}}
+                  @weekStartsOn={{1}}
+                  @formatOptions={{this.startFormat}}
                 />
               </div>
               {{#each this.tripFields as |f|}}
