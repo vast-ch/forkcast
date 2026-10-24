@@ -311,14 +311,16 @@ export default class Help extends Component {
           </p>
           <p>
             Your own route can be drawn on the map or imported from a GPX file.
-            While drawing, “Follow cycle routes” snaps each point to the nearest
-            international or national cycle route within 2 km and follows the
-            routes from the previous point (OpenStreetMap data); where there is
-            no route near, or no connection, or with it switched off, points are
-            joined with straight lines. Undo takes back a whole leg. It is kept
-            in the page address, simplified to at most 600 points, so a bookmark
-            brings it back. Drawing or importing another one replaces it.
-            "Export GPX" saves the selected route as a file.
+            While drawing, your clicks are a sketch: with “Follow cycle routes”
+            on, each click moves onto the nearest international or national
+            cycle route (OpenStreetMap data) within 25 km, and the route follows
+            the cycle routes from one click to the next by the shortest way,
+            going straight where there are none. Add clicks to steer it. Switch
+            it off for straight lines between your clicks. Undo takes back the
+            last click. It is kept in the page address, simplified to at most
+            600 points, so a bookmark brings it back. Drawing or importing
+            another one replaces it. "Export GPX" saves the selected route as a
+            file.
           </p>
         </section>
 

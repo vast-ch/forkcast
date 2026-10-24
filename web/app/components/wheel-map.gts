@@ -65,6 +65,7 @@ type GroupLayer =
   | 'borders'
   | 'labels'
   | 'cyclenet'
+  | 'drawn'
   | 'routes'
   | 'stops';
 
@@ -80,7 +81,9 @@ interface MapState {
   route?: Route;
   trip?: Trip;
   isDrawing: boolean;
-  drawnCount: number;
+  /** The sketch (the clicks) and the line drawn from it */
+  sketch: { lat: number; lon: number }[];
+  drawn: { lat: number; lon: number }[];
   highlightedDay?: number;
   /** Map details switched on in the Map section */
   details: Record<MapDetail, boolean>;
@@ -112,7 +115,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     rain?: L.LayerGroup;
     routes?: L.LayerGroup;
     stops?: L.LayerGroup;
-    drawn?: L.Polyline;
+    drawn?: L.LayerGroup;
     cursor?: L.CircleMarker;
   } = {};
   last: Partial<Record<string, unknown>> = {};
@@ -560,19 +563,40 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       if (s.isDrawing) map.doubleClickZoom.disable();
       else map.doubleClickZoom.enable();
     }
-    if (this.changed('drawn', `${s.isDrawing}-${s.drawnCount}`)) {
-      this.layers.drawn?.remove();
-      this.layers.drawn = undefined;
+    // While drawing: the clicks as a thin dashed sketch, the route made from
+    // them (matched to the cycle routes, or straight) over it.
+    if (
+      this.changed('drawn', s.drawn) ||
+      this.changed('sketch', s.sketch.length)
+    ) {
       map.getContainer().style.cursor = s.isDrawing ? 'crosshair' : '';
-      if (s.isDrawing && s.drawnCount > 0) {
-        const pts = this.owner!.planner.drawn.map(latLng);
-        this.layers.drawn = L.polyline(pts, {
+      this.replace('drawn', (group) => {
+        if (!s.isDrawing || !s.sketch.length) return;
+        L.polyline(s.sketch.map(latLng), {
+          color: '#5d6b78',
+          weight: 1.5,
+          dashArray: '3 5',
+          interactive: false,
+        }).addTo(group);
+        for (const p of s.sketch) {
+          L.circleMarker(latLng(p), {
+            radius: 3,
+            color: '#fff',
+            weight: 1,
+            fillColor: '#5d6b78',
+            fillOpacity: 1,
+            interactive: false,
+          }).addTo(group);
+        }
+        L.polyline(s.drawn.map(latLng), {
           color: OWN_COLOR,
-          weight: 3,
-          dashArray: '2 6',
+          weight: 4,
+          opacity: 0.9,
           lineCap: 'round',
-        }).addTo(map);
-      }
+          lineJoin: 'round',
+          interactive: false,
+        }).addTo(group);
+      });
     }
   }
 }
@@ -639,7 +663,8 @@ export default class WheelMap extends Component<WheelMapSignature> {
       route: p.route,
       trip: p.trip,
       isDrawing: p.isDrawing,
-      drawnCount: p.drawn.length,
+      sketch: [...p.sketch],
+      drawn: p.drawn,
       highlightedDay: p.highlightedDay,
       details: Object.fromEntries(
         MAP_DETAILS.map(({ key }) => [key, p.showDetail(key)]),

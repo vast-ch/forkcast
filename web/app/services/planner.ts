@@ -39,8 +39,8 @@ export const MAP_DETAILS: { key: MapDetail; label: string }[] = [
 ];
 export type RainMetric = 'mm' | 'days';
 
-/** How far a click may be from a cycle route to snap to it, km. */
-const SNAP_KM = 2;
+/** How far a click may be from a cycle route to be moved onto it, km. */
+const CLICK_SNAP_KM = 25;
 
 /** Colour of your own route, and of the line while drawing it. */
 export const OWN_COLOR = '#b5179e';
@@ -81,9 +81,8 @@ export default class PlannerService extends Service {
   // Interaction (not in the URL)
   @tracked hover?: Hover;
   @tracked isDrawing = false;
-  drawn = new TrackedArray<{ lat: number; lon: number }>();
-  /** Where each click's leg starts in `drawn`, so Undo removes a whole leg. */
-  drawnLegs = new TrackedArray<number>();
+  /** The clicks while drawing: a sketch the route is matched to. */
+  sketch = new TrackedArray<{ lat: number; lon: number }>();
   /** While drawing: follow the cycle routes between clicks, or draw straight lines. */
   @tracked snapToRoutes = true;
 
@@ -416,15 +415,26 @@ export default class PlannerService extends Service {
   // --- Drawing ----------------------------------------------------------------
 
   startDrawing(): void {
-    this.drawn.splice(0, this.drawn.length);
-    this.drawnLegs.splice(0, this.drawnLegs.length);
+    this.sketch.splice(0, this.sketch.length);
     this.isDrawing = true;
     this.loadCycleNet();
   }
 
-  /** Clicks so far (a leg can add many points). */
+  /** Clicks so far. */
   get drawnClicks(): number {
-    return this.drawnLegs.length;
+    return this.sketch.length;
+  }
+
+  /**
+   * The route being drawn: with snapping on, the cycle-network line that best
+   * follows the sketch (straight where it's off the network); otherwise the
+   * clicks joined with straight lines.
+   */
+  @cached
+  get drawn(): { lat: number; lon: number }[] {
+    const sketch = [...this.sketch];
+    const net = this.snapToRoutes ? this.cycleNet : undefined;
+    return net && sketch.length ? net.match(sketch, CLICK_SNAP_KM) : sketch;
   }
 
   /** The cycle network of the shown continents, once fetched. */
@@ -449,46 +459,23 @@ export default class PlannerService extends Service {
     this.loadCycleNet();
   }
 
-  /**
-   * Add a click. Snapping, it moves to the nearest cycle route within 2 km
-   * and the leg from the previous point follows the routes; where there is no
-   * route near or no connection, the leg is a straight line.
-   */
   addDrawnPoint(lat: number, lon: number): void {
-    this.drawnLegs.push(this.drawn.length);
-    const net = this.snapToRoutes ? this.cycleNet : undefined;
-    const to = net?.snap({ lat, lon }, SNAP_KM);
-    if (!net || !to) {
-      this.drawn.push({ lat, lon });
-      return;
-    }
-    const prev = this.drawn[this.drawn.length - 1];
-    const from = prev && net.snap(prev, SNAP_KM);
-    const path = from && net.route(from, to);
-    if (!path) {
-      this.drawn.push(to.point);
-      return;
-    }
-    // From a point on the network the leg starts there; from one off it, the
-    // leg first joins the network.
-    this.drawn.push(...(from.away < 0.01 ? path.slice(1) : path));
+    this.sketch.push({ lat, lon });
   }
 
-  /** Remove the last click's whole leg. */
+  /** Take back the last click. */
   undoDrawnPoint(): void {
-    const start = this.drawnLegs.pop();
-    if (start !== undefined) this.drawn.splice(start);
+    this.sketch.pop();
   }
 
   cancelDrawing(): void {
     this.isDrawing = false;
-    this.drawn.splice(0, this.drawn.length);
-    this.drawnLegs.splice(0, this.drawnLegs.length);
+    this.sketch.splice(0, this.sketch.length);
   }
 
   /** A drawn route needs at least two points. */
   get canFinishDrawing(): boolean {
-    return this.drawn.length >= 2;
+    return this.sketch.length >= 2 && this.drawn.length >= 2;
   }
 
   finishDrawing(name: string): void {

@@ -248,4 +248,53 @@ export class CycleNet {
     }
     return [from.point, ...nodes.reverse(), to.point];
   }
+
+  /**
+   * The network line for a sketch of clicks: each click moves onto the
+   * nearest network line within `clickKm`, and consecutive clicks are joined
+   * by the shortest way along the network. A click with no line near stays
+   * where it is, and a join that isn't connected or would be a detour (longer
+   * than `detour` times the straight distance, plus a few km) is a straight
+   * line.
+   */
+  match(sketch: LatLon[], clickKm: number, detour = 3): LatLon[] {
+    const out: LatLon[] = [];
+    const add = (p: LatLon) => {
+      const last = out[out.length - 1];
+      if (!last || last.lat !== p.lat || last.lon !== p.lon) out.push(p);
+    };
+    let prev: Snap | undefined;
+    for (const click of sketch) {
+      const here = this.snap(click, clickKm);
+      if (!here) {
+        add(click);
+        prev = undefined;
+        continue;
+      }
+      if (prev) {
+        const path = this.route(prev, here);
+        const straight = km(
+          prev.point.lat,
+          prev.point.lon,
+          here.point.lat,
+          here.point.lon,
+        );
+        if (path && length(path) <= detour * straight + 3) path.forEach(add);
+        else add(here.point);
+      } else {
+        add(here.point);
+      }
+      prev = here;
+    }
+    return out;
+  }
+}
+
+/** Length of a line in km. */
+function length(line: LatLon[]): number {
+  let total = 0;
+  for (let i = 1; i < line.length; i++) {
+    total += km(line[i - 1]!.lat, line[i - 1]!.lon, line[i]!.lat, line[i]!.lon);
+  }
+  return total;
 }

@@ -322,7 +322,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 />
                 <p class="wt-muted text-xs">{{if
                     this.planner.snapToRoutes
-                    "Each point snaps to the nearest cycle route within 2km and follows it from the last one; elsewhere it's a straight line."
+                    "Each click moves onto the nearest cycle route (within 25km), and the line follows the routes from one click to the next; where there are none, it goes straight."
                     "Points are joined with straight lines."
                   }}</p>
                 <Input
