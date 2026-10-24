@@ -83,6 +83,8 @@ interface MapState {
   ownRoutes: Route[];
   trip?: Trip;
   isDrawing: boolean;
+  /** Drawing the selected route further: its saved line steps aside */
+  isRedrawing: boolean;
   /** The sketch (the clicks) and the line drawn from it */
   sketch: { lat: number; lon: number }[];
   drawn: { lat: number; lon: number }[];
@@ -523,9 +525,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       },
     );
 
-    this.layer('routes', [s.route], (group) => {
+    // While one of your routes is drawn further, only the new line shows: the
+    // saved one (and its stops) would hide what Undo takes back.
+    this.layer('routes', [s.route, s.isRedrawing], (group) => {
       const r = s.route;
-      if (!r) return;
+      if (!r || s.isRedrawing) return;
       const latlngs = r.points.map(latLng);
       L.polyline(latlngs, {
         color: '#fff',
@@ -543,9 +547,9 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
     }
 
-    this.layer('stops', [s.trip, s.highlightedDay], (group) => {
+    this.layer('stops', [s.trip, s.highlightedDay, s.isRedrawing], (group) => {
       const { trip, route } = s;
-      if (!trip || !route) return;
+      if (!trip || !route || s.isRedrawing) return;
       const start = route.points[0]!;
       L.circleMarker(latLng(start), {
         pane: 'stops',
@@ -697,6 +701,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
       ownRoutes: p.ownRoutes,
       trip: p.trip,
       isDrawing: p.isDrawing,
+      isRedrawing: p.isDrawing && p.editingId === p.routeId,
       sketch: [...p.sketch],
       drawn: p.drawn,
       highlightedDay: p.highlightedDay,
@@ -769,8 +774,8 @@ export default class WheelMap extends Component<WheelMapSignature> {
   };
 
   onDoubleClick = () => {
-    if (this.planner.isDrawing && this.planner.canFinishDrawing) {
-      this.planner.finishDrawing();
+    if (this.planner.isDrawing && this.planner.canSave) {
+      this.planner.saveEditing();
     }
   };
 
