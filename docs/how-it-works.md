@@ -76,8 +76,12 @@ the map, then the trip (day chart, then summary). All settings (route,
 trip, map) live in a Frontile Drawer opened from the bar; it is the same `SidePanel` component rendering only its settings part, which also says which continent is loaded. Tapping the route
 selects a day: touch screens have no hover, so the map works out what is under
 the tap before handling it. Drawing a route closes the drawer and shows a
-floating toolbar on the map (points, Undo, Save, Cancel). The map attribution
-is shortened to one line with a link to the help page's sources.
+floating toolbar on the map (points, Undo, Save, Cancel).
+
+On every screen the map's attribution is one short line, "© OpenStreetMap ·
+EuroVelo · Credits": the notices the route data's licences (ODbL) want next to
+the map, and a link to the help page's sources, where every credit and licence
+is written out in full. A longer line covered the map, on phones most of all.
 
 **Why:** on a phone the map and the day-by-day weather are what you look at;
 the settings are changed now and then. Leaflet's own z-indexes are contained

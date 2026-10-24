@@ -28,7 +28,7 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 - The pipeline is `data/forkcast_data` with one entry point (`./build.sh` / `python -m forkcast_data`): `all`, `status`, `download <source…>`, `build <output…>`, `--fresh`. How skipping, validation and stamps work is documented in `data/README.md`; keep that file in sync when adding or changing a step.
 - A new download step uses `pipeline.ensure()` with a real validator; a new build step uses `pipeline.Stamp` with every input file and `code_hash()` of the modules it depends on, and is registered in `forkcast_data/__main__.py` in dependency order.
 - Builds never touch the network; downloads are the only steps that do. The CDS needs one request at a time.
-- EuroVelo routes: `forkcast_data/eurovelo.py`. Raw tracks in `data/eurovelo/` (ODbL; the attribution notice must stay in the help page and map attribution).
+- EuroVelo routes: `forkcast_data/eurovelo.py`. Raw tracks in `data/eurovelo/` (ODbL; the full attribution notice stays on the help page's sources section, and the map keeps its short line: © OpenStreetMap · EuroVelo · a Credits link to it).
 - Hand-made routes are the town lists in `forkcast_data/anchors.py` (the first is the app's default); stops are geocoded into `geocoded.json` by the `brouter` download.
 - Continents (ids, names, bounding boxes) are in `forkcast_data/continents.py`.
 

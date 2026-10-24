@@ -58,10 +58,6 @@ body {
 .wt-layout-chart {
   grid-area: chart;
 }
-.wt-attr-short {
-  display: none;
-}
-
 /* Desktop: panel on the left, map and the day chart on the right. */
 .wt-layout {
   display: grid;
@@ -147,12 +143,6 @@ body {
   }
   .wt-legend .wt-eyebrow {
     font-size: 9px;
-  }
-  .wt-attr-full {
-    display: none;
-  }
-  .wt-attr-short {
-    display: inline;
   }
   .wt-map .leaflet-control-attribution {
     font-size: 9px;

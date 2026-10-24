@@ -121,11 +121,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       ]);
     }
     map.attributionControl.setPrefix(false);
-    // Full credits on wide screens; a short line with a link to the help page's
-    // sources on phones, where the full text would cover the map.
+    // The two notices the route data's licences (ODbL) want next to the map;
+    // every credit and licence in full is on the help page, one click away.
     map.attributionControl.addAttribution(
-      '<span class="wt-attr-full">Climate: contains modified <a href="https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land" target="_blank" rel="noopener">Copernicus Climate Change Service</a> information 2026 (ERA5-Land), <a href="https://crudata.uea.ac.uk/cru/data/hrg/" target="_blank" rel="noopener">CRU TS 4.10</a> · Borders: Natural Earth · Routes: contains information from <a href="https://www.eurovelo.com" target="_blank" rel="noopener">EuroVelo GPX tracks</a> downloaded 2026-10-23, under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>; © OpenStreetMap contributors, BRouter</span>' +
-        '<span class="wt-attr-short">Contains modified Copernicus C3S information 2026 · CRU · EuroVelo (ODbL) · © OpenStreetMap · <a href="/help#sources">Sources</a></span>',
+      '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · EuroVelo · <a href="/help#sources">Credits</a>',
     );
     for (const [name, zIndex, isInteractive] of PANES) {
       const pane = map.createPane(name);
