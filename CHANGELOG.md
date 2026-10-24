@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.10.0 - 2026-10-24
+
 ### Added
 
 - Keep as many routes of your own as you like. Every route you draw or import is saved under "Your routes" in the list and shows dashed on the map; each has a name, given as you draw it and changed with "Edit route", which also takes a drawn route back into drawing to extend or reshape it, with the day chart and the trip following every click; each can be deleted on its own.
