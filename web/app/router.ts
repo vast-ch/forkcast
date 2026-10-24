@@ -7,7 +7,10 @@ export default class Router extends EmberRouter {
 }
 
 Router.map(function () {
-  this.route('help');
+  // /help is the first section; /help/<id> the others (app/help-sections.json).
+  this.route('help', function () {
+    this.route('section', { path: '/:section' });
+  });
   // Anything else (old /europe links, typos) opens the planner.
   this.route('not-found', { path: '/*path' });
 });

@@ -826,7 +826,7 @@ body {
   padding-block: 32px 64px;
 }
 .wt-help-header,
-.wt-help-toc,
+.wt-help-tabs,
 .wt-help {
   max-width: 44rem;
   margin-inline: auto;
@@ -837,23 +837,18 @@ body {
   color: var(--wt-muted);
   text-wrap: balance;
 }
-.wt-help-toc {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.1rem;
+/* The help's section tabs (Frontile TabNav): they wrap onto more lines on
+   narrow screens rather than scroll sideways. */
+.wt-help-tabs {
+  display: block;
   margin-top: 1.5rem;
-  padding-block: 0.75rem;
-  border-block: 1px solid var(--wt-line);
-  font-size: 0.85rem;
 }
-.wt-help-toc a {
-  color: var(--wt-ink);
-  text-decoration: underline;
-  text-decoration-color: var(--wt-line);
-  text-underline-offset: 3px;
+.wt-help-tabs > * {
+  flex-wrap: wrap;
 }
-.wt-help-toc a:hover {
-  text-decoration-color: var(--wt-accent);
+/* Tighter than Frontile's default, so all the tabs fit one line on a laptop. */
+.wt-help-tabs a {
+  padding-inline: 0.55rem;
 }
 .wt-help section {
   padding-top: 2rem;

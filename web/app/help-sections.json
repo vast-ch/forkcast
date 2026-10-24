@@ -1,0 +1,11 @@
+[
+  { "id": "map", "label": "Map" },
+  { "id": "data", "label": "Data" },
+  { "id": "maths", "label": "Calculations" },
+  { "id": "precision", "label": "Precision" },
+  { "id": "trip", "label": "Trip" },
+  { "id": "links", "label": "Sharing" },
+  { "id": "privacy", "label": "Privacy" },
+  { "id": "routes", "label": "Routes" },
+  { "id": "sources", "label": "Sources" }
+]

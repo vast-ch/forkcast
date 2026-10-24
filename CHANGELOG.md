@@ -4,6 +4,7 @@
 
 ### Changed
 
+- The help page has tabs (Map, Data, Calculations, Precision, Trip, Sharing, Privacy, Routes, Sources) and shows one topic at a time, each with its own address to link to. The map's Credits link opens Sources directly.
 - The help page's sources and licences now also credit the cycle routes used for drawing (OpenStreetMap, shared under the ODbL) and say where the relief shading comes from.
 
 ## v0.8.0 - 2026-10-24

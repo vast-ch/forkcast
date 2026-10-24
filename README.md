@@ -34,8 +34,8 @@ docker compose exec ui pnpm build                   # writes web/dist
 `web/dist` is the whole site, data included (about 54 MB; a visitor only downloads the continents they show, 0.7–4.8 MB gzipped each): upload it to any static host.
 
 - **Serve it from the domain root.** Asset URLs are absolute (`/assets/…`); a sub-path such as `example.com/forkcast/` needs `rootURL` in `web/config/environment.js` and Vite's `base` changed to match.
-- **Deep links work without rewrite rules:** the build writes `help/index.html` (and a `404.html` fallback) as copies of `index.html`. Settings live in the query string, so the planner's links are all `/`.
-- **Caching:** everything under `/assets/` has a content hash in its name and can be cached for a year (`immutable`); `index.html` (and `help/index.html`) should be `no-cache`. `web/nginx.conf` does exactly that.
+- **Deep links work without rewrite rules:** the build writes `help/index.html`, one `help/<section>/index.html` per help tab (`web/app/help-sections.json`) and a `404.html` fallback, all copies of `index.html`. Settings live in the query string, so the planner's links are all `/`.
+- **Caching:** everything under `/assets/` has a content hash in its name and can be cached for a year (`immutable`); the HTML pages should be `no-cache`. `web/nginx.conf` does exactly that.
 - **Privacy headers:** a content security policy that only allows the site's own files, `Referrer-Policy: no-referrer` and no ad topics. `web/public/_headers` sets them on Netlify (it ends up in `web/dist`), `web/security-headers.conf` in the nginx image; on another host, set the same headers.
 
 ## Layout

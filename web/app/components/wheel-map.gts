@@ -163,7 +163,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     // The two notices the route data's licences (ODbL) want next to the map;
     // every credit and licence in full is on the help page, one click away.
     map.attributionControl.addAttribution(
-      '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · EuroVelo · <a href="/help#sources">Credits</a>',
+      '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · EuroVelo · <a href="/help/sources">Credits</a>',
     );
     for (const [name, zIndex, isInteractive] of PANES) {
       const pane = map.createPane(name);
