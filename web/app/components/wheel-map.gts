@@ -123,13 +123,28 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   netRenderer?: L.Canvas;
   lastState?: MapState;
   fit?: { bounds: L.LatLngBounds; until: number };
+  cleanups: (() => void)[] = [];
 
   constructor(
     owner: Owner,
     args: { named: LeafletSignature['Args']['Named']; positional: [] },
   ) {
     super(owner, args);
-    registerDestructor(this, () => this.map?.remove());
+    registerDestructor(this, () => this.teardown());
+  }
+
+  /** Stop everything still pending (a resize, a hover, an animation), then
+   * remove the map: Leaflet throws if a timer fires on a removed map. */
+  teardown(): void {
+    this.cleanups.forEach((f) => f());
+    const map = this.map;
+    if (!map) return;
+    map.stop();
+    // A zoom animation ends on a 250 ms timer that remove() doesn't cancel
+    // (Leaflet 1.9); with this flag off the timer does nothing.
+    (map as unknown as { _animatingZoom: boolean })._animatingZoom = false;
+    map.remove();
+    this.map = undefined;
   }
 
   modify(
@@ -197,9 +212,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }
     });
     ro.observe(element);
-    registerDestructor(this, () => ro.disconnect());
-    // The container may still be resizing as the layout settles.
-    setTimeout(() => map.invalidateSize(), 0);
+    this.cleanups.push(
+      () => ro.disconnect(),
+      () => cancelAnimationFrame(frame),
+    );
   }
 
   /** Replace a layer group with a freshly built one (`build` may leave it empty). */

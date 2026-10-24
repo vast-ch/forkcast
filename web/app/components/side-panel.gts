@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
+import { waitForPromise } from '@ember/test-waiters';
 import { fn } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
 import { ButtonGroup, SegmentedControl } from 'frontile/buttons';
@@ -184,7 +185,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
     if (!file) return;
     this.importError = undefined;
     try {
-      const xml = await file.text();
+      const xml = await waitForPromise(file.text());
       const coords = parseGpx(xml);
       this.planner.setOwnRoute(
         gpxName(xml) ?? file.name.replace(/\.gpx$/i, ''),
@@ -195,15 +196,19 @@ export default class SidePanel extends Component<SidePanelSignature> {
     }
   };
 
+  /** The last export's file URL, freed by the next export (the browser may
+   * still be saving it right after the click). */
+  #exportUrl?: string;
+
   exportGpx = () => {
     const r = this.planner.route;
     if (!r) return;
+    if (this.#exportUrl) URL.revokeObjectURL(this.#exportUrl);
     const blob = new Blob([toGpx(r)], { type: 'application/gpx+xml' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = this.#exportUrl = URL.createObjectURL(blob);
     a.download = `${r.name.replace(/[^\w\- ]+/g, '').trim() || 'route'}.gpx`;
     a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
   <template>
