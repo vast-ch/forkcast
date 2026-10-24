@@ -1,21 +1,28 @@
 """Cycle network: OpenStreetMap's international bicycle routes, for drawing
 routes that follow them (the app snaps clicks to it and routes along it).
 
-- download: the ways of every international bicycle route relation (network
-  icn; in Europe essentially EuroVelo, elsewhere little) from the Overpass API,
-  one query per 20° × 20° tile in Europe and one per continent elsewhere
-  (they have few), one at a time with a pause between. Each tile is cached on its own in
-  cache/cyclenet/<continent>/<networks>/<tile>.json.gz as
-  {"ways": {id: [[lon, lat], …]}}, so an interrupted run picks up where it
-  stopped, and a different choice of networks starts its own cache. National
-  (ncn) and regional (rcn) routes are left out for now; see data/README.md for
-  what they would weigh.
-- build: out/<continent>/cyclenet.json, {"lines": [[[lon, lat], …], …]}: every
-  way once (ways cross tile edges), joined end to end into long lines where
-  exactly two meet (OSM splits routes into many short ways), simplified to
-  about 300 m and rounded to 0.001° (about 100 m). The app fetches a
-  continent's file only when that continent is shown and the rider draws with
-  snapping on.
+Fetched from the public Overpass API by route, not by area, so no query has to
+scan a large region (those are what time out on a busy server):
+
+- download:
+  1. index: one small query lists every international bicycle route relation
+     (network icn; in Europe essentially EuroVelo, elsewhere little) with its
+     id, version and bounding box: cache/cyclenet/<networks>/index.json.gz.
+  2. routes: the ways of each route, fetched BATCH routes per query (Overpass
+     `foreach` keeps them apart) and cached per route and version in
+     cache/cyclenet/<networks>/rel-<id>-v<version>.json.gz, so a rerun fetches
+     only new or changed routes (rerun with --fresh to refresh the index).
+  Every request goes to the first Overpass server that answers, waits when a
+  server asks it to (429), backs off with jitter, and gives up on a single route
+  only after all tries; a batch that keeps failing is retried route by route.
+  Routes that still fail are listed and skipped, never stopping the run: the
+  next run fetches just those.
+- build: out/<continent>/cyclenet.json, {"lines": [[[lon, lat], …], …]}: the
+  ways of every route whose box touches the continent, each way once, joined
+  end to end into long lines where exactly two meet, simplified to about 300 m
+  and rounded to 0.001° (about 100 m). Missing routes are reported, not fatal.
+  The app fetches a continent's file only when that continent is shown and the
+  rider draws with snapping on.
 
 Data © OpenStreetMap contributors, ODbL: credited on the map and the help page.
 
@@ -25,107 +32,157 @@ Usage: uv run python -m forkcast_data download cyclenet | build cyclenet [--fres
 import gzip
 import json
 import math
+import random
 import sys
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from . import continents, pipeline
 from .continents import CONTINENTS
-from .pipeline import CACHE, OUT, Stamp, code_hash, ensure, http_get, log
+from .pipeline import CACHE, OUT, UA, Stamp, code_hash, is_verified, log, mark_verified
 
-DIR = CACHE / "cyclenet"
-OVERPASS = "https://overpass-api.de/api/interpreter"
 NETWORKS = ("icn",)
-TILE = 20.0  # degrees: few queries, and a failed one only redoes its tile
-# Continents tiled at TILE; the others have so few international routes that
-# one query over their whole box is light and saves dozens of mostly empty ones.
-TILED = {"europe"}
-PAUSE = 5.0  # seconds between queries, to share the public server politely
+DIR = CACHE / "cyclenet" / "-".join(NETWORKS)
+INDEX = DIR / "index.json.gz"
+# Public Overpass servers, tried in turn when one fails or is full.
+SERVERS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+)
+BATCH = 10  # routes per query
+TRIES = 8  # per request, across the servers
+PAUSE = 5.0  # seconds between requests, to share the public servers politely
 SIMPLIFY = 0.003  # degrees, about 300 m
 
 
-def _continents() -> list[dict]:
-    return CONTINENTS
+def _request(query: str, timeout: int = 600) -> dict:
+    """POST a query to the Overpass servers in turn until one answers."""
+    data = urllib.parse.urlencode({"data": query}).encode()
+    last: Exception | None = None
+    for attempt in range(TRIES):
+        server = SERVERS[attempt % len(SERVERS)]
+        try:
+            req = urllib.request.Request(server, data=data, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                out = json.loads(r.read())
+            remark = out.get("remark", "")
+            if "error" in remark.lower():  # a 200 that hit the server's limits
+                raise RuntimeError(remark.strip()[:200])
+            time.sleep(PAUSE)
+            return out
+        except Exception as e:  # noqa: BLE001 - any failure means "try again"
+            last = e
+            wait = min(30 * (attempt + 1), 300) + random.uniform(0, 10)
+            if isinstance(e, urllib.error.HTTPError) and e.code == 429:
+                wait = max(wait, float(e.headers.get("Retry-After") or 60))
+            host = urllib.parse.urlparse(server).hostname
+            log(f"    {host}: {str(e)[:90]}; next try in {wait:.0f} s")
+            time.sleep(wait)
+    raise RuntimeError(f"no Overpass server answered: {last}")
 
 
-def tiles(continent: dict) -> list[tuple[float, float, float, float]]:
-    """Tiles (south, west, north, east) covering a continent's box."""
-    w0, s0, e0, n0 = continent["bbox"]
-    if continent["id"] not in TILED:
-        return [(s0, w0, n0, e0)]
-    out = []
-    lat = math.floor(s0 / TILE) * TILE
-    while lat < n0:
-        lon = math.floor(w0 / TILE) * TILE
-        while lon < e0:
-            out.append((lat, lon, lat + TILE, lon + TILE))
-            lon += TILE
-        lat += TILE
-    return out
+def _write(path: Path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".part")
+    with gzip.open(tmp, "wt") as f:
+        json.dump(data, f, separators=(",", ":"))
+    tmp.replace(path)
+    mark_verified(path)
 
 
-def tile_file(continent_id: str, tile) -> Path:
-    s, w, _, _ = tile
-    return DIR / continent_id / "-".join(NETWORKS) / f"{s:+06.1f}_{w:+07.1f}.json.gz"
-
-
-def _query(tile) -> str:
-    s, w, n, e = tile
-    networks = "|".join(NETWORKS)
-    return (
-        "[out:json][timeout:900][maxsize:1073741824];"
-        f'relation["type"="route"]["route"="bicycle"]["network"~"^({networks})$"]({s},{w},{n},{e});'
-        # Only the routes' ways inside the tile: a long route that touches it
-        # would otherwise bring its whole length (and time the query out).
-        f"way(r)({s},{w},{n},{e});out geom;"
-    )
-
-
-def _fetch(tile):
-    def fetch(to: Path) -> None:
-        raw = to.with_name(to.name + ".raw")
-        http_get(f"{OVERPASS}?data={urllib.parse.quote(_query(tile))}", raw, timeout=1000)
-        data = json.loads(raw.read_text())
-        raw.unlink()
-        # Overpass answers 200 with a "remark" when a query hits its limits.
-        remark = data.get("remark", "")
-        if "error" in remark.lower():
-            raise RuntimeError(remark)
-        ways = {
-            str(el["id"]): [[p["lon"], p["lat"]] for p in el["geometry"]]
-            for el in data.get("elements", [])
-            if el.get("type") == "way" and el.get("geometry")
-        }
-        with gzip.open(to, "wt") as f:
-            json.dump({"ways": ways}, f, separators=(",", ":"))
-        time.sleep(PAUSE)
-
-    return fetch
-
-
-def _validate(path: Path) -> None:
+def _read(path: Path):
     with gzip.open(path, "rt") as f:
-        if "ways" not in json.load(f):
-            raise ValueError(f"no ways in {path.name}")
+        return json.load(f)
+
+
+def _index(fresh: bool) -> list[dict]:
+    """Every route: {"id", "version", "bbox": [w, s, e, n]}."""
+    if fresh or not is_verified(INDEX):
+        networks = "|".join(NETWORKS)
+        out = _request(
+            "[out:json][timeout:300];"
+            f'relation["type"="route"]["route"="bicycle"]["network"~"^({networks})$"];'
+            "out meta bb;"
+        )
+        routes = [
+            {
+                "id": el["id"],
+                "version": el.get("version", 0),
+                "bbox": [el["bounds"]["minlon"], el["bounds"]["minlat"], el["bounds"]["maxlon"], el["bounds"]["maxlat"]],
+            }
+            for el in out.get("elements", [])
+            if el.get("type") == "relation" and el.get("bounds")
+        ]
+        if not routes:
+            raise RuntimeError("the route index came back empty")
+        _write(INDEX, {"routes": routes})
+    return _read(INDEX)["routes"]
+
+
+def route_file(r: dict) -> Path:
+    return DIR / f"rel-{r['id']}-v{r['version']}.json.gz"
+
+
+def _fetch(batch: list[dict]) -> None:
+    """The ways of each route in `batch`, cached per route."""
+    ids = ",".join(str(r["id"]) for r in batch)
+    out = _request(
+        "[out:json][timeout:600][maxsize:1073741824];"
+        f"relation(id:{ids});"
+        # Each route's id, then its ways (and those of any child routes).
+        "foreach->.r(.r out ids;(.r;rel(r.r););way(r);out geom;);"
+    )
+    ways: dict[int, dict] = {r["id"]: {} for r in batch}
+    current = None
+    for el in out.get("elements", []):
+        if el.get("type") == "relation" and el["id"] in ways:
+            current = el["id"]
+        elif el.get("type") == "way" and current is not None and el.get("geometry"):
+            ways[current][str(el["id"])] = [[p["lon"], p["lat"]] for p in el["geometry"]]
+    for r in batch:
+        _write(route_file(r), {"ways": ways[r["id"]]})
 
 
 def download(fresh: bool = False) -> None:
-    for c in _continents():
-        ts = tiles(c)
-        log(f"  {c['id']}: {len(ts)} tiles of {TILE:g}°")
-        for i, t in enumerate(ts, 1):
-            # The public server is often busy: more tries, longer pauses (ensure waits 30 s × try).
-            status = ensure(tile_file(c["id"], t), _fetch(t), _validate, fresh, retries=8)
-            log(f"  [{i:3}/{len(ts)}] {status}")
+    routes = _index(fresh)
+    todo = [r for r in routes if fresh or not is_verified(route_file(r))]
+    log(f"  {len(routes)} routes, {len(routes) - len(todo)} cached, {len(todo)} to fetch")
+    failed: list[int] = []
+    for i in range(0, len(todo), BATCH):
+        batch = todo[i : i + BATCH]
+        try:
+            _fetch(batch)
+        except RuntimeError:
+            log("    batch failed; trying its routes one by one")
+            for r in batch:
+                try:
+                    _fetch([r])
+                except RuntimeError as e:
+                    log(f"    route {r['id']} skipped: {str(e)[:120]}")
+                    failed.append(r["id"])
+        log(f"  [{min(i + BATCH, len(todo)):4}/{len(todo)}] routes fetched")
+    if failed:
+        log(f"  {len(failed)} routes not fetched ({', '.join(map(str, failed[:10]))}{'…' if len(failed) > 10 else ''}); run again to retry them")
+
+
+def _touches(box, bbox) -> bool:
+    w, s, e, n = box
+    return not (e < bbox[0] or w > bbox[2] or n < bbox[1] or s > bbox[3])
 
 
 def files() -> list[Path]:
-    return [tile_file(c["id"], t) for c in _continents() for t in tiles(c)]
+    """What the download should leave: the index and every route's file."""
+    if not INDEX.exists():
+        return [INDEX]
+    return [INDEX] + [route_file(r) for r in _read(INDEX)["routes"]]
 
 
 def outputs() -> list[Path]:
-    return [OUT / c["id"] / "cyclenet.json" for c in _continents()]
+    return [OUT / c["id"] / "cyclenet.json" for c in CONTINENTS]
 
 
 def _simplify(line: list, tol: float) -> list:
@@ -188,17 +245,21 @@ def _join(ways: list[list]) -> list[list]:
 
 
 def build(fresh: bool = False) -> None:
-    stamp = Stamp("cyclenet", files(), outputs(), code_hash(sys.modules[__name__], continents, pipeline))
+    if not INDEX.exists():
+        raise SystemExit("Missing the cycle-route index. Run: download cyclenet")
+    routes = _read(INDEX)["routes"]
+    present = [r for r in routes if route_file(r).exists()]
+    stamp = Stamp("cyclenet", [INDEX] + [route_file(r) for r in present], outputs(), code_hash(sys.modules[__name__], continents, pipeline))
     if not fresh and stamp.up_to_date():
         log("  cycle network is up to date")
         return
-    if stamp.missing_inputs():
-        raise SystemExit("Missing cycle-network tiles. Run: download cyclenet")
-    for c in _continents():
+    if len(present) < len(routes):
+        log(f"  {len(routes) - len(present)} of {len(routes)} routes are not downloaded yet; building without them")
+    for c in CONTINENTS:
         ways: dict[str, list] = {}
-        for t in tiles(c):
-            with gzip.open(tile_file(c["id"], t), "rt") as f:
-                ways.update(json.load(f)["ways"])
+        for r in present:
+            if _touches(r["bbox"], c["bbox"]):
+                ways.update(_read(route_file(r))["ways"])
         lines = []
         points = 0
         for coords in _join(list(ways.values())):
@@ -211,5 +272,5 @@ def build(fresh: bool = False) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"lines": lines}, separators=(",", ":")))
         gz = len(gzip.compress(path.read_bytes(), 9))
-        log(f"  {c['id']:14} {len(ways):6} ways -> {len(lines)} lines, {points} points, {path.stat().st_size / 1e6:.1f} MB ({gz / 1e6:.1f} MB gzipped)")
+        log(f"  {c['id']:14} {len(ways):6} ways -> {len(lines)} lines, {points} points, {path.stat().st_size / 1e6:.2f} MB ({gz / 1e6:.2f} MB gzipped)")
     stamp.done()

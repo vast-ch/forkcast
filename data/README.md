@@ -29,7 +29,7 @@ work after `data`).
 | `brouter` | Geocodes the hand-made routes' stops (`forkcast_data/geocoded.json`, committed) and routes each leg with BRouter | small | Public servers: Nominatim (1 request/s) and brouter.de. |
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
 | `details` | Natural Earth populated places and geography regions (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
-| `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API, one query per 20° × 20° tile of each continent, cached per tile in `cache/cyclenet/<continent>/icn/` | 131 tiles, most of them empty | ODbL, © OpenStreetMap contributors. One query at a time with a pause; an interrupted run resumes. |
+| `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API: first an index of every route (id, version, box), then each route's ways by id, 10 routes per query, cached per route and version in `cache/cyclenet/icn/` | a few hundred routes | ODbL, © OpenStreetMap contributors. Rotates through public Overpass servers, waits when asked (429), backs off; a route that keeps failing is skipped and listed, and the next run fetches just those. `--fresh` refreshes the index; changed routes are refetched by version. |
 
 ### Builds (into `out/`, committed)
 
@@ -41,11 +41,16 @@ work after `data`).
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `out/<continent>/climate.bin` + `climate.json` |
 | `manifest` | everything above | `out/manifest.json` |
-| `cyclenet` | `cache/cyclenet/` | `out/<continent>/cyclenet.json`: every way once, joined end to end into long lines, simplified to about 300 m. The app fetches a continent's file only when it is shown and the rider draws with snapping on. |
+| `cyclenet` | `cache/cyclenet/icn/` | `out/<continent>/cyclenet.json`: the ways of every route whose box touches the continent, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches a continent's file only when it is shown and the rider draws with snapping on. |
 
 `all` runs every download, then every build, in the order of these tables.
 
 ### Cycle network
+
+Why by route and not by area: on a busy public Overpass server, what times out
+is a query that has to scan a large region (a 20° tile, or a whole continent),
+and most of those regions are empty. Asking for routes by id never scans an
+area, so each query is quick and its size is set by the routes, not the map.
 
 For drawing routes that follow cycle routes, offline: international routes
 only (`icn`), for every continent. Why not more, measured on Switzerland:
