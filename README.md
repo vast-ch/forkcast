@@ -23,6 +23,7 @@ docker compose up ui                                # dev server, hot reload: ht
 docker compose --profile prod up --build web        # production nginx image: https://web.forkcast.orb.local
 docker compose --profile tools run --rm data        # data pipeline: download what's missing, build what's stale
 docker compose --profile tools run --rm data status # see data/README.md for steps and --fresh
+./check.sh                                          # lint and test web and data (--fix to auto-fix first)
 ```
 
 ### Static build
@@ -31,7 +32,7 @@ docker compose --profile tools run --rm data status # see data/README.md for ste
 docker compose exec ui pnpm build                   # writes web/dist
 ```
 
-`web/dist` is the whole site, data included (about 54 MB; a visitor only downloads the continents they show, 0.7–4.8 MB gzipped each): upload it to any static host.
+`web/dist` is the whole site, data included (about 59 MB; a visitor only downloads the continents they show, 0.7–4.8 MB gzipped each): upload it to any static host.
 
 - **Serve it from the domain root.** Asset URLs are absolute (`/assets/…`); a sub-path such as `example.com/forkcast/` needs `rootURL` in `web/config/environment.js` and Vite's `base` changed to match.
 - **Deep links work without rewrite rules:** the build writes `help/index.html`, one `help/<section>/index.html` per help tab (`web/app/help-sections.json`) and a `404.html` fallback, all copies of `index.html`. Settings live in the query string, so the planner's links are all `/`.

@@ -26,7 +26,8 @@ from pathlib import Path
 from . import anchors, continents, eurovelo, geocode, pipeline
 from .anchors import ROUTES
 from .eurovelo import haversine_km
-from .pipeline import CACHE as CACHE_ROOT, OUT, Stamp, code_hash, ensure, http_get, log
+from .pipeline import CACHE as CACHE_ROOT
+from .pipeline import OUT, Stamp, code_hash, ensure, http_get, log
 
 CACHE = CACHE_ROOT / "brouter"
 GEOCODED = geocode.CACHE
@@ -163,7 +164,7 @@ def write_overview(index) -> None:
     routes = []
     for meta in index:
         r = json.loads((OUT_DIR / f"{meta['id']}.json").read_text())
-        pts = [[la, lo, None] for la, lo in zip(r["lat"], r["lon"])]
+        pts = [[la, lo, None] for la, lo in zip(r["lat"], r["lon"], strict=True)]
         keep = simplify_indices(pts, OVERVIEW_M)
         routes.append({
             "id": r["id"],

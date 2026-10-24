@@ -7,7 +7,8 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 ## Commands
 
 - The web app runs in the `ui` dev container. Run pnpm via `docker compose exec ui <cmd>` (e.g. `docker compose exec ui pnpm lint:types`), never on the host. pnpm only; never npm/yarn/npx.
-- Checks: `pnpm lint:types`, `pnpm lint:js`, `pnpm lint:hbs`, `pnpm build`.
+- Checks: `./check.sh` runs everything in the containers (web: `pnpm lint`, `pnpm test` with Vitest over `app/utils`; data: `ruff check`, `pytest`); `./check.sh --fix` fixes what the linters can first. Run it before committing.
+- Ruff skips a few style rules in `pipeline.py`, `cru.py` and `era5land.py` on purpose: build stamps hash module source, so restyling them would force hours of climate rebuilds.
 - Data: `docker compose --profile tools run --rm data [climate|routes|basemap]`. Outputs go to `data/out/` (committed). BRouter responses are cached in `data/cache/brouter/`, so re-running `routes` only fetches changed legs; be polite to the public BRouter and Nominatim servers.
 
 ## Web app structure

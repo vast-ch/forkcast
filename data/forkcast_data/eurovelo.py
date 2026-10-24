@@ -222,7 +222,7 @@ def chain(stages):
     spans = []
     gaps = []
     pending_gap = None
-    for u, v, edge in steps:
+    for u, _v, edge in steps:
         if edge[0] == "gap":
             pending_gap = 1 if edge[1] else 2
             continue

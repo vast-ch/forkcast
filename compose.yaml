@@ -33,6 +33,10 @@ services:
       - ./data/cache:/data/cache
       - ./data/eurovelo:/data/eurovelo
       - ./data/forkcast_data:/data/forkcast_data
+      # For ./check.sh: the tests, and the lint and test settings.
+      - ./data/tests:/data/tests
+      - ./data/pyproject.toml:/data/pyproject.toml:ro
+      - ./data/uv.lock:/data/uv.lock:ro
       # Copernicus CDS key for the ERA5-Land downloads (see data/README.md).
       - ${HOME}/.cdsapirc:/root/.cdsapirc:ro
 

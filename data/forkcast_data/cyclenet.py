@@ -207,7 +207,7 @@ def _simplify(line: list, tol: float) -> list:
         if far > tol:
             keep[at] = True
             stack += [(a, at), (at, b)]
-    return [p for p, k in zip(line, keep) if k]
+    return [p for p, k in zip(line, keep, strict=True) if k]
 
 
 def _split_at_junctions(ways: list[list]) -> list[list]:
@@ -235,7 +235,7 @@ def _close_gaps(lines: list[list], tol: float = GAP) -> list[list]:
     point, so routes that OSM maps as separate sections meeting a few metres
     apart (often at borders) connect."""
     cell = lambda p: (math.floor(p[0] / tol), math.floor(p[1] / tol))  # noqa: E731
-    ends = [(i, j) for i, l in enumerate(lines) for j in (0, len(l) - 1)]
+    ends = [(i, j) for i, line in enumerate(lines) for j in (0, len(line) - 1)]
     grid: dict[tuple, list[int]] = {}
     for k, (i, j) in enumerate(ends):
         grid.setdefault(cell(lines[i][j]), []).append(k)
