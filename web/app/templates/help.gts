@@ -379,12 +379,34 @@ export default class Help extends Component {
               contributors data (ODbL).
             </li>
             <li>
+              <strong>Cycle routes for drawing:</strong>
+              international bicycle routes from ©
+              <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noopener noreferrer"
+              >OpenStreetMap</a>
+              contributors, fetched with the
+              <a
+                href="https://overpass-api.de"
+                target="_blank"
+                rel="noopener noreferrer"
+              >Overpass API</a>
+              and made available here under the
+              <a
+                href="https://opendatacommons.org/licenses/odbl/1-0/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >Open Database License (ODbL)</a>.
+            </li>
+            <li>
               <strong>Borders, cities, mountain ranges, rivers and lakes:</strong>
               <a
                 href="https://www.naturalearthdata.com"
                 target="_blank"
                 rel="noopener noreferrer"
-              >Natural Earth</a>, public domain.
+              >Natural Earth</a>, public domain. The relief shading is drawn
+              from the ERA5-Land terrain height above.
             </li>
           </ul>
         </section>

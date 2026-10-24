@@ -56,6 +56,7 @@ How the data is downloaded and built, and how the pipeline decides what to redo,
 - **Climate:** [ERA5-Land](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) (Copernicus Climate Change Service), 2011–2025, on a 0.25° grid (about 25 km): rain from the daily totals (rainy days over 1, 5 and 10 mm are counted), highs and lows from the average day's temperature curve calibrated against [CRU TS 4.10](https://crudata.uea.ac.uk/cru/data/hrg/) station-based daily extremes.
 - **EuroVelo routes:** the official GPX tracks from [EuroVelo.com](https://www.eurovelo.com) (ODbL, see `data/eurovelo/README.md`). Variants and spurs are resolved by taking the shortest path through the stages; holes between stages over the sea count as ferries.
 - **Demo route:** Interlaken → Rhône valley → Spain's east coast → Málaga, routed town to town with [BRouter](https://brouter.de) (trekking profile).
+- **Cycle routes for drawing:** international bicycle routes from © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, fetched with the Overpass API; the derived per-continent files are under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
 - **Borders, cities, mountain ranges, rivers and lakes:** Natural Earth (public domain). The relief shading is drawn from the climate data's terrain height.
 - **Daylight:** calculated from the sun's position for each day's start and end; no data needed.
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- The help page's sources and licences now also credit the cycle routes used for drawing (OpenStreetMap, shared under the ODbL) and say where the relief shading comes from.
+
 ## v0.8.0 - 2026-10-24
 
 ### Added
