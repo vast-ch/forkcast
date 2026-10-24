@@ -10,6 +10,7 @@
 
 ### Changed
 
+- The map's legend is just the colour scale and the rain dots, without the titles over them; the sidebar already says what's shown.
 - The credits along the bottom of the map are down to one short line with a link to the full list on the help page, so they no longer cover the map.
 - Forkcast no longer talks to anyone but its own site. The fonts are part of the app instead of coming from Google, your browser is told to refuse anything from elsewhere, and following a link out of the app no longer passes your plan along. There is no tracking of any kind; the help page has a short Privacy section.
 - Units sit right next to their numbers (80km, 4.9mm, 657m, 9h 42min), and temperatures say °C so there's no doubt about the scale.

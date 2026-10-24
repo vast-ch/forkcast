@@ -71,10 +71,10 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
       ...attributes
     >
       {{#if this.planner.showTemp}}
-        <div class="min-w-0">
-          <p class="wt-eyebrow">{{this.tempLabel}}</p>
+        {{! The titles are for screen readers; on the map the scale speaks for itself. }}
+        <div class="min-w-0" role="group" aria-label={{this.tempLabel}}>
           <div
-            class="relative mt-1.5 h-2.5 w-60 rounded-sm"
+            class="relative mt-0.5 h-2.5 w-60 rounded-sm"
             style={{css "background: " this.gradient}}
           ></div>
           <div class="relative h-4 w-60 tabular-nums">
@@ -88,9 +88,8 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
         </div>
       {{/if}}
       {{#if this.planner.showRain}}
-        <div>
-          <p class="wt-eyebrow">{{this.rainLabel}}</p>
-          <div class="mt-1 flex items-end gap-3 tabular-nums">
+        <div role="group" aria-label={{this.rainLabel}}>
+          <div class="flex items-end gap-3 tabular-nums">
             {{#each this.dots as |dot|}}
               <span class="flex items-center gap-1">
                 <span

@@ -141,9 +141,6 @@ body {
   .wt-legend .w-48 {
     width: 7.5rem;
   }
-  .wt-legend .wt-eyebrow {
-    font-size: 9px;
-  }
   .wt-map .leaflet-control-attribution {
     font-size: 9px;
     line-height: 1.3;
