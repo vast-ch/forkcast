@@ -210,6 +210,15 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     this.layers[key] = group.addTo(this.map!);
   }
 
+  /** Rebuild a layer group when any of `deps` differs from the last sync. */
+  layer(
+    key: GroupLayer,
+    deps: unknown[],
+    build: (group: L.LayerGroup) => void,
+  ): void {
+    if (this.changed(key, deps)) this.replace(key, build);
+  }
+
   /** A click handler that does nothing while a route is being drawn. */
   unlessDrawing(f: () => void): () => void {
     return () => {
@@ -233,99 +242,96 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         return data ? [data] : [];
       });
 
-    if (this.changed('relief', `${ids}-${s.details.relief}`)) {
-      this.replace('relief', (group) => {
-        if (!s.details.relief) return;
-        grids.forEach((g, k) => {
-          const r = reliefRaster(g, grids.slice(0, k));
-          L.imageOverlay(r.url, r.bounds, {
-            pane: 'relief',
-            interactive: false,
-          }).addTo(group);
-        });
+    this.layer('relief', [ids, s.details.relief], (group) => {
+      if (!s.details.relief) return;
+      grids.forEach((g, k) => {
+        const r = reliefRaster(g, grids.slice(0, k));
+        L.imageOverlay(r.url, r.bounds, {
+          pane: 'relief',
+          interactive: false,
+        }).addTo(group);
       });
-    }
+    });
 
-    const filesKey = `${ids}-${s.detailFiles}`;
-    if (this.changed('water', `${filesKey}-${s.details.water}`)) {
-      this.replace('water', (group) => {
-        if (!s.details.water) return;
-        for (const w of files('water')) {
-          for (const lake of w.lakes) {
-            L.polygon(lake.map(lonLat), {
-              pane: 'water',
-              interactive: false,
-              stroke: false,
-              fillOpacity: 1,
-              className: 'wt-lake',
-            }).addTo(group);
-          }
-          for (const river of w.rivers) {
-            L.polyline(river.map(lonLat), {
-              pane: 'water',
-              interactive: false,
-              weight: 1.2,
-              className: 'wt-river',
-            }).addTo(group);
-          }
+    this.layer('water', [ids, s.detailFiles, s.details.water], (group) => {
+      if (!s.details.water) return;
+      for (const w of files('water')) {
+        for (const lake of w.lakes) {
+          L.polygon(lake.map(lonLat), {
+            pane: 'water',
+            interactive: false,
+            stroke: false,
+            fillOpacity: 1,
+            className: 'wt-lake',
+          }).addTo(group);
         }
-      });
-    }
+        for (const river of w.rivers) {
+          L.polyline(river.map(lonLat), {
+            pane: 'water',
+            interactive: false,
+            weight: 1.2,
+            className: 'wt-river',
+          }).addTo(group);
+        }
+      }
+    });
 
     // While drawing with snapping on, the network the clicks snap to.
-    if (this.changed('cyclenet', `${filesKey}-${s.showCycleNet}`)) {
-      this.replace('cyclenet', (group) => {
-        if (!s.showCycleNet) return;
-        const renderer = (this.netRenderer ??= L.canvas({ pane: 'water' }));
-        // Black outline, white inside, like a road on a map, so the routes
-        // stand apart from everything else: every outline first, then every
-        // fill, so junctions stay white.
-        const lines = files('cyclenet').flatMap((net) =>
-          net.lines.map((line) => line.map(lonLat)),
-        );
-        for (const [color, weight] of [
-          ['#17212b', 4],
-          ['#fff', 2],
-        ] as const) {
-          for (const line of lines) {
-            L.polyline(line, {
-              renderer,
-              interactive: false,
-              weight,
-              color,
-              opacity: 1,
-              lineCap: 'round',
-              lineJoin: 'round',
-            }).addTo(group);
-          }
+    this.layer('cyclenet', [ids, s.detailFiles, s.showCycleNet], (group) => {
+      if (!s.showCycleNet) return;
+      const renderer = (this.netRenderer ??= L.canvas({ pane: 'water' }));
+      // Black outline, white inside, like a road on a map, so the routes
+      // stand apart from everything else: every outline first, then every
+      // fill, so junctions stay white.
+      const lines = files('cyclenet').flatMap((net) =>
+        net.lines.map((line) => line.map(lonLat)),
+      );
+      for (const [color, weight] of [
+        ['#17212b', 4],
+        ['#fff', 2],
+      ] as const) {
+        for (const line of lines) {
+          L.polyline(line, {
+            renderer,
+            interactive: false,
+            weight,
+            color,
+            opacity: 1,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }).addTo(group);
         }
-      });
-    }
+      }
+    });
 
-    if (this.changed('labels', `${filesKey}-${s.details.cities}`)) {
-      this.replace('labels', (group) => {
-        if (!s.details.cities) return;
-        for (const p of files('places')) {
-          for (const [name, lon, lat] of p.ranges) {
-            label(name, lat, lon, 'wt-range-name').addTo(group);
-          }
-          for (const [name, lon, lat, isCapital] of p.places) {
-            label(
-              name,
-              lat,
-              lon,
-              isCapital ? 'wt-place is-capital' : 'wt-place',
-            ).addTo(group);
-          }
+    this.layer('labels', [ids, s.detailFiles, s.details.cities], (group) => {
+      if (!s.details.cities) return;
+      for (const p of files('places')) {
+        for (const [name, lon, lat] of p.ranges) {
+          label(name, lat, lon, 'wt-range-name').addTo(group);
         }
-      });
-    }
+        for (const [name, lon, lat, isCapital] of p.places) {
+          label(
+            name,
+            lat,
+            lon,
+            isCapital ? 'wt-place is-capital' : 'wt-place',
+          ).addTo(group);
+        }
+      }
+    });
   }
 
+  /** Whether `value` (or any item, for a list) differs from the last time. */
   changed(key: string, value: unknown): boolean {
-    if (this.last[key] === value) return false;
+    const last = this.last[key];
+    const same = Array.isArray(value)
+      ? Array.isArray(last) &&
+        last.length === value.length &&
+        value.every((v, i) => v === last[i])
+      : last === value;
     this.last[key] = value;
-    return true;
+    return !same;
   }
 
   /** Fit the view to `bounds`, and keep it fitted while the layout settles. */
@@ -362,22 +368,20 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         style: { stroke: false, fillOpacity: 1, className: 'wt-land' },
       }).addTo(map);
     }
-    if (this.changed('borders', `${ids}-${s.details.borders}`)) {
-      this.replace('borders', (group) => {
-        if (!s.details.borders) return;
-        L.geoJSON(countries, {
-          pane: 'borders',
-          interactive: false,
-          style: { weight: 0.8, fill: false, className: 'wt-border' },
-        }).addTo(group);
-      });
-    }
+    this.layer('borders', [ids, s.details.borders], (group) => {
+      if (!s.details.borders) return;
+      L.geoJSON(countries, {
+        pane: 'borders',
+        interactive: false,
+        style: { weight: 0.8, fill: false, className: 'wt-border' },
+      }).addTo(group);
+    });
     this.syncDetails(s, ids);
 
     // Continents not shown yet: plain shapes that add their climate on click.
     const world = atlas.world;
-    if (world && this.changed('others', `${ids}-${atlas.continents.length}`)) {
-      this.replace('others', (group) => {
+    if (world)
+      this.layer('others', [ids, atlas.continents.length], (group) => {
         for (const c of atlas.continents) {
           if (atlas.loadedIds.includes(c.id)) continue;
           const rings = worldRings(world[c.id] ?? '');
@@ -399,33 +403,30 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             .addTo(group);
         }
       });
-    }
 
     if (loaded.length) {
       const grids = loaded.map((l) => l.climate);
-      const tempKey = `${ids}-${s.week}-${s.tempMetric}-${s.showTemp}`;
-      if (this.changed('temp', tempKey)) {
-        this.replace('temp', (group) => {
-          if (!s.showTemp) return;
-          // One image per continent; cells an earlier one covers are left out.
-          grids.forEach((g, k) => {
-            const r = temperatureRaster(
-              g,
-              s.phase,
-              s.tempMetric,
-              grids.slice(0, k),
-            );
-            L.imageOverlay(r.url, r.bounds, {
-              pane: 'climate',
-              interactive: false,
-            }).addTo(group);
-          });
+      this.layer('temp', [s.week, s.tempMetric, s.showTemp, ids], (group) => {
+        if (!s.showTemp) return;
+        // One image per continent; cells an earlier one covers are left out.
+        grids.forEach((g, k) => {
+          const r = temperatureRaster(
+            g,
+            s.phase,
+            s.tempMetric,
+            grids.slice(0, k),
+          );
+          L.imageOverlay(r.url, r.bounds, {
+            pane: 'climate',
+            interactive: false,
+          }).addTo(group);
         });
-      }
+      });
       const block = this.rainBlock(grids[0]!.step);
-      const rainKey = `${ids}-${s.week}-${s.rainMetric}-${s.rainThreshold}-${s.showRain}-${block}`;
-      if (this.changed('rain', rainKey)) {
-        this.replace('rain', (group) => {
+      this.layer(
+        'rain',
+        [ids, s.week, s.rainMetric, s.rainThreshold, s.showRain, block],
+        (group) => {
           if (!s.showRain) return;
           const renderer = (this.rainRenderer ??= L.canvas({
             pane: 'rain',
@@ -452,20 +453,17 @@ class LeafletModifier extends Modifier<LeafletSignature> {
               }).addTo(group);
             }
           });
-        });
-      }
+        },
+      );
     }
 
     // Every preset route of the shown continents, dashed; click one to pick
     // it. The Routes toggle hides them (the selected route always shows).
     const selectedId = s.route?.id;
-    if (
-      this.changed(
-        'overview',
-        `${ids}-${selectedId}-${atlas.overview.length}-${s.details.routes}`,
-      )
-    ) {
-      this.replace('overview', (group) => {
+    this.layer(
+      'overview',
+      [ids, selectedId, atlas.overview.length, s.details.routes],
+      (group) => {
         if (!s.details.routes) return;
         const names = new Map(atlas.presets.map((r) => [r.id, r.name]));
         for (const r of atlas.overview) {
@@ -491,129 +489,117 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             )
             .addTo(group);
         }
-      });
+      },
+    );
+
+    this.layer('routes', [s.route], (group) => {
+      const r = s.route;
+      if (!r) return;
+      const latlngs = r.points.map(latLng);
+      L.polyline(latlngs, {
+        color: '#fff',
+        weight: 7,
+        opacity: 0.9,
+        interactive: false,
+      }).addTo(group);
+      L.polyline(latlngs, {
+        color: r.color,
+        weight: 4,
+        interactive: false,
+      }).addTo(group);
+    });
+    if (s.route && this.changed('fitted', s.route.id)) {
+      this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
     }
 
-    if (this.changed('route', s.route)) {
-      this.replace('routes', (group) => {
-        const r = s.route;
-        if (!r) return;
-        const latlngs = r.points.map(latLng);
-        L.polyline(latlngs, {
-          color: '#fff',
-          weight: 7,
-          opacity: 0.9,
-          interactive: false,
-        }).addTo(group);
-        L.polyline(latlngs, {
-          color: r.color,
-          weight: 4,
-          interactive: false,
-        }).addTo(group);
-      });
-      if (s.route && this.changed('fitted', s.route.id)) {
-        this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
-      }
-    }
-
-    if (
-      this.changed('trip', s.trip) ||
-      this.changed('highlight', s.highlightedDay)
-    ) {
-      this.replace('stops', (group) => {
-        const { trip, route } = s;
-        if (!trip || !route) return;
-        const start = route.points[0]!;
-        L.circleMarker(latLng(start), {
+    this.layer('stops', [s.trip, s.highlightedDay], (group) => {
+      const { trip, route } = s;
+      if (!trip || !route) return;
+      const start = route.points[0]!;
+      L.circleMarker(latLng(start), {
+        pane: 'stops',
+        radius: 6,
+        color: '#fff',
+        weight: 2,
+        fillColor: '#111',
+        fillOpacity: 1,
+      })
+        .bindTooltip('Start', { direction: 'top' })
+        .addTo(group);
+      for (const d of trip.days) {
+        if (d.isRest) continue;
+        const isHi = d.n === s.highlightedDay;
+        const hasRestNext = trip.days[d.n]?.isRest === true;
+        const m = L.circleMarker(latLng(d.sleep), {
           pane: 'stops',
-          radius: 6,
-          color: '#fff',
-          weight: 2,
-          fillColor: '#111',
+          radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
+          color: isHi ? '#111' : ROUTE_ACCENT,
+          weight: isHi ? 3 : 2,
+          className: isHi ? 'wt-stop is-active' : 'wt-stop',
+          fillColor: tempSwatch(d.weather.high, '#888'),
           fillOpacity: 1,
-        })
-          .bindTooltip('Start', { direction: 'top' })
-          .addTo(group);
-        for (const d of trip.days) {
-          if (d.isRest) continue;
-          const isHi = d.n === s.highlightedDay;
-          const hasRestNext = trip.days[d.n]?.isRest === true;
-          const m = L.circleMarker(latLng(d.sleep), {
-            pane: 'stops',
-            radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
-            color: isHi ? '#111' : ROUTE_ACCENT,
-            weight: isHi ? 3 : 2,
-            className: isHi ? 'wt-stop is-active' : 'wt-stop',
-            fillColor: tempSwatch(d.weather.high, '#888'),
-            fillOpacity: 1,
-          });
-          m.bindTooltip(
-            `Night ${d.n} · ${fmtShortDate(d.date)}${hasRestNext ? ' · rest day next' : ''}`,
-            { direction: 'top', offset: [0, -4] },
+        });
+        m.bindTooltip(
+          `Night ${d.n} · ${fmtShortDate(d.date)}${hasRestNext ? ' · rest day next' : ''}`,
+          { direction: 'top', offset: [0, -4] },
+        );
+        m.on('click', () => this.owner?.planner.highlightDay(d));
+        m.addTo(group);
+      }
+      if (s.highlightedDay) {
+        const d = trip.days.find((x) => x.n === s.highlightedDay);
+        if (d && !d.isRest) {
+          const seg = route.points.filter(
+            (p) => p.km >= d.fromKm && p.km <= d.toKm,
           );
-          m.on('click', () => this.owner?.planner.highlightDay(d));
-          m.addTo(group);
+          const a = pointAt(route.points, d.fromKm);
+          const b = pointAt(route.points, d.toKm);
+          L.polyline([latLng(a), ...seg.map(latLng), latLng(b)], {
+            color: ROUTE_ACCENT,
+            weight: 6,
+            opacity: 0.95,
+            interactive: false,
+            className: 'wt-day-stretch',
+          }).addTo(group);
         }
-        if (s.highlightedDay) {
-          const d = trip.days.find((x) => x.n === s.highlightedDay);
-          if (d && !d.isRest) {
-            const seg = route.points.filter(
-              (p) => p.km >= d.fromKm && p.km <= d.toKm,
-            );
-            const a = pointAt(route.points, d.fromKm);
-            const b = pointAt(route.points, d.toKm);
-            L.polyline([latLng(a), ...seg.map(latLng), latLng(b)], {
-              color: ROUTE_ACCENT,
-              weight: 6,
-              opacity: 0.95,
-              interactive: false,
-              className: 'wt-day-stretch',
-            }).addTo(group);
-          }
-        }
-      });
-    }
+      }
+    });
 
     // A double-click zooms in, except while drawing: there it finishes the route.
     if (this.changed('drawing', s.isDrawing)) {
       if (s.isDrawing) map.doubleClickZoom.disable();
       else map.doubleClickZoom.enable();
+      map.getContainer().style.cursor = s.isDrawing ? 'crosshair' : '';
     }
     // While drawing: the clicks as a thin dashed sketch, the route made from
     // them (matched to the cycle routes, or straight) over it.
-    if (
-      this.changed('drawn', s.drawn) ||
-      this.changed('sketch', s.sketch.length)
-    ) {
-      map.getContainer().style.cursor = s.isDrawing ? 'crosshair' : '';
-      this.replace('drawn', (group) => {
-        if (!s.isDrawing || !s.sketch.length) return;
-        L.polyline(s.sketch.map(latLng), {
-          color: '#5d6b78',
-          weight: 1.5,
-          dashArray: '3 5',
+    this.layer('drawn', [s.drawn, s.sketch.length], (group) => {
+      if (!s.isDrawing || !s.sketch.length) return;
+      L.polyline(s.sketch.map(latLng), {
+        color: '#5d6b78',
+        weight: 1.5,
+        dashArray: '3 5',
+        interactive: false,
+      }).addTo(group);
+      for (const p of s.sketch) {
+        L.circleMarker(latLng(p), {
+          radius: 3,
+          color: '#fff',
+          weight: 1,
+          fillColor: '#5d6b78',
+          fillOpacity: 1,
           interactive: false,
         }).addTo(group);
-        for (const p of s.sketch) {
-          L.circleMarker(latLng(p), {
-            radius: 3,
-            color: '#fff',
-            weight: 1,
-            fillColor: '#5d6b78',
-            fillOpacity: 1,
-            interactive: false,
-          }).addTo(group);
-        }
-        L.polyline(s.drawn.map(latLng), {
-          color: OWN_COLOR,
-          weight: 4,
-          opacity: 0.9,
-          lineCap: 'round',
-          lineJoin: 'round',
-          interactive: false,
-        }).addTo(group);
-      });
-    }
+      }
+      L.polyline(s.drawn.map(latLng), {
+        color: OWN_COLOR,
+        weight: 4,
+        opacity: 0.9,
+        lineCap: 'round',
+        lineJoin: 'round',
+        interactive: false,
+      }).addTo(group);
+    });
   }
 }
 
