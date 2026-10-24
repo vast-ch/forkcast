@@ -6,6 +6,7 @@ import { modifier } from 'ember-modifier';
 import type PlannerService from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
 import { tempSwatch } from 'forkcast/utils/climate';
+import TempPill from 'forkcast/components/temp-pill';
 import {
   css,
   fmtDate,
@@ -260,10 +261,12 @@ export default class ItineraryChart extends Component<{
             <p class="wt-muted text-xs">{{this.detailRoute}}</p>
           </div>
           <dl class="wt-inline-stats">
-            <div><dt>Low</dt><dd>{{fmtTemp this.detail.nightLow}}</dd></div>
-            <div><dt>High</dt><dd>{{fmtTemp
-                  this.detail.weather.high
-                }}</dd></div>
+            <div><dt>Low</dt><dd><TempPill
+                  @t={{this.detail.nightLow}}
+                /></dd></div>
+            <div><dt>High</dt><dd><TempPill
+                  @t={{this.detail.weather.high}}
+                /></dd></div>
             <div><dt>Rain chance</dt><dd>{{fmtPct
                   this.detail.weather.rainChance
                 }}</dd></div>

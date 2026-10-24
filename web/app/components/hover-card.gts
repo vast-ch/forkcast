@@ -1,17 +1,15 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type PlannerService from 'forkcast/services/planner';
-import { tempSwatch } from 'forkcast/utils/climate';
+import TempPill from 'forkcast/components/temp-pill';
 import { isMissing } from 'forkcast/utils/helpers';
 import {
-  css,
   fmtDaylight,
   fmtHours,
   fmtDayTitle,
   fmtKm,
   fmtMm,
   fmtPct,
-  fmtTemp,
 } from 'forkcast/utils/format';
 
 const round = (n: number | null | undefined) =>
@@ -77,19 +75,10 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <p class="wt-title mt-0.5">{{this.dayTitle}}</p>
             {{#if this.route.weather}}
               <dl class="wt-readout mt-2">
-                <dt>Low / high</dt>
-                <dd>
-                  <span
-                    class="wt-chip"
-                    style={{css
-                      "background: "
-                      (tempSwatch this.route.weather.high)
-                    }}
-                  ></span>
-                  {{fmtTemp this.route.weather.low}}
-                  /
-                  {{fmtTemp this.route.weather.high}}
-                </dd>
+                <dt>Low</dt>
+                <dd><TempPill @t={{this.route.weather.low}} /></dd>
+                <dt>High</dt>
+                <dd><TempPill @t={{this.route.weather.high}} /></dd>
                 <dt>Rainy day chance</dt>
                 <dd>{{fmtPct this.route.weather.rainChance}}</dd>
                 <dt>Rain, average</dt>
@@ -116,19 +105,10 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
         {{else if this.hover.climate}}
           <p class="wt-eyebrow">{{this.weekLabel}} average · {{this.coords}}</p>
           <dl class="wt-readout mt-2">
-            <dt>Day high</dt>
-            <dd>
-              <span
-                class="wt-chip"
-                style={{css
-                  "background: "
-                  (tempSwatch this.hover.climate.high)
-                }}
-              ></span>
-              {{fmtTemp this.hover.climate.high}}
-            </dd>
             <dt>Night low</dt>
-            <dd>{{fmtTemp this.hover.climate.low}}</dd>
+            <dd><TempPill @t={{this.hover.climate.low}} /></dd>
+            <dt>Day high</dt>
+            <dd><TempPill @t={{this.hover.climate.high}} /></dd>
             <dt>Rain</dt>
             <dd>{{this.weekRain}}</dd>
             <dt>Rainy days (≥{{this.planner.rainThreshold}}mm)</dt>

@@ -428,6 +428,15 @@ export function tempColor(t: number): string {
   return `rgb(${Math.round(r)} ${Math.round(g)} ${Math.round(b)})`;
 }
 
+/** Text colour that reads on a temperature's colour: white on the dark blues
+ * and reds, ink on the light greens and yellows. */
+export function tempInk(t: number | null | undefined): string {
+  if (isMissing(t)) return 'var(--wt-ink)';
+  const [r, g, b] = tempRgb(t);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance < 0.55 ? '#fff' : 'var(--wt-ink)';
+}
+
 /** Colour of a temperature, or `fallback` when there is none (no data). */
 export function tempSwatch(
   t: number | null | undefined,

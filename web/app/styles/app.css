@@ -332,14 +332,12 @@ body {
   font-size: 0.85rem;
 }
 
-.wt-chip {
-  display: inline-block;
-  width: 0.65rem;
-  height: 0.65rem;
-  margin-right: 0.35rem;
-  border-radius: 2px;
-  vertical-align: -0.05rem;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 15%);
+/* A temperature pill (TempPill): its colour from the temperature scale. */
+.wt-temp-pill {
+  font-family: var(--wt-font-data);
+  font-weight: 600;
+  min-width: 3.4rem;
+  justify-content: center;
 }
 
 /* The legend is a button: it shrinks to a chip and back. */
