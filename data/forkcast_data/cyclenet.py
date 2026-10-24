@@ -3,8 +3,8 @@ routes that follow them (the app snaps clicks to it and routes along it).
 
 - download: the ways of every international bicycle route relation (network
   icn; in Europe essentially EuroVelo, elsewhere little) from the Overpass API,
-  one query per 20° × 20° tile of each continent, one at a time with a pause
-  between. Each tile is cached on its own in
+  one query per 20° × 20° tile in Europe and one per continent elsewhere
+  (they have few), one at a time with a pause between. Each tile is cached on its own in
   cache/cyclenet/<continent>/<networks>/<tile>.json.gz as
   {"ways": {id: [[lon, lat], …]}}, so an interrupted run picks up where it
   stopped, and a different choice of networks starts its own cache. National
@@ -38,6 +38,9 @@ DIR = CACHE / "cyclenet"
 OVERPASS = "https://overpass-api.de/api/interpreter"
 NETWORKS = ("icn",)
 TILE = 20.0  # degrees: few queries, and a failed one only redoes its tile
+# Continents tiled at TILE; the others have so few international routes that
+# one query over their whole box is light and saves dozens of mostly empty ones.
+TILED = {"europe"}
 PAUSE = 5.0  # seconds between queries, to share the public server politely
 SIMPLIFY = 0.003  # degrees, about 300 m
 
@@ -46,9 +49,11 @@ def _continents() -> list[dict]:
     return CONTINENTS
 
 
-def tiles(bbox) -> list[tuple[float, float, float, float]]:
+def tiles(continent: dict) -> list[tuple[float, float, float, float]]:
     """Tiles (south, west, north, east) covering a continent's box."""
-    w0, s0, e0, n0 = bbox
+    w0, s0, e0, n0 = continent["bbox"]
+    if continent["id"] not in TILED:
+        return [(s0, w0, n0, e0)]
     out = []
     lat = math.floor(s0 / TILE) * TILE
     while lat < n0:
@@ -107,7 +112,7 @@ def _validate(path: Path) -> None:
 
 def download(fresh: bool = False) -> None:
     for c in _continents():
-        ts = tiles(c["bbox"])
+        ts = tiles(c)
         log(f"  {c['id']}: {len(ts)} tiles of {TILE:g}°")
         for i, t in enumerate(ts, 1):
             # The public server is often busy: more tries, longer pauses (ensure waits 30 s × try).
@@ -116,7 +121,7 @@ def download(fresh: bool = False) -> None:
 
 
 def files() -> list[Path]:
-    return [tile_file(c["id"], t) for c in _continents() for t in tiles(c["bbox"])]
+    return [tile_file(c["id"], t) for c in _continents() for t in tiles(c)]
 
 
 def outputs() -> list[Path]:
@@ -191,7 +196,7 @@ def build(fresh: bool = False) -> None:
         raise SystemExit("Missing cycle-network tiles. Run: download cyclenet")
     for c in _continents():
         ways: dict[str, list] = {}
-        for t in tiles(c["bbox"]):
+        for t in tiles(c):
             with gzip.open(tile_file(c["id"], t), "rt") as f:
                 ways.update(json.load(f)["ways"])
         lines = []
