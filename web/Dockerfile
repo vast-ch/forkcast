@@ -11,6 +11,14 @@ RUN corepack enable && \
   pnpm config set store-dir "$PNPM_HOME/store" --global
 COPY web/package.json web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
+
+### Stage 1b: dev container (base plus a browser for the Ember tests)
+FROM base AS dev
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends chromium && \
+  rm -rf /var/lib/apt/lists/*
+# Chrome's sandbox can't run as root in a container.
+ENV CHROME_NO_SANDBOX=1
 EXPOSE 4200
 CMD ["pnpm", "start"]
 

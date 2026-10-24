@@ -9,7 +9,7 @@ services:
     build:
       context: .
       dockerfile: web/Dockerfile
-      target: base
+      target: dev
     init: true
     expose:
       - 4200
