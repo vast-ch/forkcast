@@ -315,9 +315,10 @@ export default class Help extends Component {
               as Route 1, Route 2 and so on; an imported one takes the name in
               its file). Pick one and press “Edit route” to change it: a drawn
               route goes back into drawing, with your clicks as you left them,
-              to add to, undo and save over the old one; an imported track can't
-              be reshaped that way, so for it Edit route changes the name only.
-              “Delete this route” removes it.
+              to add to, undo and save over the old one, and the day chart and
+              trip follow as you draw; an imported track can't be reshaped that
+              way, so for it Edit route changes the name only. “Delete this
+              route” removes it.
             </p>
             <p>
               They're kept in this browser only, whole and as long as you like

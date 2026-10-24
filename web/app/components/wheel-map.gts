@@ -83,7 +83,7 @@ interface MapState {
   ownRoutes: Route[];
   trip?: Trip;
   isDrawing: boolean;
-  /** Drawing the selected route further: its saved line steps aside */
+  /** Drawing the selected route further: the route shown is the drawing */
   isRedrawing: boolean;
   /** The sketch (the clicks) and the line drawn from it */
   sketch: { lat: number; lon: number }[];
@@ -525,11 +525,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       },
     );
 
-    // While one of your routes is drawn further, only the new line shows: the
-    // saved one (and its stops) would hide what Undo takes back.
-    this.layer('routes', [s.route, s.isRedrawing], (group) => {
+    // The selected route; while it's being drawn further, that's the new line
+    // (the planner's route follows the drawing).
+    this.layer('routes', [s.route], (group) => {
       const r = s.route;
-      if (!r || s.isRedrawing) return;
+      if (!r) return;
       const latlngs = r.points.map(latLng);
       L.polyline(latlngs, {
         color: '#fff',
@@ -547,9 +547,9 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
     }
 
-    this.layer('stops', [s.trip, s.highlightedDay, s.isRedrawing], (group) => {
+    this.layer('stops', [s.trip, s.highlightedDay], (group) => {
       const { trip, route } = s;
-      if (!trip || !route || s.isRedrawing) return;
+      if (!trip || !route) return;
       const start = route.points[0]!;
       L.circleMarker(latLng(start), {
         pane: 'stops',
@@ -607,8 +607,9 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       map.getContainer().style.cursor = s.isDrawing ? 'crosshair' : '';
     }
     // While drawing: the clicks as a thin dashed sketch, the route made from
-    // them (matched to the cycle routes, or straight) over it.
-    this.layer('drawn', [s.drawn, s.sketch.length], (group) => {
+    // them (matched to the cycle routes, or straight) over it. A route drawn
+    // further is the selected route already, so it isn't drawn twice.
+    this.layer('drawn', [s.drawn, s.sketch.length, s.isRedrawing], (group) => {
       if (!s.isDrawing || !s.sketch.length) return;
       L.polyline(s.sketch.map(latLng), {
         color: '#5d6b78',
@@ -626,6 +627,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           interactive: false,
         }).addTo(group);
       }
+      if (s.isRedrawing) return;
       L.polyline(s.drawn.map(latLng), {
         color: OWN_COLOR,
         weight: 4,
@@ -701,7 +703,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
       ownRoutes: p.ownRoutes,
       trip: p.trip,
       isDrawing: p.isDrawing,
-      isRedrawing: p.isDrawing && p.editingId === p.routeId,
+      isRedrawing: p.isRedrawing,
       sketch: [...p.sketch],
       drawn: p.drawn,
       highlightedDay: p.highlightedDay,

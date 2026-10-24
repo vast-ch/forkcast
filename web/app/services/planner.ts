@@ -346,7 +346,10 @@ export default class PlannerService extends Service {
   /** Everything the route picker offers on the loaded continents. */
   @cached
   get choices(): RouteChoice[] {
-    return [...this.atlas.presets, ...this.ownRoutes];
+    // A route being drawn further shows as it is now.
+    const redrawn = this.isDrawing ? this.redrawnRoute : undefined;
+    const own = this.ownRoutes.map((r) => (r.id === redrawn?.id ? redrawn : r));
+    return [...this.atlas.presets, ...own];
   }
 
   /**
@@ -376,8 +379,24 @@ export default class PlannerService extends Service {
   @cached
   get baseRoute(): Route | undefined {
     const id = this.routeId;
+    if (this.isRedrawing) return this.redrawnRoute;
     if (isOwnRouteId(id)) return this.ownRoutes.find((r) => r.id === id);
     return this.atlas.tracks.get(id);
+  }
+
+  /** Drawing the selected route further: the trip follows the new line. */
+  get isRedrawing(): boolean {
+    return this.isDrawing && this.editingId === this.routeId;
+  }
+
+  /** The route as it's being redrawn (not saved yet). */
+  @cached
+  get redrawnRoute(): Route | undefined {
+    const saved = this.ownRoutes.find((r) => r.id === this.editingId);
+    const line = this.drawn;
+    if (!saved || line.length < 2) return undefined;
+    const points = withDistances(line);
+    return { ...saved, points, km: points[points.length - 1]!.km };
   }
 
   /** The selected route in riding direction. */

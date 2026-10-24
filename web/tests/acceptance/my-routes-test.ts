@@ -88,7 +88,7 @@ module('Acceptance | my routes', function (hooks) {
     assert.dom('#route-picker option:checked').includesText('Route 1');
   });
 
-  test('while drawing a route further, only the new line shows, so Undo is visible', async function (assert) {
+  test('while drawing a route further, the route, map and trip follow the drawing', async function (assert) {
     await visit('/');
     await draw(this.owner, [BERN, LUCERNE, ZURICH]);
     const ownLines = () =>
@@ -104,8 +104,13 @@ module('Acceptance | my routes', function (hooks) {
         .find((p) => p.getAttribute('stroke') === '#b5179e')!
         .getAttribute('d');
     const before = d();
+    const km = () =>
+      document.querySelector('#route-picker option:checked')!.textContent;
+    const kmBefore = km();
     await click(button('Undo'));
     assert.notStrictEqual(d(), before, 'Undo shortens the line on the map');
+    assert.notStrictEqual(km(), kmBefore, 'and the selected route with it');
+    assert.dom('.wt-summary').exists('the trip is planned on the new line');
 
     await click(button('Cancel'));
     assert.strictEqual(ownLines(), 1, 'the saved route is back');
