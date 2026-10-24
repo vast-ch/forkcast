@@ -14,9 +14,11 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     eurovelo              official EuroVelo GPX tracks
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
+    details               Natural Earth places, mountain ranges, rivers and lakes
 
 Builds (into out/, except the CRU climatology which is an intermediate in cache/):
     borders    per-continent outlines and the picker's world map
+    details    per-continent city and range names, rivers and lakes
     routes     every preset route plus the route index
     cru        CRU climatology for the years (intermediate)
     climate    per-continent climate grids (ERA5-Land, calibrated with CRU)
@@ -31,7 +33,7 @@ import argparse
 import sys
 import time
 
-from . import basemap, cru, era5land, era5land_download, eurovelo, manifest, routes
+from . import basemap, cru, details, era5land, era5land_download, eurovelo, manifest, routes
 from .pipeline import STAMPS, Stamp, is_verified, log
 
 YEARS = (2011, 2025)
@@ -49,11 +51,13 @@ DOWNLOADS = {
     "eurovelo": lambda a: eurovelo.download(a.fresh),
     "brouter": lambda a: routes.download(a.fresh),
     "borders": lambda a: basemap.download(a.fresh),
+    "details": lambda a: details.download(a.fresh),
 }
 
 # In dependency order: routes need Europe's borders; the manifest needs everything.
 BUILDS = {
     "borders": lambda a: basemap.build(a.fresh),
+    "details": lambda a: details.build(a.fresh),
     "routes": lambda a: routes.build(a.fresh),
     "cru": lambda a: cru.build(a.y0, a.y1, a.fresh),
     "climate": lambda a: era5land.build(a.y0, a.y1, a.fresh),
@@ -77,6 +81,7 @@ def status(a) -> None:
         "orography": [era5land_download.orography_file()],
         "eurovelo": [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG],
         "borders": [basemap.DIR / n for n in basemap.SOURCES],
+        "details": [details.DIR / n for n in details.SOURCES],
     }
     log("downloads (verified / present / expected)")
     for name, files in groups.items():

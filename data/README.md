@@ -28,12 +28,14 @@ work after `data`).
 | `eurovelo` | Official EuroVelo GPX tracks, one per route, gzipped | 11 MB | ODbL, see `eurovelo/README.md`. |
 | `brouter` | Geocodes the hand-made routes' stops (`forkcast_data/geocoded.json`, committed) and routes each leg with BRouter | small | Public servers: Nominatim (1 request/s) and brouter.de. |
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
+| `details` | Natural Earth populated places and geography regions (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
 
 ### Builds (into `out/`, committed)
 
 | Step | Reads | Writes |
 |---|---|---|
 | `borders` | `cache/borders/` | `out/<continent>/countries.json`, `out/world.json` |
+| `details` | `cache/details/` | `out/<continent>/places.json` (towns of 50,000 or more and capitals, mountain-range names at the centre of their area; Europe 14 kB gzipped) and `out/<continent>/water.json` (rivers and lakes to 0.01°; Europe 29 kB gzipped). The app fetches each only while its layer is on. |
 | `routes` | `eurovelo/`, `cache/brouter/`, `out/europe/countries.json` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `out/<continent>/climate.bin` + `climate.json` |
