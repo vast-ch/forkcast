@@ -6,15 +6,16 @@
 
 - Keep as many routes of your own as you like. Every route you draw or import is saved under "Your routes" in the list and shows dashed on the map; each has a name, given as you draw it and changed with "Edit route", which also takes a drawn route back into drawing to extend or reshape it; each can be deleted on its own.
 
-### Fixed
-
-- On phones and in narrow browser windows the trip summary (days, arrival, riding and rest days, average high, rainy days, coldest night) was cut off under the day chart and couldn't be scrolled to. It now sits with the trip settings in the Settings drawer, where it belongs, and the page under the map scrolls again.
-
 ### Changed
 
 - Your own routes are now kept whole in your browser instead of in the page address, so long GPX tracks keep every bend and their true length (the address could only hold a smoothed, shorter copy). A link to one of your routes only names it, so it opens where you made it; to share a route, send its GPX file. Old links that carried a route still open, and save it to your routes.
 - The help's privacy part says plainly what matters: nothing about you, your plan or your routes goes to a server.
-- The drawing controls are the same on phones and computers: "Follow cycle routes", Save route, Undo and Cancel.
+- Drawing and editing a route look the same on phones and computers: the route's name, "Follow cycle routes", Save route, Undo and Cancel.
+
+### Fixed
+
+- On phones and in narrow browser windows the trip summary (days, arrival, riding and rest days, average high, rainy days, coldest night) was cut off under the day chart and couldn't be scrolled to. It now sits with the trip settings in the Settings drawer, where it belongs, and the page under the map scrolls again.
+- Leaving the map for the help page while it was still zooming caused an error behind the scenes.
 
 ## v0.9.0 - 2026-10-24
 
