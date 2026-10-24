@@ -34,7 +34,7 @@ Not in `all` (run by name; drafts the app doesn't use yet):
 
 | Step | What | Size | Notes |
 |---|---|---|---|
-| `cyclenet` | OpenStreetMap bicycle route relations (network `icn`, `ncn`, `rcn`) from the Overpass API, one query per 5° × 5° tile, cached per tile in `cache/cyclenet/<continent>/` | Europe: 140 tiles; one tile around Switzerland was 16 MB and 2 minutes | ODbL, © OpenStreetMap contributors. One query at a time with a pause; an interrupted run resumes. |
+| `cyclenet` | OpenStreetMap bicycle route relations, international and national (network `icn`, `ncn`), from the Overpass API, one query per 5° × 5° tile, cached per tile in `cache/cyclenet/<continent>/<networks>/` | Europe: 140 tiles; one tile around Switzerland was 16 MB and 2 minutes | ODbL, © OpenStreetMap contributors. One query at a time with a pause; an interrupted run resumes. |
 
 ### Builds (into `out/`, committed)
 

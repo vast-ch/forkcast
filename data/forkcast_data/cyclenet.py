@@ -1,14 +1,15 @@
 """Cycle network: OpenStreetMap's signed cycle routes, for drawing routes that
 follow real cycling roads (draft: the app doesn't use it yet).
 
-- download: the ways of every bicycle route relation at international,
-  national and regional level (network icn, ncn, rcn) from the Overpass API,
+- download: the ways of every bicycle route relation at international and
+  national level (network icn, ncn) from the Overpass API,
   one query per 5° × 5° tile of each continent in CONTINENTS, one at a time
   with a pause between. Each tile is cached on its own in
-  cache/cyclenet/<continent>/<tile>.json.gz as {"ways": {id: [[lon, lat], …]}},
-  so an interrupted run picks up where it stopped. Local routes (lcn) are left
-  out: in the Netherlands, Belgium and Germany they would multiply the size for
-  little gain at this scale.
+  cache/cyclenet/<continent>/<networks>/<tile>.json.gz as
+  {"ways": {id: [[lon, lat], …]}}, so an interrupted run picks up where it
+  stopped, and a different choice of networks starts its own cache. Regional
+  (rcn) and local (lcn) routes are left out for now: one tile around
+  Switzerland with regional routes was about 2 million points.
 - build: out/<continent>/cyclenet.json, {"lines": [[[lon, lat], …], …]}: every
   way once (ways cross tile edges), simplified to about 300 m and rounded to
   0.001° (about 100 m).
@@ -36,7 +37,7 @@ DIR = CACHE / "cyclenet"
 OVERPASS = "https://overpass-api.de/api/interpreter"
 # Continents to fetch. Start with Europe; others are a list entry away.
 CONTINENT_IDS = ["europe"]
-NETWORKS = ("icn", "ncn", "rcn")
+NETWORKS = ("icn", "ncn")
 TILE = 5.0  # degrees
 PAUSE = 5.0  # seconds between queries, to share the public server politely
 SIMPLIFY = 0.003  # degrees, about 300 m
@@ -62,7 +63,7 @@ def tiles(bbox) -> list[tuple[float, float, float, float]]:
 
 def tile_file(continent_id: str, tile) -> Path:
     s, w, _, _ = tile
-    return DIR / continent_id / f"{s:+06.1f}_{w:+07.1f}.json.gz"
+    return DIR / continent_id / "-".join(NETWORKS) / f"{s:+06.1f}_{w:+07.1f}.json.gz"
 
 
 def _query(tile) -> str:
