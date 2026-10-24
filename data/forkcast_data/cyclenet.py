@@ -71,7 +71,9 @@ def _query(tile) -> str:
     return (
         "[out:json][timeout:900][maxsize:1073741824];"
         f'relation["type"="route"]["route"="bicycle"]["network"~"^({networks})$"]({s},{w},{n},{e});'
-        "way(r);out geom;"
+        # Only the routes' ways inside the tile: a long route that touches it
+        # would otherwise bring its whole length (and time the query out).
+        f"way(r)({s},{w},{n},{e});out geom;"
     )
 
 
