@@ -108,7 +108,8 @@ def download(fresh: bool = False) -> None:
         ts = tiles(c["bbox"])
         log(f"  {c['id']}: {len(ts)} tiles of {TILE:g}°")
         for i, t in enumerate(ts, 1):
-            status = ensure(tile_file(c["id"], t), _fetch(t), _validate, fresh)
+            # The public server is often busy: more tries, longer pauses (ensure waits 30 s × try).
+            status = ensure(tile_file(c["id"], t), _fetch(t), _validate, fresh, retries=8)
             log(f"  [{i:3}/{len(ts)}] {status}")
 
 
