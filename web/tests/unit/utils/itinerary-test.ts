@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { module, test } from 'qunit';
 import { planTrip } from 'forkcast/utils/itinerary';
 import { withDistances } from 'forkcast/utils/route';
 import type { ClimateSource, DayClimate } from 'forkcast/utils/climate';
+import { closeTo } from 'forkcast/tests/helpers/close-to';
 
 /** The same weather everywhere, always. */
 const climate: ClimateSource = {
@@ -43,48 +44,47 @@ const settings = {
   rainThreshold: 5,
 };
 
-describe('planTrip', () => {
+module('Unit | Utility | itinerary', function () {
   const trip = planTrip(route, climate, settings);
 
-  it('rides and rests in the pattern, and never ends on a rest day', () => {
-    expect(trip.days.map((d) => (d.isRest ? 'R' : 'r')).join('')).toBe(
+  test('it rides and rests in the pattern, and never ends on a rest day', function (assert) {
+    assert.strictEqual(
+      trip.days.map((d) => (d.isRest ? 'R' : 'r')).join(''),
       'rrRrrRr',
     );
-    expect(trip.days[trip.days.length - 1]!.isRest).toBe(false);
-    expect(trip.ridingDays).toBe(5);
-    expect(trip.restDays).toBe(2);
+    assert.false(trip.days[trip.days.length - 1]!.isRest);
+    assert.strictEqual(trip.ridingDays, 5);
+    assert.strictEqual(trip.restDays, 2);
   });
 
-  it('covers the route day by day', () => {
+  test('it covers the route day by day', function (assert) {
     const riding = trip.days.filter((d) => !d.isRest);
-    expect(riding[0]!.fromKm).toBe(0);
-    expect(riding[riding.length - 1]!.toKm).toBeCloseTo(route.km, 5);
-    expect(
+    assert.strictEqual(riding[0]!.fromKm, 0);
+    closeTo(assert, riding[riding.length - 1]!.toKm, route.km, 5);
+    assert.true(
       riding.every((d, i) => i === 0 || d.fromKm === riding[i - 1]!.toKm),
-    ).toBe(true);
+    );
   });
 
-  it('gives each riding day its riding time and daylight', () => {
+  test('it gives each riding day its riding time and daylight', function (assert) {
     const day = trip.days[0]!;
-    expect(day.ridingHours).toBeCloseTo(100 / 20, 5);
-    expect(day.daylight).toBeGreaterThan(15); // June in the Alps
-    expect(day.needsLights).toBe(false);
-    expect(trip.days[2]!.ridingHours).toBe(0); // a rest day
+    closeTo(assert, day.ridingHours, 100 / 20, 5);
+    assert.true(day.daylight > 15, 'June in the Alps');
+    assert.false(day.needsLights);
+    assert.strictEqual(trip.days[2]!.ridingHours, 0, 'a rest day');
   });
 
-  it('flags days with more riding than daylight', () => {
+  test('it flags days with more riding than daylight', function (assert) {
     const slow = planTrip(route, climate, {
       ...settings,
       start: '2026-12-21',
       speed: 10,
     });
-    expect(slow.days[0]!.needsLights).toBe(true);
-    expect(slow.days.filter((d) => d.isRest).every((d) => !d.needsLights)).toBe(
-      true,
-    );
+    assert.true(slow.days[0]!.needsLights);
+    assert.true(slow.days.filter((d) => d.isRest).every((d) => !d.needsLights));
   });
 
-  it('adds up the rain chances into expected rainy days', () => {
-    expect(trip.rainyDays).toBeCloseTo(5 * 0.25, 5);
+  test('it adds up the rain chances into expected rainy days', function (assert) {
+    closeTo(assert, trip.rainyDays, 5 * 0.25, 5);
   });
 });

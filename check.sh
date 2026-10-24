@@ -26,7 +26,7 @@ fi
 
 step "web: lint (eslint, template-lint, stylelint, prettier, types)"
 docker compose exec -T ui pnpm lint
-step "web: tests"
+step "web: tests (Ember: unit, rendering, acceptance)"
 docker compose exec -T ui pnpm test
 step "data: lint (ruff)"
 data ruff check forkcast_data tests

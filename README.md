@@ -24,6 +24,7 @@ docker compose --profile prod up --build web        # production nginx image: ht
 docker compose --profile tools run --rm data        # data pipeline: download what's missing, build what's stale
 docker compose --profile tools run --rm data status # see data/README.md for steps and --fresh
 ./check.sh                                          # lint and test web and data (--fix to auto-fix first)
+# web tests live in the browser while developing: https://ui.forkcast.orb.local/tests
 ```
 
 ### Static build
