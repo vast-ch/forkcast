@@ -338,6 +338,14 @@ body {
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 15%);
 }
 
+/* The legend is a button: it shrinks to a chip and back. */
+.wt-legend {
+  cursor: pointer;
+}
+.wt-legend.is-closed {
+  align-items: center;
+  gap: 0.4rem !important;
+}
 /* The legend's colour scale; narrower on phones (see the media query). */
 .wt-legend-scale {
   width: 15rem;
@@ -440,11 +448,12 @@ body {
   outline-offset: 4px;
   border-radius: 4px;
 }
-/* Keyboard focus on the chart, the route controls and the help link. */
+/* Keyboard focus on the chart, the route controls, the help link and the legend. */
 .wt-scroll:focus-visible,
 .wt-reverse:focus-visible,
 .wt-select:focus-within,
-.wt-icon-link:focus-visible {
+.wt-icon-link:focus-visible,
+.wt-legend:focus-visible {
   outline: 2px solid var(--wt-accent);
   outline-offset: 1px;
 }

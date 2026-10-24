@@ -1,5 +1,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import { on } from '@ember/modifier';
 import type PlannerService from 'forkcast/services/planner';
 import { DAYS_PER_MONTH, TEMP_STOPS } from 'forkcast/utils/climate';
 import { css } from 'forkcast/utils/format';
@@ -21,7 +23,7 @@ const DOT_STEPS = {
   ],
 };
 
-export default class Legend extends Component<{ Element: HTMLDivElement }> {
+export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   @service declare planner: PlannerService;
 
   get gradient() {
@@ -65,31 +67,54 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
       : `Days with ${this.planner.rainThreshold}mm or more per week`;
   }
 
+  /** Collapsed to a small chip; it stays out of the way of the map. Not kept
+   * across visits: settings in the URL are the plan, and nothing else is stored. */
+  @tracked isOpen = true;
+
+  toggle = () => {
+    this.isOpen = !this.isOpen;
+  };
+
+  get buttonLabel() {
+    if (!this.isOpen) return 'Show the legend';
+    const parts = [
+      this.planner.showTemp ? this.tempLabel : '',
+      this.planner.showRain ? this.rainLabel : '',
+    ].filter(Boolean);
+    return `Legend: ${parts.join('; ')}. Hide the legend`;
+  }
+
   <template>
-    <div
-      class="wt-card wt-legend flex flex-wrap items-end gap-x-6 gap-y-3 px-3 py-2.5 text-xs"
+    {{! The whole legend is the toggle: click to shrink it to a chip and back. }}
+    <button
+      type="button"
+      class="wt-card wt-legend flex flex-wrap items-end gap-x-6 gap-y-3 px-3 py-2.5 text-left text-xs
+        {{unless this.isOpen 'is-closed'}}"
+      aria-expanded={{if this.isOpen "true" "false"}}
+      aria-label={{this.buttonLabel}}
+      title={{if this.isOpen "Hide the legend" "Show the legend"}}
+      {{on "click" this.toggle}}
       ...attributes
     >
-      {{#if this.planner.showTemp}}
-        {{! The titles are for screen readers; on the map the scale speaks for itself. }}
-        <div class="min-w-0" role="group" aria-label={{this.tempLabel}}>
-          <div
-            class="wt-legend-scale relative mt-0.5 h-2.5 rounded-sm"
-            style={{css "background: " this.gradient}}
-          ></div>
-          <div class="wt-legend-scale relative h-4 tabular-nums">
-            {{#each this.ticks as |tick|}}
-              <span
-                class="wt-tick"
-                style={{css "left: " tick.left "%"}}
-              >{{tick.t}}<span class="wt-tick-unit">°C</span></span>
-            {{/each}}
-          </div>
-        </div>
-      {{/if}}
-      {{#if this.planner.showRain}}
-        <div role="group" aria-label={{this.rainLabel}}>
-          <div class="wt-legend-dots flex items-end gap-3 tabular-nums">
+      {{#if this.isOpen}}
+        {{#if this.planner.showTemp}}
+          <span class="block min-w-0">
+            <span
+              class="wt-legend-scale relative mt-0.5 block h-2.5 rounded-sm"
+              style={{css "background: " this.gradient}}
+            ></span>
+            <span class="wt-legend-scale relative block h-4 tabular-nums">
+              {{#each this.ticks as |tick|}}
+                <span
+                  class="wt-tick"
+                  style={{css "left: " tick.left "%"}}
+                >{{tick.t}}<span class="wt-tick-unit">°C</span></span>
+              {{/each}}
+            </span>
+          </span>
+        {{/if}}
+        {{#if this.planner.showRain}}
+          <span class="wt-legend-dots flex items-end gap-3 tabular-nums">
             {{#each this.dots as |dot|}}
               <span class="flex items-center gap-1">
                 <span
@@ -99,9 +124,15 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
                 {{dot.label}}
               </span>
             {{/each}}
-          </div>
-        </div>
+          </span>
+        {{/if}}
+      {{else}}
+        <span
+          class="block h-2 w-8 rounded-sm"
+          style={{css "background: " this.gradient}}
+        ></span>
+        <span class="wt-dot" style={{css "width: 8px; height: 8px"}}></span>
       {{/if}}
-    </div>
+    </button>
   </template>
 }

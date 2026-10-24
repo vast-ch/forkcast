@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Click the map's legend to fold it into a small chip, and click again to bring it back.
+
 ### Fixed
 
 - On phones the map's legend fits on one line again: a narrower colour scale, with every temperature mark including 0 and the °C written once, after the last.

@@ -106,6 +106,9 @@ Under the map, one column per day: the day number on top, a bar from the night l
   rainy days at that time of year (the legend gives them for the week shown), drawn as metre-sized circles on a canvas. When zoomed
   out, neighbouring cells are merged into one dot so they stay readable
   instead of turning into a striped pattern.
+- **The legend** is a button: a click folds it into a small chip (a bit of the
+  colour scale and a rain dot) and back. Whether it is folded isn't remembered:
+  the URL holds the plan, and nothing else is stored.
 - The map shows **cell averages**; the altitude correction only applies to
   route points (see below), because only they have a known height.
 
