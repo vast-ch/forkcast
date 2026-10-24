@@ -212,8 +212,8 @@ export default class Help extends Component {
               likely a few tenths warmer than shown.</li>
             <li><strong>Distances and climbing</strong>
               are measured along the route's points. Tracks are simplified a
-              little, so climbing comes out somewhat low; drawn routes are
-              straight lines and have no height, so no altitude correction.</li>
+              little, so climbing comes out somewhat low; drawn routes have no
+              height, so no altitude correction.</li>
           </ul>
           <p>
             The values are stored to 0.5 °C and finer for rain, well below the
@@ -310,11 +310,15 @@ export default class Help extends Component {
             cycle-friendly roads.
           </p>
           <p>
-            Your own route can be drawn on the map (points joined with straight
-            lines) or imported from a GPX file. It is kept in the page address,
-            simplified to at most 600 points, so a bookmark brings it back.
-            Drawing or importing another one replaces it. "Export GPX" saves the
-            selected route as a file.
+            Your own route can be drawn on the map or imported from a GPX file.
+            While drawing, “Follow cycle routes” snaps each point to the nearest
+            international or national cycle route within 2 km and follows the
+            routes from the previous point (OpenStreetMap data); where there is
+            no route near, or no connection, or with it switched off, points are
+            joined with straight lines. Undo takes back a whole leg. It is kept
+            in the page address, simplified to at most 600 points, so a bookmark
+            brings it back. Drawing or importing another one replaces it.
+            "Export GPX" saves the selected route as a file.
           </p>
         </section>
 

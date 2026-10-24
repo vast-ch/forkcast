@@ -5,7 +5,8 @@ import ClimateGrid, {
   ClimateSet,
   type ClimateHeader,
 } from 'forkcast/utils/climate';
-import { fetchBuffer, fetchJson } from 'forkcast/utils/assets';
+import { fetchBuffer, fetchJson, hasAsset } from 'forkcast/utils/assets';
+import type { CycleNetJson } from 'forkcast/utils/cyclenet';
 import { errorMessage } from 'forkcast/utils/helpers';
 import {
   routeFromJson,
@@ -59,6 +60,8 @@ export interface WaterJson {
 export interface DetailFiles {
   places: PlacesJson;
   water: WaterJson;
+  /** The cycle network, for drawing routes that follow it (not every continent has one) */
+  cyclenet: CycleNetJson;
 }
 export type DetailKind = keyof DetailFiles;
 
@@ -181,6 +184,10 @@ export default class AtlasService extends Service {
   loadDetail(kind: DetailKind, continentId: string): Promise<void> {
     const key = `${kind}/${continentId}`;
     let load = this.#detailLoads.get(key);
+    if (!load && !hasAsset(`${continentId}/${kind}.json`)) {
+      load = Promise.resolve();
+      this.#detailLoads.set(key, load);
+    }
     if (!load) {
       load = fetchJson<DetailFiles[DetailKind]>(
         `${continentId}/${kind}.json`,

@@ -4,6 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { LinkTo } from '@ember/routing';
 import { on } from '@ember/modifier';
 import { Drawer } from 'frontile/overlays';
+import { Switch } from 'frontile/forms';
 import SlidersHorizontal from 'ember-phosphor-icons/components/ph-sliders-horizontal';
 import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
@@ -54,6 +55,7 @@ export default class IndexTemplate extends Component {
   }
 
   undoPoint = () => this.planner.undoDrawnPoint();
+  toggleSnap = () => this.planner.toggleSnap();
 
   saveDrawing = () => {
     this.planner.finishDrawing('');
@@ -90,7 +92,13 @@ export default class IndexTemplate extends Component {
               role="toolbar"
               aria-label="Drawing a route"
             >
-              <span class="text-sm">Tap the map to add points ({{this.planner.drawn.length}})</span>
+              <span class="text-sm">Tap the map to add points ({{this.planner.drawnClicks}})</span>
+              <Switch
+                @label="Follow routes"
+                @size="sm"
+                @isSelected={{this.planner.snapToRoutes}}
+                @onChange={{this.toggleSnap}}
+              />
               <button
                 type="button"
                 class="wt-btn"

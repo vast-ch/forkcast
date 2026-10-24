@@ -8,6 +8,11 @@ const urls = import.meta.glob<string>('/data-out/**/*.{json,bin}', {
   eager: true,
 });
 
+/** Whether a data file exists (some continents lack optional ones). */
+export function hasAsset(path: string): boolean {
+  return `/data-out/${path}` in urls;
+}
+
 /** URL of a data file, by its path inside data/out (e.g. "europe/climate.bin"). */
 export function assetUrl(path: string): string {
   const url = urls[`/data-out/${path}`];

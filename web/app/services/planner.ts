@@ -1,6 +1,7 @@
 import Service, { service } from '@ember/service';
 import { cached, tracked } from '@glimmer/tracking';
 import { TrackedArray } from 'tracked-built-ins';
+import { CycleNet } from 'forkcast/utils/cyclenet';
 import type AtlasService from './atlas';
 import type IndexController from 'forkcast/controllers/index';
 import {
@@ -37,6 +38,9 @@ export const MAP_DETAILS: { key: MapDetail; label: string }[] = [
   { key: 'water', label: 'Water' },
 ];
 export type RainMetric = 'mm' | 'days';
+
+/** How far a click may be from a cycle route to snap to it, km. */
+const SNAP_KM = 2;
 
 /** Colour of your own route, and of the line while drawing it. */
 export const OWN_COLOR = '#b5179e';
@@ -78,6 +82,10 @@ export default class PlannerService extends Service {
   @tracked hover?: Hover;
   @tracked isDrawing = false;
   drawn = new TrackedArray<{ lat: number; lon: number }>();
+  /** Where each click's leg starts in `drawn`, so Undo removes a whole leg. */
+  drawnLegs = new TrackedArray<number>();
+  /** While drawing: follow the cycle routes between clicks, or draw straight lines. */
+  @tracked snapToRoutes = true;
 
   private read<K extends SettingKey>(key: K): (typeof DEFAULTS)[K] {
     return this.qp ? this.qp[key] : DEFAULTS[key];
@@ -409,20 +417,73 @@ export default class PlannerService extends Service {
 
   startDrawing(): void {
     this.drawn.splice(0, this.drawn.length);
+    this.drawnLegs.splice(0, this.drawnLegs.length);
     this.isDrawing = true;
+    this.loadCycleNet();
   }
 
+  /** Clicks so far (a leg can add many points). */
+  get drawnClicks(): number {
+    return this.drawnLegs.length;
+  }
+
+  /** The cycle network of the shown continents, once fetched. */
+  @cached
+  get cycleNet(): CycleNet | undefined {
+    const files = this.atlas.loaded.flatMap((l) => {
+      const data = this.atlas.detail('cyclenet', l.continent.id);
+      return data ? [data] : [];
+    });
+    return files.length ? new CycleNet(files) : undefined;
+  }
+
+  /** Fetch the cycle network (only when drawing with snapping on). */
+  loadCycleNet(): void {
+    if (!this.snapToRoutes) return;
+    for (const id of this.atlas.loadedIds)
+      void this.atlas.loadDetail('cyclenet', id);
+  }
+
+  toggleSnap(): void {
+    this.snapToRoutes = !this.snapToRoutes;
+    this.loadCycleNet();
+  }
+
+  /**
+   * Add a click. Snapping, it moves to the nearest cycle route within 2 km
+   * and the leg from the previous point follows the routes; where there is no
+   * route near or no connection, the leg is a straight line.
+   */
   addDrawnPoint(lat: number, lon: number): void {
-    this.drawn.push({ lat, lon });
+    this.drawnLegs.push(this.drawn.length);
+    const net = this.snapToRoutes ? this.cycleNet : undefined;
+    const to = net?.snap({ lat, lon }, SNAP_KM);
+    if (!net || !to) {
+      this.drawn.push({ lat, lon });
+      return;
+    }
+    const prev = this.drawn[this.drawn.length - 1];
+    const from = prev && net.snap(prev, SNAP_KM);
+    const path = from && net.route(from, to);
+    if (!path) {
+      this.drawn.push(to.point);
+      return;
+    }
+    // From a point on the network the leg starts there; from one off it, the
+    // leg first joins the network.
+    this.drawn.push(...(from.away < 0.01 ? path.slice(1) : path));
   }
 
+  /** Remove the last click's whole leg. */
   undoDrawnPoint(): void {
-    this.drawn.pop();
+    const start = this.drawnLegs.pop();
+    if (start !== undefined) this.drawn.splice(start);
   }
 
   cancelDrawing(): void {
     this.isDrawing = false;
     this.drawn.splice(0, this.drawn.length);
+    this.drawnLegs.splice(0, this.drawnLegs.length);
   }
 
   /** A drawn route needs at least two points. */

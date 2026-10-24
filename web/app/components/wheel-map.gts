@@ -64,6 +64,7 @@ type GroupLayer =
   | 'water'
   | 'borders'
   | 'labels'
+  | 'cyclenet'
   | 'routes'
   | 'stops';
 
@@ -85,6 +86,8 @@ interface MapState {
   details: Record<MapDetail, boolean>;
   /** How many detail files have arrived, so the map redraws when one does */
   detailFiles: number;
+  /** Drawing with snapping on: show the cycle network to snap to */
+  showCycleNet: boolean;
 }
 
 interface LeafletSignature {
@@ -102,6 +105,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     relief?: L.LayerGroup;
     water?: L.LayerGroup;
     labels?: L.LayerGroup;
+    cyclenet?: L.LayerGroup;
     others?: L.LayerGroup;
     overview?: L.LayerGroup;
     temp?: L.LayerGroup;
@@ -113,6 +117,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   } = {};
   last: Partial<Record<string, unknown>> = {};
   rainRenderer?: L.Canvas;
+  netRenderer?: L.Canvas;
   lastState?: MapState;
   fit?: { bounds: L.LatLngBounds; until: number };
 
@@ -258,6 +263,25 @@ class LeafletModifier extends Modifier<LeafletSignature> {
               interactive: false,
               weight: 1.2,
               className: 'wt-river',
+            }).addTo(group);
+          }
+        }
+      });
+    }
+
+    // While drawing with snapping on, the network the clicks snap to.
+    if (this.changed('cyclenet', `${filesKey}-${s.showCycleNet}`)) {
+      this.replace('cyclenet', (group) => {
+        if (!s.showCycleNet) return;
+        const renderer = (this.netRenderer ??= L.canvas({ pane: 'water' }));
+        for (const net of files('cyclenet')) {
+          for (const line of net.lines) {
+            L.polyline(line.map(lonLat), {
+              renderer,
+              interactive: false,
+              weight: 2,
+              color: '#0d6b78',
+              opacity: 0.45,
             }).addTo(group);
           }
         }
@@ -621,6 +645,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
         MAP_DETAILS.map(({ key }) => [key, p.showDetail(key)]),
       ) as Record<MapDetail, boolean>,
       detailFiles: this.atlas.details.size,
+      showCycleNet: p.isDrawing && p.snapToRoutes,
     };
   }
 

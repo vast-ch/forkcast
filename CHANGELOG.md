@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Drawing a route can follow the cycle routes: each click snaps to the nearest international or national cycle route and the line follows the routes from your previous point. Switch "Follow cycle routes" off to draw straight lines, and back on, between any two clicks. Undo takes back a whole leg.
+
 ## v0.7.1 - 2026-10-24
 
 ### Changed

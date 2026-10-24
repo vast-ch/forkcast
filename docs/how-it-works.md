@@ -183,7 +183,17 @@ Under the map, one column per day: the day number on top, a bar from the night l
   land as unmapped stretches (counted).
 - **Demo route:** a list of towns routed with BRouter's touring profile, so
   distances and climbing are real.
-- **Your own route:** drawn (straight lines, no elevation) or imported from GPX.
+- **Your own route:** drawn or imported from GPX; drawn routes have no elevation.
+  While drawing, "Follow cycle routes" (on by default, `PlannerService.snapToRoutes`)
+  snaps each click onto the nearest line of the cycle network within 2 km and
+  finds the shortest way along it from the previous point (`web/app/utils/cyclenet.ts`:
+  a graph of the network's points, a grid of segments for the snapping, A* on
+  distance). A click with no route near, or no connection, is a straight line, as
+  is every click with snapping off. Each click is one leg, so Undo removes the
+  whole leg. The network is `out/<continent>/cyclenet.json` (OpenStreetMap
+  international and national bicycle routes, see data/README.md), fetched only
+  when drawing with snapping on, and shown faintly on the map meanwhile;
+  continents without a network file just get straight lines.
 
 ## Where things are
 

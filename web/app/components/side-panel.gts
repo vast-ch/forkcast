@@ -193,6 +193,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
   finishDrawing = () => this.planner.finishDrawing(this.drawnName.trim());
   undoPoint = () => this.planner.undoDrawnPoint();
+  toggleSnap = () => this.planner.toggleSnap();
   cancelDrawing = () => this.planner.cancelDrawing();
 
   importGpx = async (e: Event) => {
@@ -311,9 +312,19 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
             {{#if this.planner.isDrawing}}
               <div class="wt-draw flex flex-col gap-2 p-3">
-                <p class="text-sm">Click the map to add points ({{this.planner.drawn.length}}
-                  so far). Double-click or press Save to finish. Points are
-                  joined with straight lines.</p>
+                <p class="text-sm">Click the map to add points ({{this.planner.drawnClicks}}
+                  so far). Double-click or press Save to finish.</p>
+                <Switch
+                  @label="Follow cycle routes"
+                  @size="sm"
+                  @isSelected={{this.planner.snapToRoutes}}
+                  @onChange={{this.toggleSnap}}
+                />
+                <p class="wt-muted text-xs">{{if
+                    this.planner.snapToRoutes
+                    "Each point snaps to the nearest cycle route within 2km and follows it from the last one; elsewhere it's a straight line."
+                    "Points are joined with straight lines."
+                  }}</p>
                 <Input
                   @label="Name"
                   @size="sm"
@@ -332,7 +343,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                     type="button"
                     class="wt-btn"
                     {{on "click" this.undoPoint}}
-                  >Undo point</button>
+                  >Undo</button>
                   <button
                     type="button"
                     class="wt-btn is-ghost"
