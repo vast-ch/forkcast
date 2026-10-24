@@ -68,7 +68,7 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   }
 
   /** Collapsed to a small chip; it stays out of the way of the map. Not kept
-   * across visits: settings in the URL are the plan, and nothing else is stored. */
+   * across visits: it's a view choice, not part of the plan. */
   @tracked isOpen = true;
 
   toggle = () => {

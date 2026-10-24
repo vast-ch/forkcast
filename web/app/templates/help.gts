@@ -315,6 +315,17 @@ export default class Help extends Component {
               another app. You have one route of your own: drawing or importing
               another replaces it, and “Delete this route” removes it.
             </p>
+            <p>
+              Any size of file works. Your route is kept in the page address
+              (see Sharing &amp; privacy), so it's stored as at most 600 points,
+              about 3,000–4,500 characters of the link: short enough for any
+              browser, bookmark or chat app. Small bends are smoothed away to
+              get there. On a route of 1,500–2,500 km the kept line stays within
+              about 100 m of your track on average and within 600 m everywhere;
+              on a 10,000 km route, about 800 m on average and within 5 km.
+              That's well below the climate grid's 25 km, so the weather along
+              the way is the same.
+            </p>
           </section>
         {{/if}}
 
@@ -444,12 +455,14 @@ export default class Help extends Component {
               left out, so links stay short.
             </p>
             <p>
-              Nothing is kept anywhere else. Forkcast runs entirely in your
-              browser: there's no server behind it, no account, no cookies, no
-              analytics, no ads and no tracking. The page, its fonts and its
-              data all come from the site itself, and your browser is told to
-              refuse anything from elsewhere. Following a link out of the app
-              doesn't pass your plan on.
+              None of it goes to a server: nothing about you or your plan leaves
+              your browser unless you send the link yourself. Forkcast runs
+              entirely in your browser; the site is just files, with no server
+              behind it, no account, no cookies, no analytics, no ads and no
+              tracking. The page, its fonts and its data all come from the site
+              itself, and your browser is told to refuse anything from
+              elsewhere. Following a link out of the app doesn't pass your plan
+              on.
             </p>
           </section>
         {{/if}}

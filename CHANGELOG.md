@@ -8,6 +8,7 @@
 
 ### Changed
 
+- The help's Routes tab says how big a GPX file can be (any size) and how much detail your own route keeps in the link, and its privacy part now says plainly what matters: nothing about you or your plan goes to a server.
 - The drawing controls are the same on phones and computers: "Follow cycle routes", Save route, Undo and Cancel.
 
 ## v0.9.0 - 2026-10-24

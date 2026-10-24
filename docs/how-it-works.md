@@ -65,8 +65,11 @@ URL only while it differs from its default. Your own drawn or imported route is 
 
 **Why:** a bookmark or a shared link reopens exactly the same plan, reloads
 lose nothing, and there is no account or storage to manage. Defaults are left
-out so links stay short. There is deliberately no localStorage: one source of
-truth, visible in the address bar.
+out so links stay short. The rule behind this is privacy, not the address bar
+as such: nothing about a plan ever reaches a server (there is none, only
+static files). The URL is the natural home for a plan you want to share;
+browser storage is fine for anything that can't or shouldn't go there, as
+long as it stays on the device.
 
 ## Phones
 
