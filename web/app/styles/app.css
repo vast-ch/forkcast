@@ -340,6 +340,60 @@ body {
   justify-content: center;
 }
 
+/* Map details (the Map section's toggles). */
+.leaflet-relief-pane {
+  mix-blend-mode: multiply;
+}
+.wt-lake {
+  fill: var(--wt-sea);
+}
+.wt-river {
+  stroke: #5f8db3;
+  stroke-opacity: 0.85;
+}
+/* Names sit on a zero-size marker at their point; a white halo keeps them
+   readable over any colour. */
+.wt-place span,
+.wt-range-name span {
+  position: absolute;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 2px #fff,
+    0 0 3px #fff;
+}
+.wt-place span {
+  left: 5px;
+  top: -0.6em;
+  font-family: var(--wt-font-body);
+  font-size: 10px;
+  color: var(--wt-ink);
+}
+.wt-place::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--wt-ink);
+  box-shadow: 0 0 0 1px #fff;
+}
+.wt-place.is-capital span {
+  font-weight: 600;
+  font-size: 11px;
+}
+.wt-range-name span {
+  transform: translate(-50%, -50%);
+  font-family: var(--wt-font-body);
+  font-size: 10px;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b4f2e;
+}
 /* The legend is a button: it shrinks to a chip and back. */
 .wt-legend {
   cursor: pointer;

@@ -41,6 +41,27 @@ export interface RouteOverview {
   lon: number[];
 }
 
+/** City and mountain-range names of a continent (data/forkcast_data/details.py). */
+export interface PlacesJson {
+  /** name, lon, lat, 1 for a capital */
+  places: [string, number, number, number][];
+  /** name, lon, lat */
+  ranges: [string, number, number][];
+}
+
+/** Rivers (lines) and lakes (outer rings) of a continent, as [lon, lat] points. */
+export interface WaterJson {
+  rivers: [number, number][][];
+  lakes: [number, number][][];
+}
+
+/** The optional per-continent files, fetched only when their layer is on. */
+export interface DetailFiles {
+  places: PlacesJson;
+  water: WaterJson;
+}
+export type DetailKind = keyof DetailFiles;
+
 export interface LoadedContinent {
   continent: Continent;
   climate: ClimateGrid;
@@ -59,10 +80,13 @@ export default class AtlasService extends Service {
   @tracked loadingRouteId?: string;
   @tracked loadingContinentIds: string[] = [];
   tracks = new TrackedMap<string, Route>();
+  /** Map details by "<kind>/<continent id>", once fetched. */
+  details = new TrackedMap<string, DetailFiles[DetailKind]>();
 
   #manifest?: Promise<void>;
   #continentLoads = new Map<string, Promise<LoadedContinent>>();
   #routeLoads = new Map<string, Promise<Route | undefined>>();
+  #detailLoads = new Map<string, Promise<void>>();
 
   /** All loaded continents' climate as one (the first grid covering a point answers). */
   @cached
@@ -139,6 +163,39 @@ export default class AtlasService extends Service {
       this.loadingContinentIds = [];
     }
     return this.loadedIds;
+  }
+
+  /** A continent's map details, if fetched; undefined until then. */
+  detail<K extends DetailKind>(
+    kind: K,
+    continentId: string,
+  ): DetailFiles[K] | undefined {
+    return this.details.get(`${kind}/${continentId}`) as
+      DetailFiles[K] | undefined;
+  }
+
+  /**
+   * Fetch a continent's map details, once. Called only while their layer is
+   * on, so a rider who keeps Cities or Water off never downloads them.
+   */
+  loadDetail(kind: DetailKind, continentId: string): Promise<void> {
+    const key = `${kind}/${continentId}`;
+    let load = this.#detailLoads.get(key);
+    if (!load) {
+      load = fetchJson<DetailFiles[DetailKind]>(
+        `${continentId}/${kind}.json`,
+      ).then(
+        (data) => {
+          this.details.set(key, data);
+        },
+        (e: unknown) => {
+          this.#detailLoads.delete(key);
+          this.error = errorMessage(e);
+        },
+      );
+      this.#detailLoads.set(key, load);
+    }
+    return load;
   }
 
   loadRoute(id: string): Promise<Route | undefined> {

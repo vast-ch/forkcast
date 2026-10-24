@@ -4,9 +4,10 @@ import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
 import { fn, hash } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
-import { SegmentedControl } from 'frontile/buttons';
+import { ButtonGroup, SegmentedControl } from 'frontile/buttons';
 import { DatePicker, Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
+import { MAP_DETAILS } from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
 import { MONTHS, RAIN_THRESHOLDS } from 'forkcast/utils/climate';
 import {
@@ -136,6 +137,15 @@ export default class SidePanel extends Component<SidePanelSignature> {
       ['Coldest night', cold ? fmtTemp(cold.nightLow) : '–'],
       ['Coldest night on', cold ? fmtShortDate(cold.date) : '–'],
     ].map(([label, value]) => ({ label, value }));
+  }
+
+  /** The map's optional layers, as toggle buttons. */
+  get mapDetails() {
+    return MAP_DETAILS.map(({ key, label }) => ({
+      label,
+      isOn: this.planner.showDetail(key),
+      toggle: () => this.planner.toggleDetail(key),
+    }));
   }
 
   /** The numeric trip settings, with their allowed ranges. */
@@ -499,6 +509,20 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 {{/each}}
               </SegmentedControl>
             </div>
+            <ButtonGroup
+              @size="sm"
+              class="wt-detail-toggles"
+              role="group"
+              aria-label="Show on the map"
+              as |Group|
+            >
+              {{#each this.mapDetails as |d|}}
+                <Group.ToggleButton
+                  @isSelected={{d.isOn}}
+                  @onChange={{d.toggle}}
+                >{{d.label}}</Group.ToggleButton>
+              {{/each}}
+            </ButtonGroup>
           </section>
         {{/if}}
       </div>

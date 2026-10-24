@@ -106,6 +106,19 @@ Under the map, one column per day: the day number on top, a bar from the night l
   rainy days at that time of year (the legend gives them for the week shown), drawn as metre-sized circles on a canvas. When zoomed
   out, neighbouring cells are merged into one dot so they stay readable
   instead of turning into a striped pattern.
+- **Map details,** each a toggle (Frontile `ButtonGroup` of `ToggleButton`s)
+  and a URL setting (`borders`, `cities`, `relief`, `water`):
+  - **Borders** only shows or hides the country outlines; the country file
+    always loads, because it also draws the land.
+  - **Cities** (town names and mountain ranges) and **Water** (rivers, lakes)
+    come in small per-continent files (`places.json`, `water.json`, Europe 14
+    and 29 kB gzipped) that `AtlasService.loadDetail` fetches the first time
+    the layer is on, never while it's off. Names show at every zoom: the
+    toggles, not the zoom, decide how busy the map is.
+  - **Relief** needs no file: hillshading from the terrain height already in
+    the climate grid (`reliefRaster` in `web/app/utils/layers.ts`), lit from the
+    north-west, slopes exaggerated ×10 since the cells are 25 km, drawn in
+    greys that the pane multiplies onto the colours below, so it only darkens.
 - **The legend** is a button: a click folds it into a small chip (a bit of the
   colour scale and a rain dot) and back. Whether it is folded isn't remembered:
   the URL holds the plan, and nothing else is stored.

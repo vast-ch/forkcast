@@ -7,12 +7,19 @@ import type Owner from '@ember/owner';
 import type AtlasService from 'forkcast/services/atlas';
 import type PlannerService from 'forkcast/services/planner';
 import { dayAtKm, type Trip } from 'forkcast/utils/itinerary';
-import { temperatureRaster, rainDots } from 'forkcast/utils/layers';
+import {
+  temperatureRaster,
+  rainDots,
+  reliefRaster,
+} from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
 import { climateOn, tempSwatch } from 'forkcast/utils/climate';
 import { fmtShortDate } from 'forkcast/utils/format';
+import type { DetailKind } from 'forkcast/services/atlas';
 import {
+  MAP_DETAILS,
   OWN_COLOR,
+  type MapDetail,
   type RainMetric,
   type TempMetric,
 } from 'forkcast/services/planner';
@@ -34,13 +41,28 @@ const PANES: [name: string, zIndex: number, isInteractive: boolean][] = [
   ['land', 200, false],
   ['others', 210, true],
   ['climate', 300, false],
+  // Relief shading, multiplied onto the colours (see .leaflet-relief-pane).
+  ['relief', 320, false],
   ['rain', 350, false],
+  ['water', 360, false],
   ['borders', 380, false],
   // Other routes: above the climate layers, below the selected route.
   ['overview', 390, true],
+  // City and range names, above the routes so they stay readable.
+  ['labels', 450, false],
 ];
 
-type GroupLayer = 'others' | 'overview' | 'temp' | 'rain' | 'routes' | 'stops';
+type GroupLayer =
+  | 'others'
+  | 'overview'
+  | 'temp'
+  | 'relief'
+  | 'rain'
+  | 'water'
+  | 'borders'
+  | 'labels'
+  | 'routes'
+  | 'stops';
 
 interface MapState {
   /** Quarter-month shown, 0–47, and its position in the year */
@@ -56,6 +78,10 @@ interface MapState {
   isDrawing: boolean;
   drawnCount: number;
   highlightedDay?: number;
+  /** Map details switched on in the Map section */
+  details: Record<MapDetail, boolean>;
+  /** How many detail files have arrived, so the map redraws when one does */
+  detailFiles: number;
 }
 
 interface LeafletSignature {
@@ -68,8 +94,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   map?: L.Map;
   owner?: WheelMap;
   layers: {
-    borders?: L.GeoJSON;
+    borders?: L.LayerGroup;
     land?: L.GeoJSON;
+    relief?: L.LayerGroup;
+    water?: L.LayerGroup;
+    labels?: L.LayerGroup;
     others?: L.LayerGroup;
     overview?: L.LayerGroup;
     temp?: L.LayerGroup;
@@ -178,6 +207,81 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     };
   }
 
+  /**
+   * Relief, water and names. Water and names come in per-continent files that
+   * are fetched the first time their layer is on (never while it's off); the
+   * map redraws when they arrive.
+   */
+  syncDetails(s: MapState, ids: string): void {
+    const atlas = this.owner!.atlas;
+    const loaded = atlas.loaded;
+    const grids = loaded.map((l) => l.climate);
+    const files = <K extends DetailKind>(kind: K) =>
+      loaded.flatMap((l) => {
+        const data = atlas.detail(kind, l.continent.id);
+        if (!data) void atlas.loadDetail(kind, l.continent.id);
+        return data ? [data] : [];
+      });
+
+    if (this.changed('relief', `${ids}-${s.details.relief}`)) {
+      this.replace('relief', (group) => {
+        if (!s.details.relief) return;
+        grids.forEach((g, k) => {
+          const r = reliefRaster(g, grids.slice(0, k));
+          L.imageOverlay(r.url, r.bounds, {
+            pane: 'relief',
+            interactive: false,
+          }).addTo(group);
+        });
+      });
+    }
+
+    const filesKey = `${ids}-${s.detailFiles}`;
+    if (this.changed('water', `${filesKey}-${s.details.water}`)) {
+      this.replace('water', (group) => {
+        if (!s.details.water) return;
+        for (const w of files('water')) {
+          for (const lake of w.lakes) {
+            L.polygon(lake.map(lonLat), {
+              pane: 'water',
+              interactive: false,
+              stroke: false,
+              fillOpacity: 1,
+              className: 'wt-lake',
+            }).addTo(group);
+          }
+          for (const river of w.rivers) {
+            L.polyline(river.map(lonLat), {
+              pane: 'water',
+              interactive: false,
+              weight: 1.2,
+              className: 'wt-river',
+            }).addTo(group);
+          }
+        }
+      });
+    }
+
+    if (this.changed('labels', `${filesKey}-${s.details.cities}`)) {
+      this.replace('labels', (group) => {
+        if (!s.details.cities) return;
+        for (const p of files('places')) {
+          for (const [name, lon, lat] of p.ranges) {
+            label(name, lat, lon, 'wt-range-name').addTo(group);
+          }
+          for (const [name, lon, lat, isCapital] of p.places) {
+            label(
+              name,
+              lat,
+              lon,
+              isCapital ? 'wt-place is-capital' : 'wt-place',
+            ).addTo(group);
+          }
+        }
+      });
+    }
+  }
+
   changed(key: string, value: unknown): boolean {
     if (this.last[key] === value) return false;
     this.last[key] = value;
@@ -204,22 +308,31 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     const loaded = atlas.loaded;
     const ids = atlas.loadedIds.join(',');
 
+    const countries = {
+      type: 'FeatureCollection' as const,
+      features: loaded.flatMap((l) => l.countries.features),
+    };
+    // The countries are also the land itself, so they always load; the
+    // Borders toggle only shows or hides their outlines.
     if (this.changed('countries', ids)) {
       this.layers.land?.remove();
-      this.layers.borders?.remove();
-      const features = loaded.flatMap((l) => l.countries.features);
-      const all = { type: 'FeatureCollection' as const, features };
-      this.layers.land = L.geoJSON(all, {
+      this.layers.land = L.geoJSON(countries, {
         pane: 'land',
         interactive: false,
         style: { stroke: false, fillOpacity: 1, className: 'wt-land' },
       }).addTo(map);
-      this.layers.borders = L.geoJSON(all, {
-        pane: 'borders',
-        interactive: false,
-        style: { weight: 0.8, fill: false, className: 'wt-border' },
-      }).addTo(map);
     }
+    if (this.changed('borders', `${ids}-${s.details.borders}`)) {
+      this.replace('borders', (group) => {
+        if (!s.details.borders) return;
+        L.geoJSON(countries, {
+          pane: 'borders',
+          interactive: false,
+          style: { weight: 0.8, fill: false, className: 'wt-border' },
+        }).addTo(group);
+      });
+    }
+    this.syncDetails(s, ids);
 
     // Continents not shown yet: plain shapes that add their climate on click.
     const world = atlas.world;
@@ -431,6 +544,21 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   }
 }
 
+/** A [lon, lat] pair from the data files as Leaflet's [lat, lng]. */
+const lonLat = ([lon, lat]: [number, number]): [number, number] => [lat, lon];
+
+/** A map label: the name as text (never HTML), in the labels pane. */
+function label(name: string, lat: number, lon: number, className: string) {
+  const html = document.createElement('span');
+  html.textContent = name;
+  return L.marker([lat, lon], {
+    pane: 'labels',
+    interactive: false,
+    keyboard: false,
+    icon: L.divIcon({ className, html, iconSize: [0, 0] }),
+  });
+}
+
 /** A point as Leaflet's [lat, lng]. */
 const latLng = (p: { lat: number; lon: number }): [number, number] => [
   p.lat,
@@ -480,6 +608,10 @@ export default class WheelMap extends Component<WheelMapSignature> {
       isDrawing: p.isDrawing,
       drawnCount: p.drawn.length,
       highlightedDay: p.highlightedDay,
+      details: Object.fromEntries(
+        MAP_DETAILS.map(({ key }) => [key, p.showDetail(key)]),
+      ) as Record<MapDetail, boolean>,
+      detailFiles: this.atlas.details.size,
     };
   }
 

@@ -20,7 +20,7 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 - `app/utils/climate.ts` samples the climate grid (bilinear in space, a smooth seasonal curve in time) and owns the temperature colour scale.
 - `app/utils/itinerary.ts` splits a route into riding and rest days and attaches weather. `app/utils/route.ts` is geometry and GPX.
 - `app/components/wheel-map.gts` wraps Leaflet in a class modifier; `sync()` diffs the state and only rebuilds layers that changed. The temperature layer is rendered into a Web-Mercator canvas (`app/utils/layers.ts`); rain dots are metre-sized circles on a canvas renderer.
-- Frontile is used for Switch, SegmentedControl and Input. Buttons are plain `<button class="wt-btn">`. Frontile's Button rendered oversized here and its press handling didn't respond to plain clicks.
+- Frontile is used for Switch, SegmentedControl, Input, DatePicker, Chip (`TempPill`) and ButtonGroup with ToggleButton (the map-detail toggles); test new ones with a real click. Plain action buttons are `<button class="wt-btn">`: Frontile's Button once rendered oversized here and its press handling didn't respond to plain clicks.
 - Bind inline styles through `css` from `app/utils/format.ts` (htmlSafe) to avoid Ember's style-binding warning.
 
 ## Data
@@ -31,6 +31,7 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 - EuroVelo routes: `forkcast_data/eurovelo.py`. Raw tracks in `data/eurovelo/` (ODbL; the full attribution notice stays on the help page's sources section, and the map keeps its short line: © OpenStreetMap · EuroVelo · a Credits link to it).
 - Hand-made routes are the town lists in `forkcast_data/anchors.py` (the first is the app's default); stops are geocoded into `geocoded.json` by the `brouter` download.
 - Continents (ids, names, bounding boxes) are in `forkcast_data/continents.py`.
+- Map details (city and range names, rivers, lakes): `forkcast_data/details.py`, per continent; the app fetches each file only while its layer is on.
 
 ## Commits and changelog
 

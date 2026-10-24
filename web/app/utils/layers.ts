@@ -38,14 +38,21 @@ function frame(grid: ClimateGrid, pxPerDeg: number) {
   return { south, west, north, east, width, height, yN, yS };
 }
 
-/** Smooth temperature field, transparent over the sea. */
-export function temperatureRaster(
+/**
+ * Draw one value per map pixel over a grid's land cells, in Web-Mercator rows.
+ * `pixel` gets the point and the grid's fractional row and column, and returns
+ * an RGBA colour or null to leave the pixel clear. Cells that `earlier` grids
+ * cover are left to them.
+ */
+function rasterize(
   grid: ClimateGrid,
-  /** Position in the year, 0 … 1 */
-  phase: number,
-  metric: TempMetric,
-  /** Grids drawn before this one: cells they cover are left to them. */
-  earlier: ClimateGrid[] = [],
+  earlier: ClimateGrid[],
+  pixel: (
+    lat: number,
+    lon: number,
+    fy: number,
+    fx: number,
+  ) => [number, number, number, number] | null,
 ): Raster {
   const f = frame(grid, 12);
   const canvas = document.createElement('canvas');
@@ -53,25 +60,20 @@ export function temperatureRaster(
   canvas.height = f.height;
   const ctx = canvas.getContext('2d')!;
   const img = ctx.createImageData(f.width, f.height);
-  const v = metric === 'high' ? 'tmx' : 'tmn';
   for (let py = 0; py < f.height; py++) {
     const lat = toLat(f.yN - ((py + 0.5) / f.height) * (f.yN - f.yS));
     const fy = (grid.lat0 - lat) / grid.step;
     for (let px = 0; px < f.width; px++) {
       const lon = f.west + ((px + 0.5) / f.width) * (f.east - f.west);
       const fx = (lon - grid.lon0) / grid.step;
-      // Inside a land cell only (no coastal extrapolation), bilinear between land cells.
-      // Land cells only (the land mask is the same in every month).
-      const own = grid.cell(v, 0, Math.round(fy), Math.round(fx));
-      if (Number.isNaN(own)) continue;
-      if (earlier.some((g) => hasCell(g, v, lat, lon))) continue;
-      const t = grid.sampleAt(v, phase, lat, lon);
-      const [r, g, b] = tempRgb(t);
-      const i = (py * f.width + px) * 4;
-      img.data[i] = r;
-      img.data[i + 1] = g;
-      img.data[i + 2] = b;
-      img.data[i + 3] = 215;
+      // Inside a land cell only (no coastal extrapolation); the land mask is
+      // the same in every month and every variable.
+      if (Number.isNaN(grid.cell('tmx', 0, Math.round(fy), Math.round(fx))))
+        continue;
+      if (earlier.some((g) => hasCell(g, 'tmx', lat, lon))) continue;
+      const rgba = pixel(lat, lon, fy, fx);
+      if (!rgba) continue;
+      img.data.set(rgba, (py * f.width + px) * 4);
     }
   }
   ctx.putImageData(img, 0, 0);
@@ -82,6 +84,100 @@ export function temperatureRaster(
       [f.north, f.east],
     ],
   };
+}
+
+/** Smooth temperature field, transparent over the sea. */
+export function temperatureRaster(
+  grid: ClimateGrid,
+  /** Position in the year, 0 … 1 */
+  phase: number,
+  metric: TempMetric,
+  /** Grids drawn before this one: cells they cover are left to them. */
+  earlier: ClimateGrid[] = [],
+): Raster {
+  const v = metric === 'high' ? 'tmx' : 'tmn';
+  return rasterize(grid, earlier, (lat, lon) => {
+    const [r, g, b] = tempRgb(grid.sampleAt(v, phase, lat, lon));
+    return [r, g, b, 215];
+  });
+}
+
+// Relief: hillshading from the grid's terrain height, lit from the north-west
+// at 45°. The cells are about 25 km, so slopes are exaggerated to show.
+const RELIEF_EXAGGERATION = 10;
+const LIGHT = (() => {
+  const alt = Math.PI / 4;
+  const az = (315 * Math.PI) / 180; // from the north-west
+  return [
+    Math.sin(az) * Math.cos(alt),
+    Math.cos(az) * Math.cos(alt),
+    Math.sin(alt),
+  ];
+})();
+const shades = new WeakMap<ClimateGrid, Float32Array>();
+
+/** How lit each cell is: 1 on flat ground and slopes facing the light, less in shade. */
+function cellShades(grid: ClimateGrid): Float32Array {
+  let out = shades.get(grid);
+  if (out) return out;
+  out = new Float32Array(grid.rows * grid.cols).fill(Number.NaN);
+  const e = (r: number, c: number) => grid.cell('elev', 0, r, c);
+  for (let r = 0; r < grid.rows; r++) {
+    const lat = grid.lat0 - r * grid.step;
+    const dx = grid.step * 111320 * Math.cos((lat * Math.PI) / 180) * 2;
+    const dy = grid.step * 110540 * 2;
+    for (let c = 0; c < grid.cols; c++) {
+      const h = e(r, c);
+      if (Number.isNaN(h)) continue;
+      const at = (v: number) => (Number.isNaN(v) ? h : v);
+      const dzdx = (at(e(r, c + 1)) - at(e(r, c - 1))) / dx;
+      const dzdy = (at(e(r - 1, c)) - at(e(r + 1, c))) / dy; // north is up
+      const nx = -RELIEF_EXAGGERATION * dzdx;
+      const ny = -RELIEF_EXAGGERATION * dzdy;
+      const lit =
+        (nx * LIGHT[0]! + ny * LIGHT[1]! + LIGHT[2]!) / Math.hypot(nx, ny, 1);
+      out[r * grid.cols + c] = Math.min(1, Math.max(0, lit / LIGHT[2]!));
+    }
+  }
+  shades.set(grid, out);
+  return out;
+}
+
+/**
+ * Relief shading, drawn in greys that only darken (the map pane multiplies it
+ * onto the colours below), bilinear between cells, transparent over the sea.
+ */
+export function reliefRaster(
+  grid: ClimateGrid,
+  /** Grids drawn before this one: cells they cover are left to them. */
+  earlier: ClimateGrid[] = [],
+): Raster {
+  const shade = cellShades(grid);
+  const at = (r: number, c: number) =>
+    r < 0 || c < 0 || r >= grid.rows || c >= grid.cols
+      ? Number.NaN
+      : shade[r * grid.cols + c]!;
+  return rasterize(grid, earlier, (_lat, _lon, fy, fx) => {
+    const r0 = Math.floor(fy);
+    const c0 = Math.floor(fx);
+    let sum = 0;
+    let weight = 0;
+    for (const [r, c, w] of [
+      [r0, c0, (1 - (fy - r0)) * (1 - (fx - c0))],
+      [r0, c0 + 1, (1 - (fy - r0)) * (fx - c0)],
+      [r0 + 1, c0, (fy - r0) * (1 - (fx - c0))],
+      [r0 + 1, c0 + 1, (fy - r0) * (fx - c0)],
+    ] as const) {
+      const v = at(r, c);
+      if (!Number.isNaN(v)) {
+        sum += v * w;
+        weight += w;
+      }
+    }
+    if (!weight) return null;
+    const g = 255 * (1 - (1 - sum / weight) * 0.75);
+    return [g, g, g, 255];
+  });
 }
 
 /** A rain dot fills its cell at this much in an average month (mm, or rainy days). */

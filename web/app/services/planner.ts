@@ -28,6 +28,14 @@ import {
 import { WEEKS, weekOfDate, type WeekSlot } from 'forkcast/utils/weeks';
 
 export type TempMetric = 'high' | 'low';
+/** The map's optional layers, toggled in the Map section. */
+export type MapDetail = 'borders' | 'cities' | 'relief' | 'water';
+export const MAP_DETAILS: { key: MapDetail; label: string }[] = [
+  { key: 'borders', label: 'Borders' },
+  { key: 'cities', label: 'Cities' },
+  { key: 'relief', label: 'Relief' },
+  { key: 'water', label: 'Water' },
+];
 export type RainMetric = 'mm' | 'days';
 
 /** Colour of your own route, and of the line while drawing it. */
@@ -143,6 +151,15 @@ export default class PlannerService extends Service {
   }
   set showRain(v: boolean) {
     this.write('rain', v);
+  }
+
+  /** Which map details are on (each a URL setting of the same name). */
+  showDetail(key: MapDetail): boolean {
+    return this.read(key);
+  }
+
+  toggleDetail(key: MapDetail): void {
+    this.write(key, !this.read(key));
   }
 
   get rainMetric(): RainMetric {

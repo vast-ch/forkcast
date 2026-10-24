@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- The map can show more: country borders, city and mountain-range names, relief shading and rivers and lakes, each switched on and off with buttons under Map. Names and water are only downloaded once you switch them on.
+
 ### Changed
 
 - Temperatures for a day and for a spot on the map sit in pills coloured like the map and the chart, so a cold night or a hot afternoon stands out at a glance.

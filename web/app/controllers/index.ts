@@ -15,6 +15,10 @@ export default class IndexController extends Controller {
   @tracked temp = DEFAULTS.temp;
   @tracked heat = DEFAULTS.heat;
   @tracked rain = DEFAULTS.rain;
+  @tracked borders = DEFAULTS.borders;
+  @tracked cities = DEFAULTS.cities;
+  @tracked relief = DEFAULTS.relief;
+  @tracked water = DEFAULTS.water;
   @tracked dots = DEFAULTS.dots;
   @tracked rainy = DEFAULTS.rainy;
   @tracked route = DEFAULTS.route;

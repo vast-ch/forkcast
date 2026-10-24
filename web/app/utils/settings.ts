@@ -20,6 +20,11 @@ export const DEFAULTS = {
   heat: true,
   /** Show the rain dots */
   rain: true,
+  /** Map details: country outlines, city and range names, relief shading, rivers and lakes */
+  borders: true,
+  cities: true,
+  relief: true,
+  water: true,
   /** Rain dots: monthly mm or rainy days */
   dots: 'mm' as 'mm' | 'days',
   /** mm of rain from which a day counts as rainy */
