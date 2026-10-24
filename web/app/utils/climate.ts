@@ -154,8 +154,8 @@ function evalSeason(c: Float32Array, at: number, phase: number): number {
   return v;
 }
 
-/** Lapse rate at a position in the year, blended between mid-month values. */
-function lapseRateAt(phase: number): number {
+/** Lapse rate (°C per m) at a position in the year, blended between mid-month values. */
+export function lapseRateAt(phase: number): number {
   const x = phase * 12 - 0.5;
   const m0 = Math.floor(x);
   const t = x - m0;

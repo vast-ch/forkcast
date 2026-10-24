@@ -4,7 +4,7 @@
 
 ### Changed
 
-- The help page has tabs (Map, Data, Calculations, Precision, Trip, Sharing, Privacy, Routes, Sources) and shows one topic at a time, each with its own address to link to. The map's Credits link opens Sources directly.
+- The help page is rewritten and split into tabs (Map, Trip, Routes, Data, Accuracy, Sharing & privacy, Sources), one topic at a time, each with its own address to link to. It now explains the day chart, a day's numbers, daylight and the 🔦, and the trip summary, and has live parts to try: the temperature colours, the map legend, a daylight-and-riding-time calculator and the altitude correction. The map's Credits link opens Sources directly.
 - The help page's sources and licences now also credit the cycle routes used for drawing (OpenStreetMap, shared under the ODbL) and say where the relief shading comes from.
 
 ## v0.8.0 - 2026-10-24

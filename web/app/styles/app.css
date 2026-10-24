@@ -860,6 +860,24 @@ body {
   font-size: 1.35rem;
   letter-spacing: -0.01em;
 }
+.wt-help h3 {
+  margin-top: 1.75rem;
+  font-family: var(--wt-font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+/* A live piece of the app inside the help, in a card. */
+.wt-help-demo {
+  margin-top: 0.9rem;
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border: 1px solid var(--wt-line);
+  border-radius: 8px;
+}
+.wt-help-demo-caption {
+  font-size: 0.8rem;
+  color: var(--wt-muted);
+}
 .wt-help p,
 .wt-help li {
   line-height: 1.6;
