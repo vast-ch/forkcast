@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Drawing a route is quieter: just the "Follow cycle routes" switch and the Save, Undo and Cancel buttons, without instructions or a name to fill in (a drawn route is called "My route"). The help's Routes tab explains drawing.
 - The help page is rewritten and split into tabs (Map, Trip, Routes, Data, Accuracy, Sharing & privacy, Sources), one topic at a time, each with its own address to link to. It now explains the day chart, a day's numbers, daylight and the 🔦, and the trip summary, and has live parts to try: the temperature colours, the map legend, a daylight-and-riding-time calculator and the altitude correction. The map's Credits link opens Sources directly.
 - The help page's sources and licences now also credit the cycle routes used for drawing (OpenStreetMap, shared under the ODbL) and say where the relief shading comes from.
 

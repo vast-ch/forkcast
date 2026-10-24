@@ -58,7 +58,7 @@ export default class IndexTemplate extends Component {
   toggleSnap = () => this.planner.toggleSnap();
 
   saveDrawing = () => {
-    this.planner.finishDrawing('');
+    this.planner.finishDrawing();
     this.isSettingsOpen = false;
   };
 
@@ -92,7 +92,6 @@ export default class IndexTemplate extends Component {
               role="toolbar"
               aria-label="Drawing a route"
             >
-              <span class="text-sm">Tap the map to add points ({{this.planner.drawnClicks}})</span>
               <Switch
                 @label="Follow routes"
                 @size="sm"

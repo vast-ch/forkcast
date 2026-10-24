@@ -57,7 +57,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
   @service declare planner: PlannerService;
   @service declare atlas: AtlasService;
 
-  @tracked drawnName = '';
   @tracked importError?: string;
 
   /** Month labels under the slider, each centred on its four steps, and a
@@ -183,16 +182,8 @@ export default class SidePanel extends Component<SidePanelSignature> {
     if (d) this.planner.setStart(isoDate(d));
   };
 
-  startDrawing = () => {
-    this.drawnName = '';
-    this.planner.startDrawing();
-  };
-
-  setDrawnName = (v: string) => {
-    this.drawnName = v;
-  };
-
-  finishDrawing = () => this.planner.finishDrawing(this.drawnName.trim());
+  startDrawing = () => this.planner.startDrawing();
+  finishDrawing = () => this.planner.finishDrawing();
   undoPoint = () => this.planner.undoDrawnPoint();
   toggleSnap = () => this.planner.toggleSnap();
   cancelDrawing = () => this.planner.cancelDrawing();
@@ -313,25 +304,11 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
             {{#if this.planner.isDrawing}}
               <div class="wt-draw flex flex-col gap-2 p-3">
-                <p class="text-sm">Click the map to add points ({{this.planner.drawnClicks}}
-                  so far). Double-click or press Save to finish.</p>
                 <Switch
                   @label="Follow cycle routes"
                   @size="sm"
                   @isSelected={{this.planner.snapToRoutes}}
                   @onChange={{this.toggleSnap}}
-                />
-                <p class="wt-muted text-xs">{{if
-                    this.planner.snapToRoutes
-                    "Each click moves onto the nearest cycle route (within 25km), and the line follows the routes from one click to the next; where there are none, it goes straight."
-                    "Points are joined with straight lines."
-                  }}</p>
-                <Input
-                  @label="Name"
-                  @size="sm"
-                  @value={{this.drawnName}}
-                  @onInput={{this.setDrawnName}}
-                  placeholder="My route"
                 />
                 <div class="flex flex-wrap gap-2">
                   <button

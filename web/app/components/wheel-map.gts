@@ -752,7 +752,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
 
   onDoubleClick = () => {
     if (this.planner.isDrawing && this.planner.canFinishDrawing) {
-      this.planner.finishDrawing('');
+      this.planner.finishDrawing();
     }
   };
 

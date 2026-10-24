@@ -421,11 +421,6 @@ export default class PlannerService extends Service {
     this.loadCycleNet();
   }
 
-  /** Clicks so far. */
-  get drawnClicks(): number {
-    return this.sketch.length;
-  }
-
   /**
    * The route being drawn: with snapping on, the cycle-network line that best
    * follows the sketch (straight where it's off the network); otherwise the
@@ -479,10 +474,8 @@ export default class PlannerService extends Service {
     return this.sketch.length >= 2 && this.drawn.length >= 2;
   }
 
-  finishDrawing(name: string): void {
-    if (this.canFinishDrawing) {
-      this.setOwnRoute(name || 'My route', [...this.drawn]);
-    }
+  finishDrawing(): void {
+    if (this.canFinishDrawing) this.setOwnRoute('My route', [...this.drawn]);
     this.cancelDrawing();
   }
 }
