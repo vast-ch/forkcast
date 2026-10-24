@@ -6,6 +6,10 @@
 
 - On phones and in narrow browser windows the trip summary (days, arrival, riding and rest days, average high, rainy days, coldest night) was cut off under the day chart and couldn't be scrolled to. It now sits with the trip settings in the Settings drawer, where it belongs, and the page under the map scrolls again.
 
+### Changed
+
+- The drawing controls are the same on phones and computers: "Follow cycle routes", Save route, Undo and Cancel.
+
 ## v0.9.0 - 2026-10-24
 
 ### Added

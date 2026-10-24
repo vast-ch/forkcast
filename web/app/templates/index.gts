@@ -4,7 +4,6 @@ import { tracked } from '@glimmer/tracking';
 import { LinkTo } from '@ember/routing';
 import { on } from '@ember/modifier';
 import { Drawer } from 'frontile/overlays';
-import { Switch } from 'frontile/forms';
 import SlidersHorizontal from 'ember-phosphor-icons/components/ph-sliders-horizontal';
 import type PlannerService from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
@@ -16,7 +15,7 @@ import Legend from 'forkcast/components/legend';
 import ItineraryChart from 'forkcast/components/itinerary-chart';
 import Logo from 'forkcast/components/logo';
 import HelpLink from 'forkcast/components/help-link';
-import { not } from 'forkcast/utils/helpers';
+import DrawControls from 'forkcast/components/draw-controls';
 import type { TOC } from '@ember/component/template-only';
 import type { Trip } from 'forkcast/utils/itinerary';
 
@@ -54,16 +53,6 @@ export default class IndexTemplate extends Component {
     return this.isSettingsOpen && !this.planner.isDrawing;
   }
 
-  undoPoint = () => this.planner.undoDrawnPoint();
-  toggleSnap = () => this.planner.toggleSnap();
-
-  saveDrawing = () => {
-    this.planner.finishDrawing();
-    this.isSettingsOpen = false;
-  };
-
-  cancelDrawing = () => this.planner.cancelDrawing();
-
   <template>
     {{#if this.media.isPhone}}
       {{! Phones: map first, the trip below it, every setting in a drawer. }}
@@ -87,34 +76,7 @@ export default class IndexTemplate extends Component {
           <Legend class="absolute bottom-6 left-3 z-[1000]" />
           {{#if this.planner.isDrawing}}
             {{! Drawing needs the map, so the drawer closes and these take over. }}
-            <div
-              class="wt-draw-bar"
-              role="toolbar"
-              aria-label="Drawing a route"
-            >
-              <Switch
-                @label="Follow routes"
-                @size="sm"
-                @isSelected={{this.planner.snapToRoutes}}
-                @onChange={{this.toggleSnap}}
-              />
-              <button
-                type="button"
-                class="wt-btn"
-                {{on "click" this.undoPoint}}
-              >Undo</button>
-              <button
-                type="button"
-                class="wt-btn is-primary"
-                disabled={{not this.planner.canFinishDrawing}}
-                {{on "click" this.saveDrawing}}
-              >Save</button>
-              <button
-                type="button"
-                class="wt-btn is-ghost"
-                {{on "click" this.cancelDrawing}}
-              >Cancel</button>
-            </div>
+            <DrawControls class="wt-draw-bar" @onSave={{this.closeSettings}} />
           {{/if}}
         </section>
         <ChartPanel @trip={{this.planner.trip}} />

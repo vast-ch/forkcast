@@ -17,13 +17,14 @@ import {
   fmtShortDate,
   fmtTemp,
 } from 'forkcast/utils/format';
-import { errorMessage, not } from 'forkcast/utils/helpers';
+import { errorMessage } from 'forkcast/utils/helpers';
 import { LIMITS, isoDate, type LimitedKey } from 'forkcast/utils/settings';
 import { LAST_WEEK } from 'forkcast/utils/weeks';
 import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
 import Logo from 'forkcast/components/logo';
 import HelpLink from 'forkcast/components/help-link';
 import RangeInput from 'forkcast/components/range-input';
+import DrawControls from 'forkcast/components/draw-controls';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 
 type MapSetting =
@@ -175,10 +176,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
   };
 
   startDrawing = () => this.planner.startDrawing();
-  finishDrawing = () => this.planner.finishDrawing();
-  undoPoint = () => this.planner.undoDrawnPoint();
-  toggleSnap = () => this.planner.toggleSnap();
-  cancelDrawing = () => this.planner.cancelDrawing();
 
   importGpx = async (e: Event) => {
     const input = e.target as HTMLInputElement;
@@ -293,32 +290,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
           </div>
 
           {{#if this.planner.isDrawing}}
-            <div class="wt-draw flex flex-col gap-2 p-3">
-              <Switch
-                @label="Follow cycle routes"
-                @size="sm"
-                @isSelected={{this.planner.snapToRoutes}}
-                @onChange={{this.toggleSnap}}
-              />
-              <div class="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  class="wt-btn is-primary"
-                  disabled={{not this.planner.canFinishDrawing}}
-                  {{on "click" this.finishDrawing}}
-                >Save route</button>
-                <button
-                  type="button"
-                  class="wt-btn"
-                  {{on "click" this.undoPoint}}
-                >Undo</button>
-                <button
-                  type="button"
-                  class="wt-btn is-ghost"
-                  {{on "click" this.cancelDrawing}}
-                >Cancel</button>
-              </div>
-            </div>
+            <DrawControls class="wt-draw p-3" />
           {{else}}
             <div class="wt-route-actions grid grid-cols-3 gap-2">
               <button
