@@ -77,7 +77,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <p class="wt-title mt-0.5">{{this.dayTitle}}</p>
             {{#if this.route.weather}}
               <dl class="wt-readout mt-2">
-                <dt>High / low</dt>
+                <dt>Low / high</dt>
                 <dd>
                   <span
                     class="wt-chip"
@@ -86,9 +86,9 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                       (tempSwatch this.route.weather.high)
                     }}
                   ></span>
-                  {{fmtTemp this.route.weather.high}}
-                  /
                   {{fmtTemp this.route.weather.low}}
+                  /
+                  {{fmtTemp this.route.weather.high}}
                 </dd>
                 <dt>Rainy day chance</dt>
                 <dd>{{fmtPct this.route.weather.rainChance}}</dd>

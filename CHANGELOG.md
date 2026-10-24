@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- A day's temperatures read Low, then High, both above the chart and on the route, instead of High and Night.
+
 ### Fixed
 
 - On phones the Draw a route, Import GPX and Export GPX buttons sit one under the other instead of squeezing their labels onto two lines.

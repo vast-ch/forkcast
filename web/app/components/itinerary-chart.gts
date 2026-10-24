@@ -223,7 +223,7 @@ export default class ItineraryChart extends Component<{
       return `${this.planner.weekSlot.label}: ${this.offTripNote}`;
     if (!d) return 'No day selected';
     const w = d.weather;
-    return `${this.detailTitle}, ${this.detailRoute}, high ${fmtTemp(w.high)}, night ${fmtTemp(d.nightLow)}, rain chance ${fmtPct(w.rainChance)}, daylight ${fmtDaylight(d.daylight)}`;
+    return `${this.detailTitle}, ${this.detailRoute}, low ${fmtTemp(d.nightLow)}, high ${fmtTemp(w.high)}, rain chance ${fmtPct(w.rainChance)}, daylight ${fmtDaylight(d.daylight)}`;
   }
 
   /** Arrow keys step through the days (Home and End jump to the ends). */
@@ -260,10 +260,10 @@ export default class ItineraryChart extends Component<{
             <p class="wt-muted text-xs">{{this.detailRoute}}</p>
           </div>
           <dl class="wt-inline-stats">
+            <div><dt>Low</dt><dd>{{fmtTemp this.detail.nightLow}}</dd></div>
             <div><dt>High</dt><dd>{{fmtTemp
                   this.detail.weather.high
                 }}</dd></div>
-            <div><dt>Night</dt><dd>{{fmtTemp this.detail.nightLow}}</dd></div>
             <div><dt>Rain chance</dt><dd>{{fmtPct
                   this.detail.weather.rainChance
                 }}</dd></div>
