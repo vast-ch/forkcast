@@ -143,7 +143,6 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       zoomSnap: 0.5,
       worldCopyJump: false,
       attributionControl: true,
-      doubleClickZoom: false,
     });
     const bbox = this.owner?.atlas.loaded[0]?.continent.bbox;
     if (bbox) {
@@ -532,6 +531,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       });
     }
 
+    // A double-click zooms in, except while drawing: there it finishes the route.
+    if (this.changed('drawing', s.isDrawing)) {
+      if (s.isDrawing) map.doubleClickZoom.disable();
+      else map.doubleClickZoom.enable();
+    }
     if (this.changed('drawn', `${s.isDrawing}-${s.drawnCount}`)) {
       this.layers.drawn?.remove();
       this.layers.drawn = undefined;

@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- Double-clicking the map zooms in again. Only while you draw a route does a double-click finish the route instead.
 - On the map the route and the picked day's purple stretch run under the overnight stops instead of over them, so every stop's ring stays whole.
 
 ## v0.7.0 - 2026-10-24
