@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.7.0 - 2026-10-24
+
 ### Added
 
 - The map can show more: country borders, city and mountain-range names, relief shading and rivers and lakes, each switched on and off with buttons under Map. Names and water are only downloaded once you switch them on.
