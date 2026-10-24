@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- The rainy-day setting reads "Rainy day  > 1mm 5mm 10mm", with the sign next to the amounts it belongs to.
+
 ## v0.7.0 - 2026-10-24
 
 ### Added

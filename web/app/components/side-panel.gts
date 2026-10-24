@@ -496,18 +496,21 @@ export default class SidePanel extends Component<SidePanelSignature> {
               </SegmentedControl>
             </div>
             <div class="flex items-center justify-between gap-3">
-              <span class="text-sm">Rainy day &gt;</span>
-              <SegmentedControl
-                @value={{this.planner.rainThreshold}}
-                @onChange={{fn this.setMap "rainThreshold"}}
-                @size="sm"
-                aria-label="Rain needed for a rainy day"
-                as |Ctl|
-              >
-                {{#each this.rainThresholds as |mm|}}
-                  <Ctl.Item @value={{mm}}>{{mm}}mm</Ctl.Item>
-                {{/each}}
-              </SegmentedControl>
+              <span class="text-sm">Rainy day</span>
+              <span class="flex items-center gap-2">
+                <span class="text-sm" aria-hidden="true">&gt;</span>
+                <SegmentedControl
+                  @value={{this.planner.rainThreshold}}
+                  @onChange={{fn this.setMap "rainThreshold"}}
+                  @size="sm"
+                  aria-label="Rain needed for a rainy day"
+                  as |Ctl|
+                >
+                  {{#each this.rainThresholds as |mm|}}
+                    <Ctl.Item @value={{mm}}>{{mm}}mm</Ctl.Item>
+                  {{/each}}
+                </SegmentedControl>
+              </span>
             </div>
             <ButtonGroup
               @size="xs"
