@@ -30,6 +30,8 @@ function km(lat1: number, lon1: number, lat2: number, lon2: number): number {
 
 /** Grid cell size for the nearest-segment lookup, degrees. */
 const CELL = 0.05;
+/** Dead ends of the network are linked to another route this close, km. */
+const BRIDGE_KM = 1;
 
 /** A min-heap of [cost, node], for the shortest-path search. */
 class Heap {
@@ -104,6 +106,33 @@ export class CycleNet {
         }
       }
     }
+    this.#bridgeDeadEnds();
+  }
+
+  /**
+   * Link every dead end to the nearest other route within BRIDGE_KM: OSM maps
+   * routes in sections that often stop just short of the next one (at
+   * borders) or meet it part-way along, which would leave the network in
+   * pieces. A link to the middle of a segment splits it there.
+   */
+  #bridgeDeadEnds(): void {
+    const count = this.size;
+    for (let id = 0; id < count; id++) {
+      const edges = this.edges[id]!;
+      if (edges.length !== 1) continue;
+      const own = new Set([id, edges[0]![0]]);
+      const s = this.snap(this.point(id), BRIDGE_KM, own);
+      if (!s) continue;
+      let to: number;
+      if (s.toA < 0.01) to = s.a;
+      else if (s.toB < 0.01) to = s.b;
+      else {
+        to = this.#node(s.point.lat, s.point.lon);
+        this.#segment(s.a, to);
+        this.#segment(to, s.b);
+      }
+      if (to !== id) this.#segment(id, to);
+    }
   }
 
   get size(): number {
@@ -146,8 +175,9 @@ export class CycleNet {
     return { lat: this.lat[id]!, lon: this.lon[id]! };
   }
 
-  /** The nearest point on the network, if one is within `maxKm`. */
-  snap(p: LatLon, maxKm: number): Snap | undefined {
+  /** The nearest point on the network, if one is within `maxKm`, leaving
+   * out segments that touch the `skip` nodes. */
+  snap(p: LatLon, maxKm: number, skip?: Set<number>): Snap | undefined {
     // Flat x/y in km around the point: exact enough over a few km.
     const kx = 111.32 * Math.cos(p.lat * RAD);
     const ky = 110.57;
@@ -162,6 +192,7 @@ export class CycleNet {
           if (seen.has(id)) continue;
           seen.add(id);
           const [a, b] = this.#segments[id]!;
+          if (skip && (skip.has(a) || skip.has(b))) continue;
           const ax = (this.lon[a]! - p.lon) * kx;
           const ay = (this.lat[a]! - p.lat) * ky;
           const bx = (this.lon[b]! - p.lon) * kx;
