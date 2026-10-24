@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
-import { fn, hash } from '@ember/helper';
+import { fn } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
 import { ButtonGroup, SegmentedControl } from 'frontile/buttons';
 import { DatePicker, Input, Switch } from 'frontile/forms';
@@ -23,6 +23,7 @@ import { LAST_WEEK } from 'forkcast/utils/weeks';
 import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
 import Logo from 'forkcast/components/logo';
 import HelpLink from 'forkcast/components/help-link';
+import RangeInput from 'forkcast/components/range-input';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 
 type MapSetting =
@@ -439,16 +440,9 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   style={{this.weekLabelStyle}}
                 >{{this.planner.weekSlot.label}}</span>
               </div>
-              {{! `input` below is Frontile's class slot, not an event handler. }}
-              {{! template-lint-disable no-passed-in-event-handlers }}
-              <Input
-                @type="range"
+              <RangeInput
                 @value={{this.weekValue}}
                 @onInput={{this.onWeekInput}}
-                @classes={{hash
-                  innerContainer="border-0 bg-transparent p-0 shadow-none"
-                  input="wt-range h-6 border-0 bg-transparent p-0 shadow-none focus:ring-0"
-                }}
                 min="0"
                 max={{this.lastWeek}}
                 step="1"
