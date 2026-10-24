@@ -15,10 +15,12 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
     details               Natural Earth places, mountain ranges, rivers and lakes
+    cyclenet              OpenStreetMap cycle routes via Overpass (draft; not in `all`)
 
 Builds (into out/, except the CRU climatology which is an intermediate in cache/):
     borders    per-continent outlines and the picker's world map
     details    per-continent city and range names, rivers and lakes
+    cyclenet   per-continent cycle network (draft; not in `all`)
     routes     every preset route plus the route index
     cru        CRU climatology for the years (intermediate)
     climate    per-continent climate grids (ERA5-Land, calibrated with CRU)
@@ -33,7 +35,7 @@ import argparse
 import sys
 import time
 
-from . import basemap, cru, details, era5land, era5land_download, eurovelo, manifest, routes
+from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, manifest, routes
 from .pipeline import STAMPS, Stamp, is_verified, log
 
 YEARS = (2011, 2025)
@@ -52,6 +54,7 @@ DOWNLOADS = {
     "brouter": lambda a: routes.download(a.fresh),
     "borders": lambda a: basemap.download(a.fresh),
     "details": lambda a: details.download(a.fresh),
+    "cyclenet": lambda a: cyclenet.download(a.fresh),
 }
 
 # In dependency order: routes need Europe's borders; the manifest needs everything.
@@ -62,7 +65,11 @@ BUILDS = {
     "cru": lambda a: cru.build(a.y0, a.y1, a.fresh),
     "climate": lambda a: era5land.build(a.y0, a.y1, a.fresh),
     "manifest": lambda a: manifest.build(a.fresh),
+    "cyclenet": lambda a: cyclenet.build(a.fresh),
 }
+
+# Steps that run only when named, not in `all`: drafts the app doesn't use yet.
+NOT_IN_ALL = {"cyclenet"}
 
 
 def _run(kind: str, name: str, fn, a) -> None:
@@ -82,6 +89,7 @@ def status(a) -> None:
         "eurovelo": [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG],
         "borders": [basemap.DIR / n for n in basemap.SOURCES],
         "details": [details.DIR / n for n in details.SOURCES],
+        "cyclenet": cyclenet.files(),
     }
     log("downloads (verified / present / expected)")
     for name, files in groups.items():
@@ -108,10 +116,10 @@ def main(argv=None) -> None:
         return
     plan = []
     if a.command in ("all", "download"):
-        names = a.what if a.command == "download" and a.what else list(DOWNLOADS)
+        names = a.what if a.command == "download" and a.what else [n for n in DOWNLOADS if n not in NOT_IN_ALL]
         plan += [("download", n, DOWNLOADS[n]) for n in names]
     if a.command in ("all", "build"):
-        names = a.what if a.command == "build" and a.what else list(BUILDS)
+        names = a.what if a.command == "build" and a.what else [n for n in BUILDS if n not in NOT_IN_ALL]
         plan += [("build", n, BUILDS[n]) for n in names]
     unknown = [n for k, n, _ in plan if n not in (DOWNLOADS if k == "download" else BUILDS)]
     if unknown:

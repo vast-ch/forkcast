@@ -30,6 +30,12 @@ work after `data`).
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
 | `details` | Natural Earth populated places and geography regions (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
 
+Not in `all` (run by name; drafts the app doesn't use yet):
+
+| Step | What | Size | Notes |
+|---|---|---|---|
+| `cyclenet` | OpenStreetMap bicycle route relations (network `icn`, `ncn`, `rcn`) from the Overpass API, one query per 5° × 5° tile, cached per tile in `cache/cyclenet/<continent>/` | Europe: 140 tiles; one tile around Switzerland was 16 MB and 2 minutes | ODbL, © OpenStreetMap contributors. One query at a time with a pause; an interrupted run resumes. |
+
 ### Builds (into `out/`, committed)
 
 | Step | Reads | Writes |
@@ -40,8 +46,21 @@ work after `data`).
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `out/<continent>/climate.bin` + `climate.json` |
 | `manifest` | everything above | `out/manifest.json` |
+| `cyclenet` (not in `all`) | `cache/cyclenet/` | `out/<continent>/cyclenet.json`: every way once, simplified to about 300 m. |
 
 `all` runs every download, then every build, in the order of these tables.
+
+### Cycle network (draft)
+
+For drawing routes that follow real cycling roads, offline. First
+measurement, one tile (45–50°N, 5–10°E): with regional routes (`rcn`)
+included it was 206,610 ways and about 2 million points, still 415,000 after
+simplifying to 300 m, far too much to ship for a continent. Before the app
+uses it, decide the cut: national and international routes only, a coarser
+simplification, or splitting the network into tiles the app fetches only
+while drawing. The Overpass server returned 502 to the follow-up query, so
+the national-only size is still to be measured; run
+`download cyclenet` when it is quiet.
 Builds never use the network; a build whose inputs are missing stops and says
 which download to run.
 
