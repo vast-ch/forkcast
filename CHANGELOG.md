@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- On phones the map's legend fits on one line again: a narrower colour scale, with every temperature mark including 0 and the °C written once, after the last.
+
 ## v0.5.0 - 2026-10-24
 
 ### Added

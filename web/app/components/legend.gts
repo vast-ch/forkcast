@@ -74,22 +74,22 @@ export default class Legend extends Component<{ Element: HTMLDivElement }> {
         {{! The titles are for screen readers; on the map the scale speaks for itself. }}
         <div class="min-w-0" role="group" aria-label={{this.tempLabel}}>
           <div
-            class="relative mt-0.5 h-2.5 w-60 rounded-sm"
+            class="wt-legend-scale relative mt-0.5 h-2.5 rounded-sm"
             style={{css "background: " this.gradient}}
           ></div>
-          <div class="relative h-4 w-60 tabular-nums">
+          <div class="wt-legend-scale relative h-4 tabular-nums">
             {{#each this.ticks as |tick|}}
               <span
                 class="wt-tick"
                 style={{css "left: " tick.left "%"}}
-              >{{tick.t}}°C</span>
+              >{{tick.t}}<span class="wt-tick-unit">°C</span></span>
             {{/each}}
           </div>
         </div>
       {{/if}}
       {{#if this.planner.showRain}}
         <div role="group" aria-label={{this.rainLabel}}>
-          <div class="flex items-end gap-3 tabular-nums">
+          <div class="wt-legend-dots flex items-end gap-3 tabular-nums">
             {{#each this.dots as |dot|}}
               <span class="flex items-center gap-1">
                 <span
