@@ -3,6 +3,8 @@ import { cached, tracked } from '@glimmer/tracking';
 import { TrackedArray } from 'tracked-built-ins';
 import { CycleNet } from 'forkcast/utils/cyclenet';
 import type AtlasService from './atlas';
+import type MyRoutesService from './my-routes';
+import { isOwnRouteId } from './my-routes';
 import type IndexController from 'forkcast/controllers/index';
 import {
   RAIN_THRESHOLDS,
@@ -12,7 +14,6 @@ import {
 import { planTrip, type Trip, type TripDay } from 'forkcast/utils/itinerary';
 import {
   decodeTrack,
-  encodeTrack,
   reversed,
   withDistances,
   type Route,
@@ -20,7 +21,6 @@ import {
 } from 'forkcast/utils/route';
 import {
   DEFAULTS,
-  OWN_ROUTE_ID,
   inLimits,
   isIsoDate,
   type LimitedKey,
@@ -75,6 +75,7 @@ export interface RouteChoice {
  */
 export default class PlannerService extends Service {
   @service declare atlas: AtlasService;
+  @service('my-routes') declare myRoutes: MyRoutesService;
 
   /** Set by the index route (the planner); undefined outside it. */
   @tracked qp?: IndexController;
@@ -86,6 +87,8 @@ export default class PlannerService extends Service {
   sketch = new TrackedArray<{ lat: number; lon: number }>();
   /** While drawing: follow the cycle routes between clicks, or draw straight lines. */
   @tracked snapToRoutes = true;
+  /** While drawing further on one of your routes: its id. */
+  @tracked editingId?: string;
 
   private read<K extends SettingKey>(key: K): (typeof DEFAULTS)[K] {
     return this.qp ? this.qp[key] : DEFAULTS[key];
@@ -316,44 +319,61 @@ export default class PlannerService extends Service {
 
   // --- Routes ---------------------------------------------------------------
 
-  /** Your own route, decoded from the URL. */
+  /** Your own routes, saved in this browser. */
   @cached
-  get ownRoute(): Route | undefined {
-    const track = this.read('track');
-    if (!track) return undefined;
-    const coords = decodeTrack(track);
-    if (coords.length < 2) return undefined;
-    const points = withDistances(coords);
-    return {
-      id: OWN_ROUTE_ID,
-      name: this.read('name') || 'My route',
-      group: 'Yours',
-      color: OWN_COLOR,
-      isPreset: false,
-      points,
-      km: points[points.length - 1]!.km,
-    };
+  get ownRoutes(): Route[] {
+    return this.myRoutes.routes.flatMap((saved) => {
+      const coords = decodeTrack(saved.track);
+      if (coords.length < 2) return [];
+      const points = withDistances(coords);
+      return [
+        {
+          id: saved.id,
+          name: saved.name,
+          group: 'Yours',
+          color: OWN_COLOR,
+          isPreset: false,
+          points,
+          km: points[points.length - 1]!.km,
+        },
+      ];
+    });
   }
 
   /** Everything the route picker offers on the loaded continents. */
   @cached
   get choices(): RouteChoice[] {
-    const own = this.ownRoute;
-    return own ? [...this.atlas.presets, own] : this.atlas.presets;
+    return [...this.atlas.presets, ...this.ownRoutes];
   }
 
-  /** The selected route id, falling back to the first preset of the loaded continents. */
+  /**
+   * The selected route id, falling back to the first preset of the loaded
+   * continents. A link to one of your routes keeps its id even where the
+   * route isn't saved (see `isMissingRoute`).
+   */
   get routeId(): string {
     const id = this.read('route');
-    if (id && this.choices.some((r) => r.id === id)) return id;
-    return this.atlas.presets[0]?.id ?? (this.ownRoute ? OWN_ROUTE_ID : '');
+    if (id && (isOwnRouteId(id) || this.choices.some((r) => r.id === id)))
+      return id;
+    return this.atlas.presets[0]?.id ?? this.ownRoutes[0]?.id ?? '';
+  }
+
+  /** The link points to someone's own route that isn't saved in this browser. */
+  get isMissingRoute(): boolean {
+    const id = this.read('route');
+    return isOwnRouteId(id) && !this.myRoutes.find(id);
+  }
+
+  /** The selected route, if it's one of yours: as saved. */
+  get selectedOwn() {
+    return this.myRoutes.find(this.routeId);
   }
 
   /** The selected route in its original direction, once its track is loaded. */
   @cached
   get baseRoute(): Route | undefined {
     const id = this.routeId;
-    if (id === OWN_ROUTE_ID) return this.ownRoute;
+    if (isOwnRouteId(id)) return this.ownRoutes.find((r) => r.id === id);
     return this.atlas.tracks.get(id);
   }
 
@@ -390,33 +410,45 @@ export default class PlannerService extends Service {
   /** Make sure the selected preset's track is loaded. */
   async loadSelected(): Promise<void> {
     const id = this.routeId;
-    if (id && id !== OWN_ROUTE_ID) await this.atlas.loadRoute(id);
+    if (id && !isOwnRouteId(id)) await this.atlas.loadRoute(id);
   }
 
-  /** Make a drawn or imported track your route (replacing the previous one). */
-  setOwnRoute(
+  /** Save an imported track as one of your routes and select it. */
+  importRoute(
     name: string,
     coords: { lat: number; lon: number; ele?: number | null }[],
   ): void {
-    this.write('track', encodeTrack(coords));
-    this.write('name', name);
-    this.write('route', OWN_ROUTE_ID);
+    this.#selectOwn(this.myRoutes.add(coords, name).id);
+  }
+
+  #selectOwn(id: string): void {
+    this.write('route', id);
     this.write('reverse', false);
     this.highlightedDay = undefined;
   }
 
-  deleteOwnRoute(): void {
-    this.write('track', '');
-    this.write('name', '');
-    this.write('route', '');
-    this.highlightedDay = undefined;
-    void this.loadSelected();
+  renameRoute(id: string, name: string): void {
+    this.myRoutes.rename(id, name);
+  }
+
+  /** Delete one of your routes; if it was selected, the default comes back. */
+  deleteRoute(id: string): void {
+    this.myRoutes.remove(id);
+    if (this.read('route') === id) {
+      this.write('route', '');
+      this.highlightedDay = undefined;
+      void this.loadSelected();
+    }
   }
 
   // --- Drawing ----------------------------------------------------------------
 
-  startDrawing(): void {
-    this.sketch.splice(0, this.sketch.length);
+  /** Draw a new route, or carry on drawing one of yours (`id`). */
+  startDrawing(id?: string): void {
+    const saved = id ? this.myRoutes.find(id) : undefined;
+    this.sketch.splice(0, this.sketch.length, ...(saved?.sketch ?? []));
+    if (saved?.snap !== undefined) this.snapToRoutes = saved.snap;
+    this.editingId = saved?.id;
     this.isDrawing = true;
     this.loadCycleNet();
   }
@@ -466,6 +498,7 @@ export default class PlannerService extends Service {
 
   cancelDrawing(): void {
     this.isDrawing = false;
+    this.editingId = undefined;
     this.sketch.splice(0, this.sketch.length);
   }
 
@@ -474,8 +507,22 @@ export default class PlannerService extends Service {
     return this.sketch.length >= 2 && this.drawn.length >= 2;
   }
 
+  /** Save the drawing: as a new route, or over the one being drawn further. */
   finishDrawing(): void {
-    if (this.canFinishDrawing) this.setOwnRoute('My route', [...this.drawn]);
+    if (this.canFinishDrawing) {
+      const coords = [...this.drawn];
+      const sketch = [...this.sketch];
+      if (this.editingId) {
+        this.myRoutes.redraw(this.editingId, coords, sketch, this.snapToRoutes);
+        this.highlightedDay = undefined;
+      } else {
+        const saved = this.myRoutes.add(coords, this.myRoutes.nextName(), {
+          sketch,
+          snap: this.snapToRoutes,
+        });
+        this.#selectOwn(saved.id);
+      }
+    }
     this.cancelDrawing();
   }
 }

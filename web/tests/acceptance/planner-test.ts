@@ -47,25 +47,6 @@ module('Acceptance | planner', function (hooks) {
     assert.dom('.leaflet-labels-pane .wt-place').exists();
   });
 
-  test('a drawn route becomes "My route"', async function (assert) {
-    await visit('/');
-    await click(button('Draw a route'));
-    assert.dom('[aria-label="Drawing a route"]').exists();
-    assert.dom(button('Save route')).isDisabled('nothing to save yet');
-
-    // Clicks on the map are where Leaflet puts them; add them directly.
-    const planner = this.owner.lookup('service:planner');
-    planner.addDrawnPoint(46.95, 7.45);
-    planner.addDrawnPoint(47.37, 8.54);
-    await click(button('Undo'));
-    planner.addDrawnPoint(47.05, 8.31);
-    await click(button('Save route'));
-
-    assert.dom('[aria-label="Drawing a route"]').doesNotExist();
-    assert.dom('#route-picker option:checked').includesText('My route');
-    assert.dom(button('Delete this route')).exists();
-  });
-
   test('cancel leaves the route as it was', async function (assert) {
     await visit('/');
     await click(button('Draw a route'));

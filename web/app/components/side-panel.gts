@@ -90,6 +90,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
   get groups() {
     const order = ['Demo', 'EuroVelo', 'Yours'];
+    const label = (g: string) => (g === 'Yours' ? 'Your routes' : g);
     const byGroup = new Map<
       string,
       { id: string; label: string; isSelected: boolean }[]
@@ -105,7 +106,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
     }
     return [...byGroup.entries()]
       .sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))
-      .map(([label, routes]) => ({ label, routes }));
+      .map(([group, routes]) => ({ label: label(group), routes }));
   }
 
   get selected() {
@@ -170,7 +171,10 @@ export default class SidePanel extends Component<SidePanelSignature> {
     void this.planner.selectRoute((e.target as HTMLSelectElement).value);
   };
 
-  deleteSelected = () => this.planner.deleteOwnRoute();
+  deleteSelected = () => this.planner.deleteRoute(this.planner.routeId);
+  renameSelected = (name: string) =>
+    this.planner.renameRoute(this.planner.routeId, name);
+  editSelected = () => this.planner.startDrawing(this.planner.routeId);
   /** From the date picker: a Date (or null if cleared, which it can't be here). */
   setStart = (d: Date | null) => {
     if (d) this.planner.setStart(isoDate(d));
@@ -187,7 +191,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
     try {
       const xml = await waitForPromise(file.text());
       const coords = parseGpx(xml);
-      this.planner.setOwnRoute(
+      this.planner.importRoute(
         gpxName(xml) ?? file.name.replace(/\.gpx$/i, ''),
         coords,
       );
@@ -246,6 +250,9 @@ export default class SidePanel extends Component<SidePanelSignature> {
                     }}
                   ></span>
                   <select id="route-picker" {{on "change" this.selectRoute}}>
+                    {{#if this.planner.isMissingRoute}}
+                      <option selected disabled>Route not saved here</option>
+                    {{/if}}
                     {{#each this.groups as |g|}}
                       <optgroup label={{g.label}}>
                         {{#each g.routes as |r|}}
@@ -271,27 +278,51 @@ export default class SidePanel extends Component<SidePanelSignature> {
               <p class="wt-empty">No preset routes here yet. Draw a route on the
                 map or import a GPX file.</p>
             {{/if}}
-            <p class="wt-muted flex flex-wrap items-center gap-x-2 text-xs">
-              {{#if this.isLoadingRoute}}
-                Loading the track…
-              {{else if this.route}}
-                {{#if this.route.url}}
-                  <a
-                    href={{this.route.url}}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="underline"
-                  >Route page</a>
-                {{/if}}
-                {{#unless this.route.isPreset}}
-                  <button
-                    type="button"
-                    class="wt-link-danger"
-                    {{on "click" this.deleteSelected}}
-                  >Delete this route</button>
-                {{/unless}}
-              {{/if}}
-            </p>
+            {{#if this.planner.isMissingRoute}}
+              <p class="wt-error text-sm" role="alert">This link points to a
+                route someone drew or imported. Those are saved only in the
+                browser where they were made, so it can't be shown here: ask for
+                its GPX file (Export GPX) and import it.</p>
+            {{else if this.isLoadingRoute}}
+              <p class="wt-muted text-xs">Loading the track…</p>
+            {{else if this.route.url}}
+              <p class="wt-muted text-xs"><a
+                  href={{this.route.url}}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="underline"
+                >Route page</a></p>
+            {{/if}}
+            {{#if this.planner.myRoutes.saveError}}
+              <p class="wt-error text-sm" role="alert">
+                {{this.planner.myRoutes.saveError}}</p>
+            {{/if}}
+            {{#if this.planner.selectedOwn}}
+              {{#unless this.planner.isDrawing}}
+                <div class="wt-own-route flex flex-col gap-2">
+                  <Input
+                    @label="Name"
+                    @size="sm"
+                    @value={{this.planner.selectedOwn.name}}
+                    @onChange={{this.renameSelected}}
+                  />
+                  <p class="flex flex-wrap items-center gap-x-3 text-xs">
+                    {{#if this.planner.selectedOwn.sketch}}
+                      <button
+                        type="button"
+                        class="wt-link"
+                        {{on "click" this.editSelected}}
+                      >Edit route</button>
+                    {{/if}}
+                    <button
+                      type="button"
+                      class="wt-link-danger"
+                      {{on "click" this.deleteSelected}}
+                    >Delete this route</button>
+                  </p>
+                </div>
+              {{/unless}}
+            {{/if}}
           </div>
 
           {{#if this.planner.isDrawing}}

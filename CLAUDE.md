@@ -20,6 +20,7 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 - Privacy is the rule, not the mechanism: nothing about the user (their plan, routes, whereabouts) may reach a server, and the site has none, only static files. Where in the browser things are kept is a design choice: the URL for the plan, so a link shares it; browser storage (localStorage, IndexedDB) is fine for what doesn't fit there or belongs to the device, as long as it never leaves it.
 - Data files are imported through `app/utils/assets.ts` (`import.meta.glob` over `/data-out`, the mounted `data/out`), never fetched by fixed path, so they get hashed names and can be cached for a year.
 - `app/services/atlas.ts` loads the manifest and picker map first, a continent's climate grid and borders when it is opened, and a route's track when it is picked.
+- Your own routes: `app/services/my-routes.ts` keeps them in localStorage (whole tracks, names, a drawn route's clicks); the URL's `route` holds one's UUID (`isOwnRouteId`). Tests use their own storage key (`tests/helpers/index.ts`), so running them never touches real routes.
 - `app/services/planner.ts` is the single place components get state from; derived `route` and `trip` are `@cached`.
 - `app/utils/climate.ts` samples the climate grid (bilinear in space, a smooth seasonal curve in time) and owns the temperature colour scale.
 - `app/utils/itinerary.ts` splits a route into riding and rest days and attaches weather. `app/utils/route.ts` is geometry and GPX.

@@ -31,7 +31,7 @@ export const DEFAULTS = {
   dots: 'mm' as 'mm' | 'days',
   /** mm of rain from which a day counts as rainy */
   rainy: 5,
-  /** Selected route id; '' means the continent's default */
+  /** Selected route: a preset's id, or one of your routes' UUID; '' means the continent's default */
   route: '',
   /** First day of the trip; today by default */
   start: isoDate(),
@@ -43,9 +43,9 @@ export const DEFAULTS = {
   reverse: false,
   /** Highlighted trip day, 0 for none */
   day: 0,
-  /** Your own route, encoded (see encodeTrack) */
+  /** Old links only: a route carried in the link itself (see encodeTrack) and
+   * its name; it's saved to your routes on opening (IndexRoute.redirect) */
   track: '',
-  /** Name of your own route */
   name: '',
 };
 
@@ -73,6 +73,3 @@ export function inLimits(key: LimitedKey, v: number): boolean {
 /** A date as the date input and the URL hold it: yyyy-mm-dd. */
 export const isIsoDate = (v: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(v);
 export const SETTING_KEYS = Object.keys(DEFAULTS) as SettingKey[];
-
-/** Route id used for your own route (from `track`). */
-export const OWN_ROUTE_ID = 'mine';

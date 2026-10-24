@@ -69,4 +69,4 @@ These are climate normals, not forecasts: they say what is typical, not what a g
 There is no backend. The production image is nginx serving the built app:
 
 - Everything under `/assets/` (code and data) has a content hash in its name and is served with `Cache-Control: public, max-age=31536000, immutable`; `index.html` is `no-cache`, so new releases are picked up.
-- Every setting lives in the URL query string; values at their defaults are left out. Your own route is encoded in the URL too (polyline encoding, simplified to at most 600 points).
+- Every setting lives in the URL query string; values at their defaults are left out. Your own routes are kept whole in the browser's localStorage, never on a server; the URL names one by its UUID.

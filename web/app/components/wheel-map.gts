@@ -79,6 +79,8 @@ interface MapState {
   rainMetric: RainMetric;
   rainThreshold: number;
   route?: Route;
+  /** Your own routes (the selected one among them too) */
+  ownRoutes: Route[];
   trip?: Trip;
   isDrawing: boolean;
   /** The sketch (the clicks) and the line drawn from it */
@@ -473,30 +475,43 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       );
     }
 
-    // Every preset route of the shown continents, dashed; click one to pick
-    // it. The Routes toggle hides them (the selected route always shows).
+    // Every other route, dashed: the presets of the shown continents and your
+    // own routes. Click one to pick it. The Routes toggle hides them (the
+    // selected route always shows).
     const selectedId = s.route?.id;
     this.layer(
       'overview',
-      [ids, selectedId, atlas.overview.length, s.details.routes],
+      [ids, selectedId, atlas.overview.length, s.ownRoutes, s.details.routes],
       (group) => {
         if (!s.details.routes) return;
         const names = new Map(atlas.presets.map((r) => [r.id, r.name]));
-        for (const r of atlas.overview) {
-          if (r.id === selectedId || !atlas.loadedIds.includes(r.continent))
-            continue;
-          L.polyline(
-            r.lat.map((lat, i) => [lat, r.lon[i]!] as [number, number]),
-            {
-              pane: 'overview',
+        const others = [
+          ...atlas.overview
+            .filter((r) => atlas.loadedIds.includes(r.continent))
+            .map((r) => ({
+              id: r.id,
+              name: names.get(r.id) ?? r.id,
               color: r.color,
-              weight: 2.5,
-              opacity: 0.75,
-              dashArray: '6 5',
-              className: 'wt-overview-route',
-            },
-          )
-            .bindTooltip(names.get(r.id) ?? r.id, STICKY_TIP)
+              line: r.lat.map((lat, i) => [lat, r.lon[i]!] as [number, number]),
+            })),
+          ...s.ownRoutes.map((r) => ({
+            id: r.id,
+            name: r.name,
+            color: r.color,
+            line: r.points.map(latLng),
+          })),
+        ];
+        for (const r of others) {
+          if (r.id === selectedId) continue;
+          L.polyline(r.line, {
+            pane: 'overview',
+            color: r.color,
+            weight: 2.5,
+            opacity: 0.75,
+            dashArray: '6 5',
+            className: 'wt-overview-route',
+          })
+            .bindTooltip(r.name, STICKY_TIP)
             .on(
               'click',
               this.unlessDrawing(
@@ -679,6 +694,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
       rainMetric: p.rainMetric,
       rainThreshold: p.rainThreshold,
       route: p.route,
+      ownRoutes: p.ownRoutes,
       trip: p.trip,
       isDrawing: p.isDrawing,
       sketch: [...p.sketch],

@@ -202,13 +202,11 @@ ${pts}
 `;
 }
 
-// --- Own routes in the URL ----------------------------------------------------
-// A drawn or imported route is kept in the address bar so a bookmark or reload
-// brings it back. Coordinates use the Google polyline encoding (1e-5 degrees),
-// with elevation in whole metres as a third value when the track has it. A "3"
-// or "2" prefix says which. Long tracks are simplified to MAX_URL_POINTS first.
-
-const MAX_URL_POINTS = 600;
+// --- Track encoding ------------------------------------------------------------
+// Your own routes are saved in the browser (services/my-routes.ts) in a compact
+// text form: the Google polyline encoding (1e-5 degrees), with elevation in
+// whole metres as a third value when the track has it. A "3" or "2" prefix says
+// which. Old links carried a route in this form too (the `track` parameter).
 
 function encodeValue(v: number, out: string[]): void {
   let n = v < 0 ? ~(v << 1) : v << 1;
@@ -222,13 +220,12 @@ function encodeValue(v: number, out: string[]): void {
 export function encodeTrack(
   coords: { lat: number; lon: number; ele?: number | null }[],
 ): string {
-  const pts = simplifyToCount(coords, MAX_URL_POINTS);
-  const hasEle = pts.every((p) => p.ele !== null && p.ele !== undefined);
+  const hasEle = coords.every((p) => p.ele !== null && p.ele !== undefined);
   const out: string[] = [hasEle ? '3' : '2'];
   let pLat = 0;
   let pLon = 0;
   let pEle = 0;
-  for (const p of pts) {
+  for (const p of coords) {
     const lat = Math.round(p.lat * 1e5);
     const lon = Math.round(p.lon * 1e5);
     encodeValue(lat - pLat, out);
@@ -273,57 +270,4 @@ export function decodeTrack(
     }
   }
   return out;
-}
-
-/** Douglas-Peucker with a growing tolerance until at most `max` points remain. */
-function simplifyToCount<T extends { lat: number; lon: number }>(
-  pts: T[],
-  max: number,
-): T[] {
-  if (pts.length <= max) return pts;
-  let tol = 10;
-  let out = pts;
-  while (out.length > max) {
-    out = simplify(pts, tol);
-    tol *= 1.5;
-  }
-  return out;
-}
-
-function simplify<T extends { lat: number; lon: number }>(
-  pts: T[],
-  tolM: number,
-): T[] {
-  const lat0 =
-    (pts.reduce((s, p) => s + p.lat, 0) / pts.length) * (Math.PI / 180);
-  const xy = pts.map((p) => [
-    p.lon * (Math.PI / 180) * Math.cos(lat0) * 6371000,
-    p.lat * (Math.PI / 180) * 6371000,
-  ]);
-  const keep = new Uint8Array(pts.length);
-  keep[0] = keep[pts.length - 1] = 1;
-  const stack: [number, number][] = [[0, pts.length - 1]];
-  while (stack.length) {
-    const [i, j] = stack.pop()!;
-    const [x1, y1] = xy[i]!;
-    const [x2, y2] = xy[j]!;
-    const dx = x2! - x1!;
-    const dy = y2! - y1!;
-    const norm = Math.hypot(dx, dy) || 1e-9;
-    let best = 0;
-    let idx = -1;
-    for (let k = i + 1; k < j; k++) {
-      const [x, y] = xy[k]!;
-      const dist = Math.abs(dy * x! - dx * y! + x2! * y1! - y2! * x1!) / norm;
-      if (dist > best) {
-        best = dist;
-        idx = k;
-      }
-    }
-    if (best > tolM && idx > 0) {
-      keep[idx] = 1;
-      stack.push([i, idx], [idx, j]);
-    }
-  }
-  return pts.filter((_, i) => keep[i]);
 }

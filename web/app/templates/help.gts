@@ -147,8 +147,9 @@ export default class Help extends Component {
                   out. It only darkens, so the temperature colours stay true.</dd></div>
               <div><dt>Water</dt><dd>Main rivers and lakes; many routes follow a
                   river.</dd></div>
-              <div><dt>Routes</dt><dd>The dashed routes you haven't picked.
-                  Click one to pick it; your own route always shows.</dd></div>
+              <div><dt>Routes</dt><dd>The dashed routes you haven't picked. Your
+                  own routes show here too. Click one to pick it; the picked
+                  route always shows.</dd></div>
             </dl>
             <p>
               Cities and water are downloaded only once you switch them on.
@@ -307,24 +308,31 @@ export default class Help extends Component {
               height, so no climbing and no altitude correction.
             </p>
 
-            <h3>GPX files</h3>
+            <h3>Your routes</h3>
             <p>
-              “Import GPX” makes a track from your file your route, with its
-              heights, so climbing and the altitude correction work. “Export
-              GPX” saves the selected route as a file, for your bike computer or
-              another app. You have one route of your own: drawing or importing
-              another replaces it, and “Delete this route” removes it.
+              Every route you draw or import is kept, under “Your routes” in the
+              list and dashed on the map. A drawn one is called Route 1, Route 2
+              and so on; an imported one takes the name in its file. Pick one to
+              change its name in the Name field, or to delete it. “Edit route”
+              takes a drawn route back into drawing, with your clicks as you
+              left them: add to it, undo, and save over the old one. Imported
+              tracks can't be reshaped that way.
             </p>
             <p>
-              Any size of file works. Your route is kept in the page address
-              (see Sharing &amp; privacy), so it's stored as at most 600 points,
-              about 3,000–4,500 characters of the link: short enough for any
-              browser, bookmark or chat app. Small bends are smoothed away to
-              get there. On a route of 1,500–2,500 km the kept line stays within
-              about 100 m of your track on average and within 600 m everywhere;
-              on a 10,000 km route, about 800 m on average and within 5 km.
-              That's well below the climate grid's 25 km, so the weather along
-              the way is the same.
+              They're kept in this browser only, whole and as long as you like
+              (any size of GPX works), never on a server. The link to one says
+              which of your routes it is, not the route itself, so it opens only
+              in the browser where the route was made. To give a route to
+              someone, send them its GPX file. Clearing this site's data in your
+              browser deletes them; export a GPX of any you want to keep.
+            </p>
+
+            <h3>GPX files</h3>
+            <p>
+              “Import GPX” adds the track in your file to your routes, with its
+              heights, so climbing and the altitude correction work. “Export
+              GPX” saves the selected route as a file, for your bike computer,
+              another app or another browser.
             </p>
           </section>
         {{/if}}
@@ -448,21 +456,23 @@ export default class Help extends Component {
           <section id="sharing">
             <h2>Sharing and privacy</h2>
             <p>
-              Your whole plan lives in the page address: continents, week, map
-              layers, route, start date, distances, speed, rest pattern, the
-              picked day and your own route. Bookmark it or send the link, and
-              the same plan opens again. Settings left at their defaults are
-              left out, so links stay short.
+              Your plan lives in the page address: continents, week, map layers,
+              route, start date, distances, speed, rest pattern and the picked
+              day. Bookmark it or send the link, and the same plan opens again.
+              Settings left at their defaults are left out, so links stay short.
+              Your own routes are the exception: they're kept in this browser,
+              and a link only names one, so someone else opening it is told to
+              ask you for its GPX file.
             </p>
             <p>
-              None of it goes to a server: nothing about you or your plan leaves
-              your browser unless you send the link yourself. Forkcast runs
-              entirely in your browser; the site is just files, with no server
-              behind it, no account, no cookies, no analytics, no ads and no
-              tracking. The page, its fonts and its data all come from the site
-              itself, and your browser is told to refuse anything from
-              elsewhere. Following a link out of the app doesn't pass your plan
-              on.
+              None of it goes to a server: nothing about you, your plan or your
+              routes leaves your browser unless you send the link or a GPX file
+              yourself. Forkcast runs entirely in your browser; the site is just
+              files, with no server behind it, no account, no cookies, no
+              analytics, no ads and no tracking. The page, its fonts and its
+              data all come from the site itself, and your browser is told to
+              refuse anything from elsewhere. Following a link out of the app
+              doesn't pass your plan on.
             </p>
           </section>
         {{/if}}

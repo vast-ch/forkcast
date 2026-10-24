@@ -608,10 +608,18 @@ body {
   align-self: stretch;
   border-radius: 2px;
 }
+/* Text buttons under the route picker: Edit route, Delete this route. */
+.wt-link,
 .wt-link-danger {
-  color: var(--wt-danger);
   padding: 0.25rem;
 }
+.wt-link {
+  color: var(--wt-accent);
+}
+.wt-link-danger {
+  color: var(--wt-danger);
+}
+.wt-link:hover,
 .wt-link-danger:hover {
   text-decoration: underline;
 }
