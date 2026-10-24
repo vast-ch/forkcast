@@ -78,6 +78,12 @@ body {
   flex-direction: column;
   overflow-y: auto;
 }
+/* Each part keeps its full height and the page scrolls: the panel's own
+   desktop sizing (shrink to fit, scroll inside) would squeeze the trip
+   overview into whatever is left under the map. */
+.wt-phone > * {
+  flex: none;
+}
 .wt-phone-bar {
   position: sticky;
   top: 0;
@@ -124,9 +130,6 @@ body {
   background: color-mix(in srgb, var(--wt-paper) 94%, transparent);
   border: 1px dashed #b5179e;
   border-radius: 6px;
-}
-.wt-phone-overview {
-  padding-block: 0.5rem 2rem;
 }
 
 @media (max-width: 899px) {

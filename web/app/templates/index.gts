@@ -118,7 +118,6 @@ export default class IndexTemplate extends Component {
           {{/if}}
         </section>
         <ChartPanel @trip={{this.planner.trip}} />
-        <SidePanel @part="overview" class="wt-phone-overview" />
       </main>
       {{#if this.showSettings}}
         <Drawer

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- On phones and in narrow browser windows the trip summary (days, arrival, riding and rest days, average high, rainy days, coldest night) was cut off under the day chart and couldn't be scrolled to. It now sits with the trip settings in the Settings drawer, where it belongs, and the page under the map scrolls again.
+
 ## v0.9.0 - 2026-10-24
 
 ### Added
