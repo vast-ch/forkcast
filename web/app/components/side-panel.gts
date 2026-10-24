@@ -331,7 +331,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 </div>
               </div>
             {{else}}
-              <div class="grid grid-cols-3 gap-2">
+              <div class="wt-route-actions grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   class="wt-btn justify-center"

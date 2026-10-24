@@ -148,6 +148,10 @@ body {
   .wt-legend-dots {
     gap: 0.45rem !important;
   }
+  /* Draw / Import / Export: one per row, full width; three across wrap. */
+  .wt-route-actions {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
   .wt-map .leaflet-control-attribution {
     font-size: 9px;
     line-height: 1.3;
