@@ -14,9 +14,7 @@ import gzip
 import json
 import math
 import re
-import sys
 import time
-import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 

@@ -874,10 +874,6 @@ body {
   border: 1px solid var(--wt-line);
   border-radius: 8px;
 }
-.wt-help-demo-caption {
-  font-size: 0.8rem;
-  color: var(--wt-muted);
-}
 .wt-help p,
 .wt-help li {
   line-height: 1.6;

@@ -36,7 +36,7 @@ import sys
 import time
 
 from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, manifest, routes
-from .pipeline import STAMPS, Stamp, is_verified, log
+from .pipeline import STAMPS, is_verified, log
 
 YEARS = (2011, 2025)
 
