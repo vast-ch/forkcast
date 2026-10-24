@@ -311,12 +311,13 @@ export default class Help extends Component {
             <h3>Your routes</h3>
             <p>
               Every route you draw or import is kept, under “Your routes” in the
-              list and dashed on the map. A drawn one is called Route 1, Route 2
-              and so on; an imported one takes the name in its file. Pick one to
-              change its name in the Name field, or to delete it. “Edit route”
-              takes a drawn route back into drawing, with your clicks as you
-              left them: add to it, undo, and save over the old one. Imported
-              tracks can't be reshaped that way.
+              list and dashed on the map. Name a route as you draw it (it starts
+              as Route 1, Route 2 and so on; an imported one takes the name in
+              its file). Pick one and press “Edit route” to change it: a drawn
+              route goes back into drawing, with your clicks as you left them,
+              to add to, undo and save over the old one; an imported track can't
+              be reshaped that way, so for it Edit route changes the name only.
+              “Delete this route” removes it.
             </p>
             <p>
               They're kept in this browser only, whole and as long as you like

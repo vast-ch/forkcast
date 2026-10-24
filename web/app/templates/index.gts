@@ -15,7 +15,7 @@ import Legend from 'forkcast/components/legend';
 import ItineraryChart from 'forkcast/components/itinerary-chart';
 import Logo from 'forkcast/components/logo';
 import HelpLink from 'forkcast/components/help-link';
-import DrawControls from 'forkcast/components/draw-controls';
+import RouteEditor from 'forkcast/components/route-editor';
 import type { TOC } from '@ember/component/template-only';
 import type { Trip } from 'forkcast/utils/itinerary';
 
@@ -76,7 +76,7 @@ export default class IndexTemplate extends Component {
           <Legend class="absolute bottom-6 left-3 z-[1000]" />
           {{#if this.planner.isDrawing}}
             {{! Drawing needs the map, so the drawer closes and these take over. }}
-            <DrawControls class="wt-draw-bar" @onSave={{this.closeSettings}} />
+            <RouteEditor class="wt-draw-bar" @onSave={{this.closeSettings}} />
           {{/if}}
         </section>
         <ChartPanel @trip={{this.planner.trip}} />

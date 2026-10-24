@@ -17,8 +17,10 @@ module('Acceptance | my routes', function (hooks) {
   async function draw(
     owner: { lookup(name: 'service:planner'): unknown },
     points: { lat: number; lon: number }[],
+    name?: string,
   ) {
     await click(button('Draw a route'));
+    if (name) await fillIn(field('Name'), name);
     const planner = owner.lookup('service:planner') as {
       addDrawnPoint(lat: number, lon: number): void;
     };
@@ -31,17 +33,14 @@ module('Acceptance | my routes', function (hooks) {
     await draw(this.owner, [BERN, LUCERNE]);
 
     assert.dom('#route-picker option:checked').includesText('Route 1');
-    assert.dom(field('Name')).hasValue('Route 1');
     assert.ok(UUID.test(currentURL()), currentURL());
     assert.dom('.wt-summary').exists('the trip is planned');
   });
 
   test('several routes, each renamed, picked and deleted on its own', async function (assert) {
     await visit('/');
-    await draw(this.owner, [BERN, LUCERNE]);
-    await fillIn(field('Name'), 'To Lucerne');
-    await draw(this.owner, [LUCERNE, ZURICH]);
-    await fillIn(field('Name'), 'To Zürich');
+    await draw(this.owner, [BERN, LUCERNE], 'To Lucerne');
+    await draw(this.owner, [LUCERNE, ZURICH], 'To Zürich');
 
     const mine = () =>
       [
@@ -55,7 +54,7 @@ module('Acceptance | my routes', function (hooks) {
       '#route-picker optgroup[label="Your routes"] option',
     )!;
     await fillIn('#route-picker', first.value);
-    assert.dom(field('Name')).hasValue('To Lucerne');
+    assert.dom('#route-picker option:checked').includesText('To Lucerne');
 
     await click(button('Delete this route'));
     assert.deepEqual(mine(), ['To Zürich']);
@@ -86,7 +85,43 @@ module('Acceptance | my routes', function (hooks) {
       .dom('#route-picker optgroup[label="Your routes"] option')
       .exists({ count: 1 });
     assert.notStrictEqual(km(), before, 'longer now');
-    assert.dom(field('Name')).hasValue('Route 1');
+    assert.dom('#route-picker option:checked').includesText('Route 1');
+  });
+
+  test('while drawing a route further, only the new line shows, so Undo is visible', async function (assert) {
+    await visit('/');
+    await draw(this.owner, [BERN, LUCERNE, ZURICH]);
+    const ownLines = () =>
+      [...document.querySelectorAll('.leaflet-overlay-pane path')].filter(
+        (p) => p.getAttribute('stroke') === '#b5179e',
+      ).length;
+    assert.strictEqual(ownLines(), 1, 'the saved route');
+
+    await click(button('Edit route'));
+    assert.strictEqual(ownLines(), 1, 'only the line being drawn');
+    const d = () =>
+      [...document.querySelectorAll('.leaflet-overlay-pane path')]
+        .find((p) => p.getAttribute('stroke') === '#b5179e')!
+        .getAttribute('d');
+    const before = d();
+    await click(button('Undo'));
+    assert.notStrictEqual(d(), before, 'Undo shortens the line on the map');
+
+    await click(button('Cancel'));
+    assert.strictEqual(ownLines(), 1, 'the saved route is back');
+  });
+
+  test('editing an imported route edits only its name', async function (assert) {
+    const track = encodeTrack([BERN, ZURICH]);
+    await visit(`/?track=${encodeURIComponent(track)}&name=Imported`);
+    assert.dom(field('Name', { optional: true })).doesNotExist();
+
+    await click(button('Edit route'));
+    assert.dom('[aria-label="Editing a route"]').exists();
+    await fillIn(field('Name'), 'Renamed');
+    await click(button('Save route'));
+    assert.dom('#route-picker option:checked').includesText('Renamed');
+    assert.dom('[aria-label="Editing a route"]').doesNotExist();
   });
 
   test('a link to a route saved in another browser warns', async function (assert) {
@@ -111,13 +146,5 @@ module('Acceptance | my routes', function (hooks) {
     assert
       .dom('#route-picker optgroup[label="Your routes"] option')
       .exists({ count: 1 });
-  });
-
-  test('imported routes have no Edit route (only rename and delete)', async function (assert) {
-    const track = encodeTrack([BERN, ZURICH]);
-    await visit(`/?track=${encodeURIComponent(track)}`);
-    assert.dom(field('Name')).exists();
-    assert.throws(() => button('Edit route'));
-    assert.dom(button('Delete this route')).exists();
   });
 });

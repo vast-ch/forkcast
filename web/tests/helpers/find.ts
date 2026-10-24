@@ -9,11 +9,19 @@ export function button(text: string): HTMLElement {
   return el as HTMLElement;
 }
 
-/** The form field labelled `text`. */
-export function field(text: string): HTMLInputElement {
+/** The form field labelled `text` (with `optional`, null when there's none). */
+export function field(text: string): HTMLInputElement;
+export function field(
+  text: string,
+  options: { optional: true },
+): HTMLInputElement | null;
+export function field(
+  text: string,
+  options?: { optional: true },
+): HTMLInputElement | null {
   const label = findAll('label').find((l) => l.textContent?.trim() === text);
   const input =
     label && find(`#${CSS.escape(label.getAttribute('for') ?? '')}`);
-  if (!input) throw new Error(`No field "${text}"`);
-  return input as HTMLInputElement;
+  if (!input && !options?.optional) throw new Error(`No field "${text}"`);
+  return (input as HTMLInputElement | null) ?? null;
 }

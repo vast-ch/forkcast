@@ -87,8 +87,11 @@ export default class PlannerService extends Service {
   sketch = new TrackedArray<{ lat: number; lon: number }>();
   /** While drawing: follow the cycle routes between clicks, or draw straight lines. */
   @tracked snapToRoutes = true;
-  /** While drawing further on one of your routes: its id. */
+  /** While editing one of your routes (drawing it further, or renaming an
+   * imported one): its id. */
   @tracked editingId?: string;
+  /** The name in the editor while drawing or editing; applied on save. */
+  @tracked draftName = '';
 
   private read<K extends SettingKey>(key: K): (typeof DEFAULTS)[K] {
     return this.qp ? this.qp[key] : DEFAULTS[key];
@@ -427,10 +430,6 @@ export default class PlannerService extends Service {
     this.highlightedDay = undefined;
   }
 
-  renameRoute(id: string, name: string): void {
-    this.myRoutes.rename(id, name);
-  }
-
   /** Delete one of your routes; if it was selected, the default comes back. */
   deleteRoute(id: string): void {
     this.myRoutes.remove(id);
@@ -441,7 +440,12 @@ export default class PlannerService extends Service {
     }
   }
 
-  // --- Drawing ----------------------------------------------------------------
+  // --- Drawing and editing -----------------------------------------------------
+
+  /** Drawing a new route, or editing one of yours. */
+  get isEditing(): boolean {
+    return this.isDrawing || this.editingId !== undefined;
+  }
 
   /** Draw a new route, or carry on drawing one of yours (`id`). */
   startDrawing(id?: string): void {
@@ -449,8 +453,19 @@ export default class PlannerService extends Service {
     this.sketch.splice(0, this.sketch.length, ...(saved?.sketch ?? []));
     if (saved?.snap !== undefined) this.snapToRoutes = saved.snap;
     this.editingId = saved?.id;
+    this.draftName = saved?.name ?? this.myRoutes.nextName();
     this.isDrawing = true;
     this.loadCycleNet();
+  }
+
+  /** Edit one of your routes: drawn ones go back into drawing, imported ones
+   * (which can't be reshaped) only get their name edited. */
+  editRoute(id: string): void {
+    const saved = this.myRoutes.find(id);
+    if (!saved) return;
+    if (saved.sketch) return this.startDrawing(id);
+    this.editingId = id;
+    this.draftName = saved.name;
   }
 
   /**
@@ -496,34 +511,45 @@ export default class PlannerService extends Service {
     this.sketch.pop();
   }
 
-  cancelDrawing(): void {
+  /** Leave drawing or editing without saving. */
+  cancelEditing(): void {
     this.isDrawing = false;
     this.editingId = undefined;
+    this.draftName = '';
     this.sketch.splice(0, this.sketch.length);
   }
 
-  /** A drawn route needs at least two points. */
-  get canFinishDrawing(): boolean {
+  /** A drawn route needs at least two points; a rename can always be saved. */
+  get canSave(): boolean {
+    if (!this.isDrawing) return true;
     return this.sketch.length >= 2 && this.drawn.length >= 2;
   }
 
-  /** Save the drawing: as a new route, or over the one being drawn further. */
-  finishDrawing(): void {
-    if (this.canFinishDrawing) {
-      const coords = [...this.drawn];
-      const sketch = [...this.sketch];
-      if (this.editingId) {
-        this.myRoutes.redraw(this.editingId, coords, sketch, this.snapToRoutes);
-        this.highlightedDay = undefined;
-      } else {
-        const saved = this.myRoutes.add(coords, this.myRoutes.nextName(), {
-          sketch,
-          snap: this.snapToRoutes,
-        });
-        this.#selectOwn(saved.id);
+  /** Save the drawing or the edit: a new route, or over the one edited. */
+  saveEditing(): void {
+    if (this.canSave) {
+      const id = this.editingId;
+      if (this.isDrawing) {
+        const coords = [...this.drawn];
+        const sketch = [...this.sketch];
+        if (id) {
+          this.myRoutes.redraw(id, coords, sketch, this.snapToRoutes);
+          this.highlightedDay = undefined;
+        } else {
+          const saved = this.myRoutes.add(coords, this.draftName, {
+            sketch,
+            snap: this.snapToRoutes,
+          });
+          this.#selectOwn(saved.id);
+        }
       }
+      if (id)
+        this.myRoutes.rename(
+          id,
+          this.draftName.trim() || this.myRoutes.find(id)!.name,
+        );
     }
-    this.cancelDrawing();
+    this.cancelEditing();
   }
 }
 

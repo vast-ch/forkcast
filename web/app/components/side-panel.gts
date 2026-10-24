@@ -25,7 +25,7 @@ import { gpxName, parseGpx, toGpx } from 'forkcast/utils/route';
 import Logo from 'forkcast/components/logo';
 import HelpLink from 'forkcast/components/help-link';
 import RangeInput from 'forkcast/components/range-input';
-import DrawControls from 'forkcast/components/draw-controls';
+import RouteEditor from 'forkcast/components/route-editor';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 
 type MapSetting =
@@ -172,9 +172,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
   };
 
   deleteSelected = () => this.planner.deleteRoute(this.planner.routeId);
-  renameSelected = (name: string) =>
-    this.planner.renameRoute(this.planner.routeId, name);
-  editSelected = () => this.planner.startDrawing(this.planner.routeId);
+  editSelected = () => this.planner.editRoute(this.planner.routeId);
   /** From the date picker: a Date (or null if cleared, which it can't be here). */
   setStart = (d: Date | null) => {
     if (d) this.planner.setStart(isoDate(d));
@@ -298,35 +296,25 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 {{this.planner.myRoutes.saveError}}</p>
             {{/if}}
             {{#if this.planner.selectedOwn}}
-              {{#unless this.planner.isDrawing}}
-                <div class="wt-own-route flex flex-col gap-2">
-                  <Input
-                    @label="Name"
-                    @size="sm"
-                    @value={{this.planner.selectedOwn.name}}
-                    @onChange={{this.renameSelected}}
-                  />
-                  <p class="flex flex-wrap items-center gap-x-3 text-xs">
-                    {{#if this.planner.selectedOwn.sketch}}
-                      <button
-                        type="button"
-                        class="wt-link"
-                        {{on "click" this.editSelected}}
-                      >Edit route</button>
-                    {{/if}}
-                    <button
-                      type="button"
-                      class="wt-link-danger"
-                      {{on "click" this.deleteSelected}}
-                    >Delete this route</button>
-                  </p>
-                </div>
+              {{#unless this.planner.isEditing}}
+                <p class="flex flex-wrap items-center gap-x-3 text-xs">
+                  <button
+                    type="button"
+                    class="wt-link"
+                    {{on "click" this.editSelected}}
+                  >Edit route</button>
+                  <button
+                    type="button"
+                    class="wt-link-danger"
+                    {{on "click" this.deleteSelected}}
+                  >Delete this route</button>
+                </p>
               {{/unless}}
             {{/if}}
           </div>
 
-          {{#if this.planner.isDrawing}}
-            <DrawControls class="wt-draw p-3" />
+          {{#if this.planner.isEditing}}
+            <RouteEditor class="wt-draw p-3" />
           {{else}}
             <div class="wt-route-actions grid grid-cols-3 gap-2">
               <button
