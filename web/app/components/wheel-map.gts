@@ -277,14 +277,25 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       this.replace('cyclenet', (group) => {
         if (!s.showCycleNet) return;
         const renderer = (this.netRenderer ??= L.canvas({ pane: 'water' }));
-        for (const net of files('cyclenet')) {
-          for (const line of net.lines) {
-            L.polyline(line.map(lonLat), {
+        // Black outline, white inside, like a road on a map, so the routes
+        // stand apart from everything else: every outline first, then every
+        // fill, so junctions stay white.
+        const lines = files('cyclenet').flatMap((net) =>
+          net.lines.map((line) => line.map(lonLat)),
+        );
+        for (const [color, weight] of [
+          ['#17212b', 4],
+          ['#fff', 2],
+        ] as const) {
+          for (const line of lines) {
+            L.polyline(line, {
               renderer,
               interactive: false,
-              weight: 2,
-              color: '#0d6b78',
-              opacity: 0.45,
+              weight,
+              color,
+              opacity: 1,
+              lineCap: 'round',
+              lineJoin: 'round',
             }).addTo(group);
           }
         }
