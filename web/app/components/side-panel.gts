@@ -510,7 +510,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
               </SegmentedControl>
             </div>
             <ButtonGroup
-              @size="sm"
+              @size="xs"
               class="wt-detail-toggles"
               role="group"
               aria-label="Show on the map"

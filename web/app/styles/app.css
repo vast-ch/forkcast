@@ -340,6 +340,30 @@ body {
   justify-content: center;
 }
 
+/* Map details: the Map section's toggles, quieter than Frontile's default
+   (black when on): white when off, a soft teal when on. */
+.wt-detail-toggles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.wt-detail-toggles button {
+  justify-content: center;
+  height: 1.75rem;
+  font-size: 12px;
+  font-weight: 500;
+  background: #fff;
+  color: var(--wt-muted);
+  border-color: var(--wt-line);
+  box-shadow: none;
+}
+.wt-detail-toggles button:hover {
+  background: var(--wt-band);
+}
+.wt-detail-toggles button[aria-pressed="true"] {
+  background: var(--wt-accent-soft);
+  color: var(--wt-accent);
+  border-color: color-mix(in srgb, var(--wt-accent) 35%, transparent);
+}
 /* Map details (the Map section's toggles). */
 .leaflet-relief-pane {
   mix-blend-mode: multiply;
