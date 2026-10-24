@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Drawing a route now follows the international cycle routes in Europe, Africa and Asia (in Europe, the EuroVelo routes). The other continents follow with the next data update.
+
 ### Changed
 
 - Drawing a route is quieter: just the "Follow cycle routes" switch and the Save, Undo and Cancel buttons, without instructions or a name to fill in (a drawn route is called "My route"). The help's Routes tab explains drawing.

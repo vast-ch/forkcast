@@ -47,6 +47,12 @@ work after `data`).
 
 ### Cycle network
 
+The files in `out/` for Europe, Africa and Asia were built from an earlier
+area-based fetch, while every public Overpass server was overloaded; North
+America, South America and Oceania have none yet (drawing there gives
+straight lines). `download cyclenet` then `build cyclenet` replaces them all
+when a server is available.
+
 Why by route and not by area: on a busy public Overpass server, what times out
 is a query that has to scan a large region (a 20° tile, or a whole continent),
 and most of those regions are empty. Asking for routes by id never scans an
