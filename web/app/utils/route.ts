@@ -1,5 +1,7 @@
 // Route geometry: cumulative distances, positions along a route, GPX in/out.
 
+import { haversineKm } from './geo';
+
 export interface RoutePoint {
   lat: number;
   lon: number;
@@ -62,19 +64,6 @@ export function routeFromJson(r: RouteJson): Route {
       km: r.km_at[i]!,
     })),
   };
-}
-
-export function haversineKm(
-  a: { lat: number; lon: number },
-  b: { lat: number; lon: number },
-): number {
-  const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLon = (b.lon - a.lon) * rad;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
-  return 6371.0088 * 2 * Math.asin(Math.sqrt(h));
 }
 
 /** Build route points (with cumulative km) from plain coordinates. */

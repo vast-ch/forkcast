@@ -6,6 +6,8 @@
 // are rounded to 0.001°, so a junction is the same point in both) are joined
 // there. Distances are great-circle km.
 
+import { km, lineKm } from './geo';
+
 export interface CycleNetJson {
   /** Lines of [lon, lat] points */
   lines: [number, number][][];
@@ -16,17 +18,7 @@ export interface LatLon {
   lon: number;
 }
 
-const R = 6371;
 const RAD = Math.PI / 180;
-
-function km(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const dLat = (lat2 - lat1) * RAD;
-  const dLon = (lon2 - lon1) * RAD;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * RAD) * Math.cos(lat2 * RAD) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
-}
 
 /** Grid cell size for the nearest-segment lookup, degrees. */
 const CELL = 0.05;
@@ -310,7 +302,7 @@ export class CycleNet {
           here.point.lat,
           here.point.lon,
         );
-        if (path && length(path) <= detour * straight + 3) path.forEach(add);
+        if (path && lineKm(path) <= detour * straight + 3) path.forEach(add);
         else add(here.point);
       } else {
         add(here.point);
@@ -319,13 +311,4 @@ export class CycleNet {
     }
     return out;
   }
-}
-
-/** Length of a line in km. */
-function length(line: LatLon[]): number {
-  let total = 0;
-  for (let i = 1; i < line.length; i++) {
-    total += km(line[i - 1]!.lat, line[i - 1]!.lon, line[i]!.lat, line[i]!.lon);
-  }
-  return total;
 }
