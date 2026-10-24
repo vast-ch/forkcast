@@ -29,12 +29,7 @@ work after `data`).
 | `brouter` | Geocodes the hand-made routes' stops (`forkcast_data/geocoded.json`, committed) and routes each leg with BRouter | small | Public servers: Nominatim (1 request/s) and brouter.de. |
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
 | `details` | Natural Earth populated places and geography regions (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
-
-Not in `all` (run by name; drafts the app doesn't use yet):
-
-| Step | What | Size | Notes |
-|---|---|---|---|
-| `cyclenet` | OpenStreetMap bicycle route relations, international and national (network `icn`, `ncn`), from the Overpass API, one query per 5° × 5° tile, cached per tile in `cache/cyclenet/<continent>/<networks>/` | Europe: 140 tiles; one tile around Switzerland was 16 MB and 2 minutes | ODbL, © OpenStreetMap contributors. One query at a time with a pause; an interrupted run resumes. |
+| `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API, one query per 20° × 20° tile of each continent, cached per tile in `cache/cyclenet/<continent>/icn/` | 131 tiles, most of them empty | ODbL, © OpenStreetMap contributors. One query at a time with a pause; an interrupted run resumes. |
 
 ### Builds (into `out/`, committed)
 
@@ -46,21 +41,24 @@ Not in `all` (run by name; drafts the app doesn't use yet):
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `out/<continent>/climate.bin` + `climate.json` |
 | `manifest` | everything above | `out/manifest.json` |
-| `cyclenet` (not in `all`) | `cache/cyclenet/` | `out/<continent>/cyclenet.json`: every way once, simplified to about 300 m. |
+| `cyclenet` | `cache/cyclenet/` | `out/<continent>/cyclenet.json`: every way once, joined end to end into long lines, simplified to about 300 m. The app fetches a continent's file only when it is shown and the rider draws with snapping on. |
 
 `all` runs every download, then every build, in the order of these tables.
 
-### Cycle network (draft)
+### Cycle network
 
-For drawing routes that follow real cycling roads, offline. First
-measurement, one tile (45–50°N, 5–10°E): with regional routes (`rcn`)
-included it was 206,610 ways and about 2 million points, still 415,000 after
-simplifying to 300 m, far too much to ship for a continent. Before the app
-uses it, decide the cut: national and international routes only, a coarser
-simplification, or splitting the network into tiles the app fetches only
-while drawing. The Overpass server returned 502 to the follow-up query, so
-the national-only size is still to be measured; run
-`download cyclenet` when it is quiet.
+For drawing routes that follow cycle routes, offline: international routes
+only (`icn`), for every continent. Why not more, measured on Switzerland:
+
+- International routes touching Switzerland: about 2,500 km in 10,161 short
+  OSM ways, 107,191 points; 75–85 kB gzipped before joining the ways.
+- With regional routes (`rcn`) one 5° tile (45–50°N, 5–10°E) was 206,610 ways
+  and about 2 million points, still 415,000 after simplifying to 300 m: far too
+  much to ship for a continent.
+- National routes (`ncn`) would roughly triple Europe; the cache keeps tiles per
+  choice of networks (`cache/cyclenet/<continent>/<networks>/`), so trying them
+  later doesn't mix with these.
+
 Builds never use the network; a build whose inputs are missing stops and says
 which download to run.
 

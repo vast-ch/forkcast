@@ -195,8 +195,8 @@ Under the map, one column per day: the day number on top, a bar from the night l
   a join that isn't connected or would be a detour (over 3× the straight
   distance) is straight. Off, the clicks are joined with straight lines. The map
   shows the sketch dashed under the result; Undo removes the last click. The
-  network is `out/<continent>/cyclenet.json` (OpenStreetMap international and
-  national bicycle routes, see data/README.md), fetched only when drawing with
+  network is `out/<continent>/cyclenet.json` (OpenStreetMap international
+  bicycle routes, every continent, see data/README.md), fetched only when drawing with
   snapping on and shown faintly meanwhile; continents without a network file
   just get straight lines.
 

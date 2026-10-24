@@ -1,24 +1,25 @@
-"""Cycle network: OpenStreetMap's signed cycle routes, for drawing routes that
-follow real cycling roads (draft: the app doesn't use it yet).
+"""Cycle network: OpenStreetMap's international bicycle routes, for drawing
+routes that follow them (the app snaps clicks to it and routes along it).
 
-- download: the ways of every bicycle route relation at international and
-  national level (network icn, ncn) from the Overpass API,
-  one query per 5° × 5° tile of each continent in CONTINENTS, one at a time
-  with a pause between. Each tile is cached on its own in
+- download: the ways of every international bicycle route relation (network
+  icn; in Europe essentially EuroVelo, elsewhere little) from the Overpass API,
+  one query per 20° × 20° tile of each continent, one at a time with a pause
+  between. Each tile is cached on its own in
   cache/cyclenet/<continent>/<networks>/<tile>.json.gz as
   {"ways": {id: [[lon, lat], …]}}, so an interrupted run picks up where it
-  stopped, and a different choice of networks starts its own cache. Regional
-  (rcn) and local (lcn) routes are left out for now: one tile around
-  Switzerland with regional routes was about 2 million points.
+  stopped, and a different choice of networks starts its own cache. National
+  (ncn) and regional (rcn) routes are left out for now; see data/README.md for
+  what they would weigh.
 - build: out/<continent>/cyclenet.json, {"lines": [[[lon, lat], …], …]}: every
-  way once (ways cross tile edges), simplified to about 300 m and rounded to
-  0.001° (about 100 m).
+  way once (ways cross tile edges), joined end to end into long lines where
+  exactly two meet (OSM splits routes into many short ways), simplified to
+  about 300 m and rounded to 0.001° (about 100 m). The app fetches a
+  continent's file only when that continent is shown and the rider draws with
+  snapping on.
 
-Data © OpenStreetMap contributors, ODbL: the app must credit it wherever the
-network is shown or used.
+Data © OpenStreetMap contributors, ODbL: credited on the map and the help page.
 
 Usage: uv run python -m forkcast_data download cyclenet | build cyclenet [--fresh]
-Not part of `all` yet: nothing in the app reads it.
 """
 
 import gzip
@@ -35,20 +36,18 @@ from .pipeline import CACHE, OUT, Stamp, code_hash, ensure, http_get, log
 
 DIR = CACHE / "cyclenet"
 OVERPASS = "https://overpass-api.de/api/interpreter"
-# Continents to fetch. Start with Europe; others are a list entry away.
-CONTINENT_IDS = ["europe"]
-NETWORKS = ("icn", "ncn")
-TILE = 5.0  # degrees
+NETWORKS = ("icn",)
+TILE = 20.0  # degrees: few queries, and a failed one only redoes its tile
 PAUSE = 5.0  # seconds between queries, to share the public server politely
 SIMPLIFY = 0.003  # degrees, about 300 m
 
 
 def _continents() -> list[dict]:
-    return [c for c in CONTINENTS if c["id"] in CONTINENT_IDS]
+    return CONTINENTS
 
 
 def tiles(bbox) -> list[tuple[float, float, float, float]]:
-    """5° tiles (south, west, north, east) covering a continent's box."""
+    """Tiles (south, west, north, east) covering a continent's box."""
     w0, s0, e0, n0 = bbox
     out = []
     lat = math.floor(s0 / TILE) * TILE
@@ -70,7 +69,7 @@ def _query(tile) -> str:
     s, w, n, e = tile
     networks = "|".join(NETWORKS)
     return (
-        "[out:json][timeout:300];"
+        "[out:json][timeout:900][maxsize:1073741824];"
         f'relation["type"="route"]["route"="bicycle"]["network"~"^({networks})$"]({s},{w},{n},{e});'
         "way(r);out geom;"
     )
@@ -79,7 +78,7 @@ def _query(tile) -> str:
 def _fetch(tile):
     def fetch(to: Path) -> None:
         raw = to.with_name(to.name + ".raw")
-        http_get(f"{OVERPASS}?data={urllib.parse.quote(_query(tile))}", raw, timeout=400)
+        http_get(f"{OVERPASS}?data={urllib.parse.quote(_query(tile))}", raw, timeout=1000)
         data = json.loads(raw.read_text())
         raw.unlink()
         # Overpass answers 200 with a "remark" when a query hits its limits.
@@ -145,6 +144,41 @@ def _simplify(line: list, tol: float) -> list:
     return [p for p, k in zip(line, keep) if k]
 
 
+def _join(ways: list[list]) -> list[list]:
+    """Join ways end to end where exactly two meet, so a route that OSM splits
+    into many short ways becomes one long line (simplifying then works, and
+    the file shrinks). Junctions of three or more stay line ends."""
+    key = lambda p: (round(p[0], 6), round(p[1], 6))  # noqa: E731
+    ends: dict[tuple, list[int]] = {}
+    for i, w in enumerate(ways):
+        for p in (w[0], w[-1]):
+            ends.setdefault(key(p), []).append(i)
+    used = [False] * len(ways)
+    lines = []
+    for start in range(len(ways)):
+        if used[start]:
+            continue
+        used[start] = True
+        line = list(ways[start])
+        for forward in (True, False):
+            while True:
+                tip = key(line[-1] if forward else line[0])
+                nxt = [j for j in ends.get(tip, []) if not used[j]]
+                if len(ends.get(tip, [])) != 2 or not nxt:
+                    break
+                j = nxt[0]
+                used[j] = True
+                w = ways[j]
+                if forward:
+                    # Append: the way must start at the tip.
+                    line += (w if key(w[0]) == tip else w[::-1])[1:]
+                else:
+                    # Prepend: the way must end at the tip.
+                    line = (w if key(w[-1]) == tip else w[::-1])[:-1] + line
+        lines.append(line)
+    return lines
+
+
 def build(fresh: bool = False) -> None:
     stamp = Stamp("cyclenet", files(), outputs(), code_hash(sys.modules[__name__], continents, pipeline))
     if not fresh and stamp.up_to_date():
@@ -159,7 +193,7 @@ def build(fresh: bool = False) -> None:
                 ways.update(json.load(f)["ways"])
         lines = []
         points = 0
-        for coords in ways.values():
+        for coords in _join(list(ways.values())):
             line = [[round(x, 3), round(y, 3)] for x, y in _simplify(coords, SIMPLIFY)]
             line = [p for i, p in enumerate(line) if i == 0 or p != line[i - 1]]
             if len(line) > 1:

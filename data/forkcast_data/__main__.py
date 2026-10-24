@@ -15,12 +15,12 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
     details               Natural Earth places, mountain ranges, rivers and lakes
-    cyclenet              OpenStreetMap cycle routes via Overpass (draft; not in `all`)
+    cyclenet              OpenStreetMap international cycle routes via Overpass
 
 Builds (into out/, except the CRU climatology which is an intermediate in cache/):
     borders    per-continent outlines and the picker's world map
     details    per-continent city and range names, rivers and lakes
-    cyclenet   per-continent cycle network (draft; not in `all`)
+    cyclenet   per-continent cycle network (for drawing along routes)
     routes     every preset route plus the route index
     cru        CRU climatology for the years (intermediate)
     climate    per-continent climate grids (ERA5-Land, calibrated with CRU)
@@ -68,9 +68,6 @@ BUILDS = {
     "cyclenet": lambda a: cyclenet.build(a.fresh),
 }
 
-# Steps that run only when named, not in `all`: drafts the app doesn't use yet.
-NOT_IN_ALL = {"cyclenet"}
-
 
 def _run(kind: str, name: str, fn, a) -> None:
     t0 = time.time()
@@ -116,10 +113,10 @@ def main(argv=None) -> None:
         return
     plan = []
     if a.command in ("all", "download"):
-        names = a.what if a.command == "download" and a.what else [n for n in DOWNLOADS if n not in NOT_IN_ALL]
+        names = a.what if a.command == "download" and a.what else list(DOWNLOADS)
         plan += [("download", n, DOWNLOADS[n]) for n in names]
     if a.command in ("all", "build"):
-        names = a.what if a.command == "build" and a.what else [n for n in BUILDS if n not in NOT_IN_ALL]
+        names = a.what if a.command == "build" and a.what else list(BUILDS)
         plan += [("build", n, BUILDS[n]) for n in names]
     unknown = [n for k, n, _ in plan if n not in (DOWNLOADS if k == "download" else BUILDS)]
     if unknown:
