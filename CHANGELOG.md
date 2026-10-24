@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.5.0 - 2026-10-24
+
 ### Added
 
 - Each day shows its hours of daylight, from sunrise where you start to sunset where you stop, when you pick it in the chart or point at it on the route. In the far north it says when it's the midnight sun or the polar night.
@@ -10,10 +12,10 @@
 
 ### Changed
 
-- The map's legend is just the colour scale and the rain dots, without the titles over them; the sidebar already says what's shown.
-- The credits along the bottom of the map are down to one short line with a link to the full list on the help page, so they no longer cover the map.
 - Forkcast no longer talks to anyone but its own site. The fonts are part of the app instead of coming from Google, your browser is told to refuse anything from elsewhere, and following a link out of the app no longer passes your plan along. There is no tracking of any kind; the help page has a short Privacy section.
 - Units sit right next to their numbers (80km, 4.9mm, 657m, 9h 42min), and temperatures say °C so there's no doubt about the scale.
+- The credits along the bottom of the map are down to one short line with a link to the full list on the help page, so they no longer cover the map.
+- The map's legend is just the colour scale and the rain dots, without the titles over them; the sidebar already says what's shown.
 
 ## v0.4.0 - 2026-10-23
 
