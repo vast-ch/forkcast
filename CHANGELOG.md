@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.6.1 - 2026-10-24
+
 ### Changed
 
 - A day's temperatures read Low, then High, both above the chart and on the route, instead of High and Night.
