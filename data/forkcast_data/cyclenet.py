@@ -57,6 +57,7 @@ BATCH = 10  # routes per query
 TRIES = 8  # per request, across the servers
 PAUSE = 5.0  # seconds between requests, to share the public servers politely
 SIMPLIFY = 0.003  # degrees, about 300 m
+GAP = 0.0015  # degrees, about 150 m: line ends this close are joined
 
 
 def _request(query: str, timeout: int = 600) -> dict:
@@ -209,6 +210,60 @@ def _simplify(line: list, tol: float) -> list:
     return [p for p, k in zip(line, keep) if k]
 
 
+def _split_at_junctions(ways: list[list]) -> list[list]:
+    """Split ways at every point another way shares, so junctions are line
+    ends: in OSM one route often meets another part-way along a way, and
+    simplifying would otherwise drop that point and cut the network apart."""
+    key = lambda p: (round(p[0], 6), round(p[1], 6))  # noqa: E731
+    used: dict[tuple, int] = {}
+    for w in ways:
+        for k in {key(p) for p in w}:
+            used[k] = used.get(k, 0) + 1
+    out = []
+    for w in ways:
+        start = 0
+        for i in range(1, len(w) - 1):
+            if used[key(w[i])] > 1:
+                out.append(w[start : i + 1])
+                start = i
+        out.append(w[start:])
+    return out
+
+
+def _close_gaps(lines: list[list], tol: float = GAP) -> list[list]:
+    """Move line ends that are within `tol` degrees of each other onto one
+    point, so routes that OSM maps as separate sections meeting a few metres
+    apart (often at borders) connect."""
+    cell = lambda p: (math.floor(p[0] / tol), math.floor(p[1] / tol))  # noqa: E731
+    ends = [(i, j) for i, l in enumerate(lines) for j in (0, len(l) - 1)]
+    grid: dict[tuple, list[int]] = {}
+    for k, (i, j) in enumerate(ends):
+        grid.setdefault(cell(lines[i][j]), []).append(k)
+    parent = list(range(len(ends)))
+
+    def find(k: int) -> int:
+        while parent[k] != k:
+            parent[k] = parent[parent[k]]
+            k = parent[k]
+        return k
+
+    for k, (i, j) in enumerate(ends):
+        x, y = lines[i][j]
+        cx, cy = cell(lines[i][j])
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for m in grid.get((cx + dx, cy + dy), []):
+                    a, b = ends[m]
+                    if a != i and math.hypot(lines[a][b][0] - x, lines[a][b][1] - y) <= tol:
+                        parent[find(k)] = find(m)
+    target = {}
+    for k, (i, j) in enumerate(ends):
+        target.setdefault(find(k), lines[i][j])
+    for k, (i, j) in enumerate(ends):
+        lines[i][j] = target[find(k)]
+    return lines
+
+
 def _join(ways: list[list]) -> list[list]:
     """Join ways end to end where exactly two meet, so a route that OSM splits
     into many short ways becomes one long line (simplifying then works, and
@@ -262,12 +317,13 @@ def build(fresh: bool = False) -> None:
                 ways.update(_read(route_file(r))["ways"])
         lines = []
         points = 0
-        for coords in _join(list(ways.values())):
+        for coords in _join(_split_at_junctions(list(ways.values()))):
             line = [[round(x, 3), round(y, 3)] for x, y in _simplify(coords, SIMPLIFY)]
             line = [p for i, p in enumerate(line) if i == 0 or p != line[i - 1]]
             if len(line) > 1:
                 lines.append(line)
                 points += len(line)
+        lines = _close_gaps(lines)
         path = OUT / c["id"] / "cyclenet.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"lines": lines}, separators=(",", ":")))
