@@ -48,6 +48,9 @@ const PANES: [name: string, zIndex: number, isInteractive: boolean][] = [
   ['borders', 380, false],
   // Other routes: above the climate layers, below the selected route.
   ['overview', 390, true],
+  // The start and the night stops, above every line (the route and the
+  // selected day's stretch pass under them), below the names.
+  ['stops', 420, true],
   // City and range names, above the routes so they stay readable.
   ['labels', 450, false],
 ];
@@ -480,6 +483,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         if (!trip || !route) return;
         const start = route.points[0]!;
         L.circleMarker(latLng(start), {
+          pane: 'stops',
           radius: 6,
           color: '#fff',
           weight: 2,
@@ -493,6 +497,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           const isHi = d.n === s.highlightedDay;
           const hasRestNext = trip.days[d.n]?.isRest === true;
           const m = L.circleMarker(latLng(d.sleep), {
+            pane: 'stops',
             radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
             color: isHi ? '#111' : ROUTE_ACCENT,
             weight: isHi ? 3 : 2,

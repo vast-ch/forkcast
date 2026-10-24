@@ -6,6 +6,10 @@
 
 - The rainy-day setting reads "Rainy day  > 1mm 5mm 10mm", with the sign next to the amounts it belongs to.
 
+### Fixed
+
+- On the map the route and the picked day's purple stretch run under the overnight stops instead of over them, so every stop's ring stays whole.
+
 ## v0.7.0 - 2026-10-24
 
 ### Added
