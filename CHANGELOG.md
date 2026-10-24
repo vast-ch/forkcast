@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.9.0 - 2026-10-24
+
 ### Added
 
 - Drawing a route now follows the international cycle routes in Europe, Africa and Asia (in Europe, the EuroVelo routes). The other continents follow with the next data update.
