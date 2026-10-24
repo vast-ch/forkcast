@@ -456,12 +456,17 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }
     }
 
-    // Every preset route of the shown continents, dashed; click one to pick it.
+    // Every preset route of the shown continents, dashed; click one to pick
+    // it. The Routes toggle hides them (the selected route always shows).
     const selectedId = s.route?.id;
     if (
-      this.changed('overview', `${ids}-${selectedId}-${atlas.overview.length}`)
+      this.changed(
+        'overview',
+        `${ids}-${selectedId}-${atlas.overview.length}-${s.details.routes}`,
+      )
     ) {
       this.replace('overview', (group) => {
+        if (!s.details.routes) return;
         const names = new Map(atlas.presets.map((r) => [r.id, r.name]));
         for (const r of atlas.overview) {
           if (r.id === selectedId || !atlas.loadedIds.includes(r.continent))

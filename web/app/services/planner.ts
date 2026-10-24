@@ -30,12 +30,13 @@ import { WEEKS, weekOfDate, type WeekSlot } from 'forkcast/utils/weeks';
 
 export type TempMetric = 'high' | 'low';
 /** The map's optional layers, toggled in the Map section. */
-export type MapDetail = 'borders' | 'cities' | 'relief' | 'water';
+export type MapDetail = 'borders' | 'cities' | 'relief' | 'water' | 'routes';
 export const MAP_DETAILS: { key: MapDetail; label: string }[] = [
   { key: 'borders', label: 'Borders' },
   { key: 'cities', label: 'Cities' },
   { key: 'relief', label: 'Relief' },
   { key: 'water', label: 'Water' },
+  { key: 'routes', label: 'Routes' },
 ];
 export type RainMetric = 'mm' | 'days';
 

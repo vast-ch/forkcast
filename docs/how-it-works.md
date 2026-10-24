@@ -107,7 +107,9 @@ Under the map, one column per day: the day number on top, a bar from the night l
   out, neighbouring cells are merged into one dot so they stay readable
   instead of turning into a striped pattern.
 - **Map details,** each a toggle (Frontile `ButtonGroup` of `ToggleButton`s)
-  and a URL setting (`borders`, `cities`, `relief`, `water`):
+  and a URL setting (`borders`, `cities`, `relief`, `water`, `routes`):
+  - **Routes** shows or hides the dashed preset routes other than the
+    selected one (already loaded at start, from `routes/overview.json`).
   - **Borders** only shows or hides the country outlines; the country file
     always loads, because it also draws the land.
   - **Cities** (town names and mountain ranges) and **Water** (rivers, lakes)

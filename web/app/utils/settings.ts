@@ -25,6 +25,8 @@ export const DEFAULTS = {
   cities: true,
   relief: true,
   water: true,
+  /** The preset routes other than the selected one, dashed */
+  routes: true,
   /** Rain dots: monthly mm or rainy days */
   dots: 'mm' as 'mm' | 'days',
   /** mm of rain from which a day counts as rainy */

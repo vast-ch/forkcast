@@ -4,6 +4,7 @@
 
 ### Added
 
+- A Routes button under Map shows or hides the dashed routes you haven't picked, for a cleaner map; the route you're on always stays.
 - Drawing a route can follow the cycle routes: each click moves onto the nearest international or national cycle route, and the route follows the cycle routes from one click to the next, going straight only where there are none. Add clicks to steer it. Switch "Follow cycle routes" off for straight lines; the sketch stays on the map either way, and Undo takes back the last click.
 
 ## v0.7.1 - 2026-10-24

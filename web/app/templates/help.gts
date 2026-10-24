@@ -57,18 +57,18 @@ export default class Help extends Component {
             neighbouring dots merge into one showing their average, so they stay
             readable. Click the legend to fold it away, and again to bring it
             back. Under “Map” you can also switch country borders, city and
-            mountain-range names, relief shading and rivers and lakes on and
-            off; names and water are only downloaded once you switch them on.
-            Names are shown at every zoom, so switch them off for a cleaner map.
-            Forkcast opens on Europe and the current week (drag the slider under
-            “Map”: it moves a quarter of a month, about a week, at a time); the
-            other continents are drawn as light shapes, and clicking one adds
-            its climate (a one-off download of 1–5 MB). You can show several at
-            once, for a trip that crosses from one into another. Point at the
-            map to read the averages for that spot in the week shown (its rain
-            in total, and how many of its days are rainy); point at your route
-            to see the day you would be there and the weather expected on that
-            date.
+            mountain-range names, relief shading, rivers and lakes, and the
+            other routes (the dashed ones) on and off; names and water are only
+            downloaded once you switch them on. Names are shown at every zoom,
+            so switch them off for a cleaner map. Forkcast opens on Europe and
+            the current week (drag the slider under “Map”: it moves a quarter of
+            a month, about a week, at a time); the other continents are drawn as
+            light shapes, and clicking one adds its climate (a one-off download
+            of 1–5 MB). You can show several at once, for a trip that crosses
+            from one into another. Point at the map to read the averages for
+            that spot in the week shown (its rain in total, and how many of its
+            days are rainy); point at your route to see the day you would be
+            there and the weather expected on that date.
           </p>
         </section>
 
