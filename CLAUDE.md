@@ -7,6 +7,7 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 ## Commands
 
 - The web app runs in the `ui` dev container. Run pnpm via `docker compose exec ui <cmd>` (e.g. `docker compose exec ui pnpm lint:types`), never on the host. pnpm only; never npm/yarn/npx.
+- Deploys: Netlify builds `web/` from the repository (`netlify.toml`); the built site is not committed.
 - Checks: `./check.sh` runs everything in the containers (web: `pnpm lint`, `pnpm test`; data: `ruff check`, `pytest`); `./check.sh --fix` fixes what the linters can first. Run it before committing.
 - Web tests are Ember's (QUnit, `ember-qunit`, `@ember/test-helpers`, `qunit-dom`), by kind: `tests/unit/` for plain logic (`app/utils`), `tests/integration/components|helpers/` for rendering tests, `tests/acceptance/` for whole screens on the real data. Shared finders and assertions are in `tests/helpers/`. `pnpm test` builds into `web/dist-tests` and runs them in the container's Chromium; while developing, open https://ui.forkcast.orb.local/tests to run them live (`?filter=` to pick some). Write new tests the Ember way, not with Vitest.
 - No `setTimeout`, `waitUntil` or other polling, in tests or in the app. Async work in the app registers with `@ember/test-waiters` instead, so `await visit()`/`click()` settle when it's done: data files already do (`app/utils/assets.ts` wraps every fetch in `waitForPromise`); wrap any new promise the UI depends on the same way.
