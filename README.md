@@ -4,6 +4,8 @@ What the weather usually does along your bike route, day by day.
 
 A bikepacking weather planner built on climate records rather than forecasts, so you can plan a trip months ahead.
 
+**Live at [forkcast.vast.earth](https://forkcast.vast.earth).** What changed in each release: [CHANGELOG.md](CHANGELOG.md), also shown in the app at [/changelog](https://forkcast.vast.earth/changelog).
+
 - **The map:** 15 years of climate records for any week of the year: average day highs or night lows as colour, rain (mm, or rainy days over 1, 5 or 10mm) as dots on top. It opens on Europe; click another continent to add it.
 - **Routes:** all 17 EuroVelo routes and a demo route, Interlaken – Málaga, are built in. You can also draw your own or import a GPX, and export any route as GPX.
 - **The trip:** set a start date, km per day, average speed and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat).
@@ -66,7 +68,7 @@ These are climate normals, not forecasts: they say what is typical, not what a g
 
 ## Static site
 
-There is no backend. It's deployed on Netlify, which builds `web/` from this repository (`netlify.toml`; the built site isn't committed); the production image is the same app served by nginx:
+There is no backend. It runs at https://forkcast.vast.earth, deployed on Netlify, which builds `web/` from this repository (`netlify.toml`; the built site isn't committed); the production image is the same app served by nginx:
 
 - Everything under `/assets/` (code and data) has a content hash in its name and is served with `Cache-Control: public, max-age=31536000, immutable`; `index.html` is `no-cache`, so new releases are picked up.
 - Every setting lives in the URL query string; values at their defaults are left out. Your own routes are kept whole in the browser's localStorage, never on a server; the URL names one by its UUID. The last plan and map view are kept there too, so opening the site without a link picks up where you left off.
