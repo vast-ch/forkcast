@@ -4,30 +4,30 @@ import {
   setupTest as upstreamSetupTest,
   type SetupTestOptions,
 } from 'ember-qunit';
-import MyRoutesService from 'forkcast/services/my-routes';
-import LastVisitService from 'forkcast/services/last-visit';
+import { storage } from 'forkcast/utils/stored';
 
-/** Tests keep their routes and last visit under their own keys, never
- * touching yours, and start each test with none. */
-export const TEST_ROUTES_KEY = 'forkcast:test-routes';
-export const TEST_LAST_VISIT_KEY = 'forkcast:test-last-visit';
-class TestRoutes extends MyRoutesService {
-  get storageKey() {
-    return TEST_ROUTES_KEY;
-  }
-}
-class TestLastVisit extends LastVisitService {
-  get storageKey() {
-    return TEST_LAST_VISIT_KEY;
-  }
-}
+/** Tests keep what the app stores in the browser under their own keys,
+ * never touching yours, and start each test with nothing stored. */
+storage.prefix = 'forkcast:test:';
 function isolateStorage(hooks: NestedHooks) {
   hooks.beforeEach(function () {
-    localStorage.removeItem(TEST_ROUTES_KEY);
-    localStorage.removeItem(TEST_LAST_VISIT_KEY);
-    this.owner.register('service:my-routes', TestRoutes);
-    this.owner.register('service:last-visit', TestLastVisit);
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith(storage.prefix)) localStorage.removeItem(key);
+    }
+    storage.failed = false;
   });
+}
+
+/** Store `value` under `key` as the app would, e.g. as left by an earlier
+ * visit. */
+export function storeAsApp(key: string, value: unknown): void {
+  localStorage.setItem(storage.prefix + key, JSON.stringify(value));
+}
+
+/** What the app stored under `key`. */
+export function storedByApp(key: string): unknown {
+  const raw = localStorage.getItem(storage.prefix + key);
+  return raw === null ? undefined : JSON.parse(raw);
 }
 
 // This file exists to provide wrappers around ember-qunit's

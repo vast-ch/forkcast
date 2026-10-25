@@ -2,7 +2,8 @@ import { module, test } from 'qunit';
 import { currentURL, visit } from '@ember/test-helpers';
 import {
   setupApplicationTest,
-  TEST_LAST_VISIT_KEY,
+  storeAsApp,
+  storedByApp,
 } from 'forkcast/tests/helpers';
 import { closeTo } from 'forkcast/tests/helpers/close-to';
 import type LastVisitService from 'forkcast/services/last-visit';
@@ -11,11 +12,9 @@ module('Acceptance | last visit', function (hooks) {
   setupApplicationTest(hooks);
 
   /** What an earlier visit left in storage. */
-  function leftAt(settings: string, view?: typeof VIEW) {
-    localStorage.setItem(
-      TEST_LAST_VISIT_KEY,
-      JSON.stringify({ settings, view }),
-    );
+  function leftAt(plan: string, view?: typeof VIEW) {
+    storeAsApp('last-plan', plan);
+    if (view) storeAsApp('map-view', view);
   }
   const VIEW = { lat: 41.5, lon: 2.5, zoom: 7 };
   const savedView = (owner: { lookup(name: string): unknown }) =>
@@ -33,10 +32,7 @@ module('Acceptance | last visit', function (hooks) {
     leftAt('km=120');
     await visit('/?km=90');
     assert.notOk(currentURL().includes('km=120'), currentURL());
-    const saved = JSON.parse(localStorage.getItem(TEST_LAST_VISIT_KEY)!) as {
-      settings: string;
-    };
-    assert.strictEqual(saved.settings, 'km=90');
+    assert.strictEqual(storedByApp('last-plan'), 'km=90');
   });
 
   test('the map opens where it was left instead of fitting the route', async function (assert) {
