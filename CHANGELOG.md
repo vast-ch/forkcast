@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.11.0 - 2026-10-25
+
 ### Added
 
 - A "What's new" page, linked from the help page, lists every release and what it changed.
