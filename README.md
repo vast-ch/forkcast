@@ -25,22 +25,31 @@ How the app works and why it is built this way: [docs/how-it-works.md](docs/how-
 
 ## Screenshots
 
-The same plan three ways: Interlaken – Málaga in early November.
+The same plan throughout: Interlaken – Málaga in early November. Retake them with `docs/screenshots/take.sh`.
 
-<table>
-  <tr>
-    <th>Everything</th>
-    <th>Temperature view</th>
-    <th>Rain view</th>
-  </tr>
-  <tr>
-    <td width="33%"><img src="docs/screenshots/everything.jpg" alt="The planner with temperature as colour and rain as dots on the map, the trip settings and summary on the left, and the day chart below"></td>
-    <td width="33%"><img src="docs/screenshots/temperature.jpg" alt="Temperature view: the same plan with only the temperature colours on the map"></td>
-    <td width="33%"><img src="docs/screenshots/rain.jpg" alt="Rain view: the same plan with only the rain dots on the map"></td>
-  </tr>
-</table>
+### Everything
 
-Retake them with `docs/screenshots/take.sh`.
+Temperature as colour, rain as dots, and the trip day by day.
+
+![The planner with temperature as colour and rain as dots on the map, the trip settings and summary on the left, and the day chart below](docs/screenshots/everything.jpg)
+
+### Temperature view
+
+Rain switched off: only the day highs (or night lows) as colour.
+
+![The same plan with only the temperature colours on the map](docs/screenshots/temperature.jpg)
+
+### Rain view
+
+Temperature switched off: only the rain dots.
+
+![The same plan with only the rain dots on the map](docs/screenshots/rain.jpg)
+
+### On a phone
+
+The map and the day chart; settings and the trip summary are in a drawer.
+
+<img src="docs/screenshots/phone.jpg" alt="The planner on a phone: the map with the route, the selected day's weather and the day chart below" width="320">
 
 ## Run it
 
