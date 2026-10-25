@@ -19,26 +19,28 @@ A bikepacking weather planner built on climate records rather than forecasts, so
 - **Each day:** the expected high, night low and chance of rain where you'll be on that date, plus climbing, riding time and hours of daylight. A 🔦 marks days with more riding than daylight.
 - **In sync:** the day chart and the map's week move together, and the whole plan lives in the link, so a bookmark or a shared URL reopens it.
 
-**Everything:** temperature as colour, rain as dots, and the trip day by day.
-
-![The planner: Interlaken – Málaga on the map of Europe's early-November climate, temperature as colour and rain as dots, the trip settings and summary on the left, and the day chart of highs, lows and rain below](docs/screenshots/everything.jpg)
-
-<table>
-  <tr>
-    <td width="50%"><img src="docs/screenshots/temperature.jpg" alt="Temperature view: the same plan with only the temperature colours on the map"></td>
-    <td width="50%"><img src="docs/screenshots/rain.jpg" alt="Rain view: the same plan with only the rain dots on the map"></td>
-  </tr>
-  <tr>
-    <td><strong>Temperature view:</strong> rain switched off</td>
-    <td><strong>Rain view:</strong> temperature switched off</td>
-  </tr>
-</table>
-
-Screenshots are retaken with `docs/screenshots/take.sh`.
-
 The in-app help page (`/help`) explains where the numbers come from and how far to trust them.
 
 How the app works and why it is built this way: [docs/how-it-works.md](docs/how-it-works.md). How the data is made: [data/README.md](data/README.md).
+
+## Screenshots
+
+The same plan three ways: Interlaken – Málaga in early November.
+
+<table>
+  <tr>
+    <th>Everything</th>
+    <th>Temperature view</th>
+    <th>Rain view</th>
+  </tr>
+  <tr>
+    <td width="33%"><img src="docs/screenshots/everything.jpg" alt="The planner with temperature as colour and rain as dots on the map, the trip settings and summary on the left, and the day chart below"></td>
+    <td width="33%"><img src="docs/screenshots/temperature.jpg" alt="Temperature view: the same plan with only the temperature colours on the map"></td>
+    <td width="33%"><img src="docs/screenshots/rain.jpg" alt="Rain view: the same plan with only the rain dots on the map"></td>
+  </tr>
+</table>
+
+Retake them with `docs/screenshots/take.sh`.
 
 ## Run it
 
