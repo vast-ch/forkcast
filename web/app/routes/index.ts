@@ -3,6 +3,7 @@ import { service } from '@ember/service';
 import type Transition from '@ember/routing/transition';
 import type AtlasService from 'forkcast/services/atlas';
 import type MyRoutesService from 'forkcast/services/my-routes';
+import type LastVisitService from 'forkcast/services/last-visit';
 import type RouterService from '@ember/routing/router-service';
 import type PlannerService from 'forkcast/services/planner';
 import type IndexController from 'forkcast/controllers/index';
@@ -27,6 +28,7 @@ export default class IndexRoute extends Route {
   @service declare planner: PlannerService;
   @service('my-routes') declare myRoutes: MyRoutesService;
   @service declare router: RouterService;
+  @service('last-visit') declare lastVisit: LastVisitService;
 
   queryParams = QUERY_PARAMS;
 
@@ -39,6 +41,9 @@ export default class IndexRoute extends Route {
   }
 
   /**
+   * Opening Forkcast with nothing in the address picks up where you left off:
+   * the last settings, and the map where you left it.
+   *
    * Old links carried the route itself (`track`, `name`): save it as one of
    * your routes (once: the same track again is the same route) and point the
    * link at it instead.
@@ -48,6 +53,14 @@ export default class IndexRoute extends Route {
     const text = (v: unknown) => (typeof v === 'string' ? v : '');
     const track = text(params['track']);
     const name = text(params['name']);
+    // Looking it up starts it remembering every change.
+    const lastVisit = this.lastVisit;
+    if (Object.keys(params).length === 0) {
+      lastVisit.isResuming = true;
+      const url = lastVisit.url;
+      if (url) void this.router.replaceWith(url);
+      return;
+    }
     if (!track) return;
     const coords = decodeTrack(track);
     const route = coords.length >= 2 ? this.myRoutes.add(coords, name).id : '';

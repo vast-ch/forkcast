@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Forkcast remembers where you left off. Open it again without a link and your last plan is back, with the map where you left it; a link still opens exactly the plan it carries.
+
 ## v0.10.0 - 2026-10-24
 
 ### Added

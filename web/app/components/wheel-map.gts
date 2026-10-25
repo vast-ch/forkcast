@@ -6,6 +6,7 @@ import L from 'leaflet';
 import type Owner from '@ember/owner';
 import type AtlasService from 'forkcast/services/atlas';
 import type PlannerService from 'forkcast/services/planner';
+import type LastVisitService from 'forkcast/services/last-visit';
 import { dayAtKm, type Trip } from 'forkcast/utils/itinerary';
 import {
   temperatureRaster,
@@ -126,7 +127,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   rainRenderer?: L.Canvas;
   netRenderer?: L.Canvas;
   lastState?: MapState;
-  fit?: { bounds: L.LatLngBounds; until: number };
+  /** The view to keep while the layout settles (see setup), and until when. */
+  settle?: { apply: () => void; until: number };
+  /** Opened where the last visit left the map: don't fit the first route. */
+  isResumed = false;
   cleanups: (() => void)[] = [];
 
   constructor(
@@ -171,8 +175,14 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       worldCopyJump: false,
       attributionControl: true,
     });
+    const lastVisit = this.owner?.lastVisit;
+    const view = lastVisit?.isResuming ? lastVisit.view : undefined;
+    if (lastVisit) lastVisit.isResuming = false;
     const bbox = this.owner?.atlas.loaded[0]?.continent.bbox;
-    if (bbox) {
+    if (view) {
+      this.keep(() => map.setView([view.lat, view.lon], view.zoom));
+      this.isResumed = true;
+    } else if (bbox) {
       map.fitBounds([
         [bbox[1], bbox[0]],
         [bbox[3], bbox[2]],
@@ -206,13 +216,23 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       if (this.lastState) this.sync(this.lastState);
     });
     map.on('dblclick', () => this.owner?.onDoubleClick());
+    // Remember the view for next time (see LastVisitService).
+    map.on('moveend', () => {
+      const c = map.getCenter();
+      if (this.owner)
+        this.owner.lastVisit.view = {
+          lat: Math.round(c.lat * 1e4) / 1e4,
+          lon: Math.round(c.lng * 1e4) / 1e4,
+          zoom: map.getZoom(),
+        };
+    });
     this.map = map;
     // The container keeps resizing while the page lays out (the day chart
     // appears under it a moment later); keep the map sized and the fit right.
     const ro = new ResizeObserver(() => {
       map.invalidateSize();
-      if (this.fit && performance.now() < this.fit.until) {
-        map.fitBounds(this.fit.bounds, FIT);
+      if (this.settle && performance.now() < this.settle.until) {
+        this.settle.apply();
       }
     });
     ro.observe(element);
@@ -354,11 +374,16 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     return !same;
   }
 
+  /** Set the view with `apply`, and keep it while the layout settles. */
+  keep(apply: () => void) {
+    this.settle = { apply, until: performance.now() + 2000 };
+    apply();
+  }
+
   /** Fit the view to `bounds`, and keep it fitted while the layout settles. */
   fitTo(bounds: L.LatLngBounds) {
-    this.fit = { bounds, until: performance.now() + 2000 };
     this.map!.invalidateSize();
-    this.map!.fitBounds(bounds, FIT);
+    this.keep(() => this.map!.fitBounds(bounds, FIT));
   }
 
   /** Cells per rain dot, so a dot spans at least ~9 px at the current zoom. */
@@ -544,7 +569,8 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }).addTo(group);
     });
     if (s.route && this.changed('fitted', s.route.id)) {
-      this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
+      if (this.isResumed) this.isResumed = false;
+      else this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
     }
 
     this.layer('stops', [s.trip, s.highlightedDay], (group) => {
@@ -688,6 +714,7 @@ interface WheelMapSignature {
 export default class WheelMap extends Component<WheelMapSignature> {
   @service declare atlas: AtlasService;
   @service declare planner: PlannerService;
+  @service('last-visit') declare lastVisit: LastVisitService;
 
   get state(): MapState {
     const p = this.planner;

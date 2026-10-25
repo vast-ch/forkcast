@@ -467,6 +467,11 @@ export default class Help extends Component {
               ask you for its GPX file.
             </p>
             <p>
+              This browser also remembers where you left off: your last plan and
+              where the map was. Opening Forkcast without a plan in the address
+              picks up from there; opening a link shows the link's plan instead.
+            </p>
+            <p>
               None of it goes to a server: nothing about you, your plan or your
               routes leaves your browser unless you send the link or a GPX file
               yourself. Forkcast runs entirely in your browser; the site is just

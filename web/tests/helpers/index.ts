@@ -5,19 +5,28 @@ import {
   type SetupTestOptions,
 } from 'ember-qunit';
 import MyRoutesService from 'forkcast/services/my-routes';
+import LastVisitService from 'forkcast/services/last-visit';
 
-/** Tests keep their routes under their own key, never touching yours, and
- * start each test with none. */
+/** Tests keep their routes and last visit under their own keys, never
+ * touching yours, and start each test with none. */
 export const TEST_ROUTES_KEY = 'forkcast:test-routes';
+export const TEST_LAST_VISIT_KEY = 'forkcast:test-last-visit';
 class TestRoutes extends MyRoutesService {
   get storageKey() {
     return TEST_ROUTES_KEY;
   }
 }
-function isolateRoutes(hooks: NestedHooks) {
+class TestLastVisit extends LastVisitService {
+  get storageKey() {
+    return TEST_LAST_VISIT_KEY;
+  }
+}
+function isolateStorage(hooks: NestedHooks) {
   hooks.beforeEach(function () {
     localStorage.removeItem(TEST_ROUTES_KEY);
+    localStorage.removeItem(TEST_LAST_VISIT_KEY);
     this.owner.register('service:my-routes', TestRoutes);
+    this.owner.register('service:last-visit', TestLastVisit);
   });
 }
 
@@ -27,7 +36,7 @@ function isolateRoutes(hooks: NestedHooks) {
 
 function setupApplicationTest(hooks: NestedHooks, options?: SetupTestOptions) {
   upstreamSetupApplicationTest(hooks, options);
-  isolateRoutes(hooks);
+  isolateStorage(hooks);
 
   // Additional setup for application tests can be done here.
   //
@@ -47,14 +56,14 @@ function setupApplicationTest(hooks: NestedHooks, options?: SetupTestOptions) {
 
 function setupRenderingTest(hooks: NestedHooks, options?: SetupTestOptions) {
   upstreamSetupRenderingTest(hooks, options);
-  isolateRoutes(hooks);
+  isolateStorage(hooks);
 
   // Additional setup for rendering tests can be done here.
 }
 
 function setupTest(hooks: NestedHooks, options?: SetupTestOptions) {
   upstreamSetupTest(hooks, options);
-  isolateRoutes(hooks);
+  isolateStorage(hooks);
 
   // Additional setup for unit tests can be done here.
 }
