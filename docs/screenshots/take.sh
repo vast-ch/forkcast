@@ -13,11 +13,12 @@ shot() { # name scale window-size url
   docker compose cp "ui:/tmp/$1.png" "$tmp/$1.png" >/dev/null 2>&1
 }
 
-shot desktop 2 1440,900 "$site/?start=2026-10-25&day=12&week=41"
-shot route 2 1440,900 "$site/?route=ev6&start=2027-05-15&km=100&day=20&week=21"
-shot phone 3 390,844 "$site/?start=2027-04-10&day=8&week=15"
+# The same plan three ways: everything, then each layer on its own.
+plan="$site/?start=2026-10-25&day=12&week=41"
+shot everything 2 1440,900 "$plan"
+shot rain 2 1440,900 "$plan&heat=false"
+shot temperature 2 1440,900 "$plan&rain=false"
 
-for f in desktop route; do
+for f in everything rain temperature; do
   sips -Z 1800 -s format jpeg -s formatOptions 75 "$tmp/$f.png" --out "$out/$f.jpg" >/dev/null
 done
-sips -Z 1300 -s format jpeg -s formatOptions 75 "$tmp/phone.png" --out "$out/phone.jpg" >/dev/null

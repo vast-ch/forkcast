@@ -13,22 +13,24 @@ A bikepacking weather planner built on climate records rather than forecasts, so
 
 **Live at [forkcast.vast.earth](https://forkcast.vast.earth).** What changed in each release: [CHANGELOG.md](CHANGELOG.md), also shown in the app at [/changelog](https://forkcast.vast.earth/changelog).
 
-![The planner on a computer: the Interlaken – Málaga route on the map of Europe's climate, the trip settings and summary on the left, and a day chart of highs, lows and rain below](docs/screenshots/desktop.jpg)
-
 - **The map:** 15 years of climate records for any week of the year: average day highs or night lows as colour, rain (mm, or rainy days over 1, 5 or 10mm) as dots on top. It opens on Europe; click another continent to add it.
 - **Routes:** all 17 EuroVelo routes and a demo route, Interlaken – Málaga, are built in. You can also draw your own or import a GPX, and export any route as GPX.
 - **The trip:** set a start date, km per day, average speed and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat).
 - **Each day:** the expected high, night low and chance of rain where you'll be on that date, plus climbing, riding time and hours of daylight. A 🔦 marks days with more riding than daylight.
 - **In sync:** the day chart and the map's week move together, and the whole plan lives in the link, so a bookmark or a shared URL reopens it.
 
+**Everything:** temperature as colour, rain as dots, and the trip day by day.
+
+![The planner: Interlaken – Málaga on the map of Europe's early-November climate, temperature as colour and rain as dots, the trip settings and summary on the left, and the day chart of highs, lows and rain below](docs/screenshots/everything.jpg)
+
 <table>
   <tr>
-    <td width="70%"><img src="docs/screenshots/route.jpg" alt="EuroVelo 6 from the Atlantic to the Black Sea, starting in mid-May: the map shows early June, the day chart warms from about 20 °C to over 30 °C by July"></td>
-    <td width="30%"><img src="docs/screenshots/phone.jpg" alt="The planner on a phone: the map with the route, the selected day's weather and the day chart below; the settings are in a drawer"></td>
+    <td width="50%"><img src="docs/screenshots/temperature.jpg" alt="Temperature view: the same plan with only the temperature colours on the map"></td>
+    <td width="50%"><img src="docs/screenshots/rain.jpg" alt="Rain view: the same plan with only the rain dots on the map"></td>
   </tr>
   <tr>
-    <td>EuroVelo 6, Atlantic – Black Sea, setting off in mid-May</td>
-    <td>On a phone</td>
+    <td><strong>Temperature view:</strong> rain switched off</td>
+    <td><strong>Rain view:</strong> temperature switched off</td>
   </tr>
 </table>
 
