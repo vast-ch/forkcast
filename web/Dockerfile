@@ -28,6 +28,8 @@ COPY web/ .
 # Data built by the `data` image (see data/Dockerfile). The app imports it as
 # assets, so every file gets a content-hashed name and can be cached for a year.
 COPY data/out/ data-out/
+# The changelog page renders the repository's changelog.
+COPY CHANGELOG.md ./
 RUN pnpm run build
 
 ### Stage 3: prod

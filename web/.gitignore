@@ -20,3 +20,5 @@
 .pnpm-store/
 /public/data/
 /data-out/
+# A copy or mount of the repository's changelog (see compose.yaml)
+/CHANGELOG.md

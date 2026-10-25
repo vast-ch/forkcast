@@ -16,13 +16,14 @@ function hmrClientConfig() {
   return { clientPort: Number(port), protocol };
 }
 
-// The app's own pages besides `/` (see app/router.ts): the help page and one
-// per help section (app/help-sections.json). A static host serves
+// The app's own pages besides `/` (see app/router.ts): the help page, one
+// per help section (app/help-sections.json) and the changelog. A static host serves
 // `help/index.html` for /help and `help/<id>/index.html` for /help/<id>, so
 // deep links work without a rewrite rule; 404.html is the fallback page hosts
 // such as GitHub Pages and Netlify use.
 const PAGES = [
   'help',
+  'changelog',
   ...JSON.parse(readFileSync('app/help-sections.json', 'utf8')).map(
     (s) => `help/${s.id}`,
   ),

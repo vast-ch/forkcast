@@ -208,7 +208,7 @@ Under the map, one column per day: the day number on top, a bar from the night l
 
 | Path | What |
 |---|---|
-| `web/app/routes/`, `web/app/templates/` | `index` (the planner, at `/`), `help` |
+| `web/app/routes/`, `web/app/templates/` | `index` (the planner, at `/`), `help`, `changelog` (CHANGELOG.md rendered with `marked`, which loads only on that page) |
 | `web/app/services/atlas.ts` | loads the manifest, continents and route tracks |
 | `web/app/services/planner.ts` | all planner state, read from and written to the URL |
 | `web/app/components/wheel-map.gts` | the Leaflet map |

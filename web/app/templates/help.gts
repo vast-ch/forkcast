@@ -62,7 +62,10 @@ export default class Help extends Component {
     {{pageTitle this.sectionLabel " · How it works"}}
     <div class="wt-help-page">
       <header class="wt-help-header">
-        <LinkTo @route="index" class="wt-help-link">← Back to the map</LinkTo>
+        <nav class="flex justify-between">
+          <LinkTo @route="index" class="wt-help-link">← Back to the map</LinkTo>
+          <LinkTo @route="changelog" class="wt-help-link">What's new</LinkTo>
+        </nav>
         <h1 class="wt-logo-heading mt-3"><LinkTo
             @route="index"
             aria-label="Forkcast home"

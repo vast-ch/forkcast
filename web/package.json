@@ -101,5 +101,8 @@
   },
   "ember": {
     "edition": "octane"
+  },
+  "dependencies": {
+    "marked": "^18.1.1"
   }
 }

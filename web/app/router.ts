@@ -11,6 +11,7 @@ Router.map(function () {
   this.route('help', function () {
     this.route('section', { path: '/:section' });
   });
+  this.route('changelog');
   // Anything else (old /europe links, typos) opens the planner.
   this.route('not-found', { path: '/*path' });
 });

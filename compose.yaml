@@ -20,6 +20,8 @@ services:
       - /app/node_modules
       # The app imports the built data from /data-out (hashed asset URLs).
       - ./data/out:/app/data-out:ro
+      # The changelog page renders the repository's changelog.
+      - ./CHANGELOG.md:/app/CHANGELOG.md:ro
     labels:
       - dev.orbstack.domains=ui.forkcast.orb.local
       - dev.orbstack.http-port=4200

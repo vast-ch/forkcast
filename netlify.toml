@@ -1,9 +1,10 @@
 # Netlify builds the web app from the repository: the built site isn't
 # committed. The data in data/out is, and the app imports it from
-# web/data-out (in development that's a mount, see compose.yaml).
+# web/data-out, and the changelog page web/CHANGELOG.md (in development
+# both are mounts, see compose.yaml).
 [build]
   base = "web"
-  command = "cp -R ../data/out data-out && pnpm build"
+  command = "cp -R ../data/out data-out && cp ../CHANGELOG.md . && pnpm build"
   publish = "dist"
 
 [build.environment]
