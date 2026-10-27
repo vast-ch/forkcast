@@ -14,14 +14,6 @@ import TempScale from 'forkcast/components/help/temp-scale';
 import DaylightDemo from 'forkcast/components/help/daylight-demo';
 import AltitudeDemo from 'forkcast/components/help/altitude-demo';
 
-/** Sections that were renamed or merged: old links still land on the right tab. */
-const ALIASES: Record<string, string> = {
-  maths: 'data',
-  precision: 'accuracy',
-  links: 'sharing',
-  privacy: 'sharing',
-};
-
 export default class Help extends Component {
   @service declare atlas: AtlasService;
   @service declare router: RouterService;
@@ -30,8 +22,7 @@ export default class Help extends Component {
   get section(): string {
     const raw = this.router.currentRoute?.params?.['section'] as
       string | undefined;
-    const id = raw && (ALIASES[raw] ?? raw);
-    const known = SECTIONS.find((s) => s.id === id);
+    const known = SECTIONS.find((s) => s.id === raw);
     return (known ?? SECTIONS[0]!).id;
   }
 

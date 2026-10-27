@@ -104,11 +104,11 @@ interface MapState {
   drawn: { lat: number; lon: number }[];
   highlightedDay?: number;
   /** Dates over the night stops */
-  milestones: Milestones;
+  dates: Milestones;
   /** Map details switched on in the Map section */
   details: Record<MapDetail, boolean>;
   /** Which city names show */
-  cityLimit: CityLimit;
+  cities: CityLimit;
   /** How many detail files have arrived, so the map redraws when one does */
   detailFiles: number;
   /** Drawing with snapping on: show the cycle network to snap to */
@@ -364,12 +364,12 @@ class LeafletModifier extends Modifier<LeafletSignature> {
 
     // Only the capitals when zoomed out, so a whole continent stays readable.
     const zoom = this.map!.getZoom();
-    const deps = [ids, s.detailFiles, s.cityLimit, isCapitalsOnly(zoom)];
+    const deps = [ids, s.detailFiles, s.cities, isCapitalsOnly(zoom)];
     this.layer('labels', deps, (group) => {
-      if (s.cityLimit === 'off') return;
+      if (s.cities === 'off') return;
       for (const p of files('places')) {
         for (const [name, lon, lat, isCapital, pop, rank] of p.places) {
-          if (!isPlaceShown(s.cityLimit, zoom, pop, rank, isCapital === 1))
+          if (!isPlaceShown(s.cities, zoom, pop, rank, isCapital === 1))
             continue;
           label(
             name,
@@ -655,10 +655,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     });
 
     // Where the rider is as each month (or week) begins, over that night's stop.
-    this.layer('dates', [s.trip, s.milestones], (group) => {
+    this.layer('dates', [s.trip, s.dates], (group) => {
       const { trip } = s;
       if (!trip) return;
-      for (const { day, label: text } of milestones(trip, s.milestones)) {
+      for (const { day, label: text } of milestones(trip, s.dates)) {
         label(text, day.sleep.lat, day.sleep.lon, 'wt-stop-date').addTo(group);
       }
     });
@@ -813,11 +813,11 @@ export default class WheelMap extends Component<WheelMapSignature> {
       sketch: [...p.sketch],
       drawn: p.drawn,
       highlightedDay: p.highlightedDay,
-      milestones: p.milestones,
+      dates: p.dates,
       details: Object.fromEntries(
-        MAP_DETAILS.map(({ key }) => [key, p.showDetail(key)]),
+        MAP_DETAILS.map(({ key }) => [key, p[key]]),
       ) as Record<MapDetail, boolean>,
-      cityLimit: p.cityLimit,
+      cities: p.cities,
       detailFiles: this.atlas.details.size,
       showCycleNet: p.isDrawing && p.snapToRoutes,
     };

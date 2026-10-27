@@ -107,7 +107,7 @@ export default class ItineraryChart extends Component<{
   get column(): number | undefined {
     const off = this.planner.offTrip;
     if (off) return off === 'before' ? 0 : this.args.trip.days.length + 1;
-    return this.planner.highlightedDay;
+    return this.planner.highlightedDay || undefined;
   }
 
   /** The parking columns at both ends, for a week before or after the trip. */
@@ -296,7 +296,10 @@ export default class ItineraryChart extends Component<{
         aria-label="Day of the trip (expected temperatures and rain for each day)"
         aria-valuemin="1"
         aria-valuemax={{@trip.days.length}}
-        aria-valuenow={{this.planner.highlightedDay}}
+        aria-valuenow={{if
+          this.planner.highlightedDay
+          this.planner.highlightedDay
+        }}
         aria-valuetext={{this.valueText}}
         {{on "keydown" this.onKey}}
         {{scrollToColumn this.column}}

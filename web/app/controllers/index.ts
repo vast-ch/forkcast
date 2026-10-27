@@ -12,27 +12,25 @@ export default class IndexController extends Controller {
 
   @tracked continents = DEFAULTS.continents;
   @tracked week = DEFAULTS.week;
-  @tracked temp = DEFAULTS.temp;
-  @tracked heat = DEFAULTS.heat;
-  @tracked rain = DEFAULTS.rain;
+  @tracked tempMetric = DEFAULTS.tempMetric;
+  @tracked showTemp = DEFAULTS.showTemp;
+  @tracked showRain = DEFAULTS.showRain;
   @tracked borders = DEFAULTS.borders;
-  @tracked cities = DEFAULTS.cities;
   @tracked relief = DEFAULTS.relief;
   @tracked water = DEFAULTS.water;
   @tracked routes = DEFAULTS.routes;
+  @tracked cities = DEFAULTS.cities;
   @tracked dates = DEFAULTS.dates;
-  @tracked dots = DEFAULTS.dots;
-  @tracked rainy = DEFAULTS.rainy;
-  @tracked route = DEFAULTS.route;
+  @tracked rainMetric = DEFAULTS.rainMetric;
+  @tracked rainThreshold = DEFAULTS.rainThreshold;
+  @tracked routeId = DEFAULTS.routeId;
   @tracked start = DEFAULTS.start;
-  @tracked km = DEFAULTS.km;
+  @tracked kmPerDay = DEFAULTS.kmPerDay;
   @tracked speed = DEFAULTS.speed;
-  @tracked ride = DEFAULTS.ride;
-  @tracked rest = DEFAULTS.rest;
-  @tracked reverse = DEFAULTS.reverse;
-  @tracked day = DEFAULTS.day;
-  @tracked track = DEFAULTS.track;
-  @tracked name = DEFAULTS.name;
+  @tracked rideDays = DEFAULTS.rideDays;
+  @tracked restDays = DEFAULTS.restDays;
+  @tracked isReversed = DEFAULTS.isReversed;
+  @tracked highlightedDay = DEFAULTS.highlightedDay;
 }
 
 declare module '@ember/controller' {

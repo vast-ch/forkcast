@@ -27,12 +27,12 @@ module('Acceptance | planner', function (hooks) {
     await visit('/');
     const days = Number(summary('Days'));
     await fillIn(field('km per day'), '160');
-    assert.strictEqual(currentURL(), '/?km=160');
+    assert.strictEqual(currentURL(), '/?kmPerDay=160');
     assert.true(Number(summary('Days')) < days, 'longer days, fewer of them');
   });
 
   test('settings in the URL are read back', async function (assert) {
-    await visit('/?km=160&rest=0');
+    await visit('/?kmPerDay=160&restDays=0');
     assert.dom(field('km per day')).hasValue('160');
     assert.strictEqual(summary('Rest days'), '0');
   });
@@ -75,14 +75,6 @@ module('Acceptance | planner', function (hooks) {
     assert.true(places.every((p) => p.classList.contains('is-capital')));
   });
 
-  test('an old link with the cities switched off still hides them', async function (assert) {
-    await visit('/?cities=false');
-    assert.dom('.leaflet-labels-pane .wt-place').doesNotExist();
-    assert
-      .dom('[aria-label="City names shown"] [aria-checked="true"]')
-      .hasText('Off');
-  });
-
   test('rain shows as rainy-day emoji, or as mm dots', async function (assert) {
     await visit('/');
     assert.dom('.wt-legend-emoji').includesText('2+ days');
@@ -92,7 +84,7 @@ module('Acceptance | planner', function (hooks) {
       .includesText('3+ days', 'steps for 1 mm days');
     assert.dom('.leaflet-rain-pane .leaflet-tile').exists('emoji tiles');
     await click(button('mm'));
-    assert.strictEqual(currentURL(), '/?dots=mm&rainy=1');
+    assert.strictEqual(currentURL(), '/?rainMetric=mm&rainThreshold=1');
     assert.dom('.wt-legend-emoji').doesNotExist();
     assert.dom('.wt-legend-dots').includesText('60mm');
     assert.dom('.leaflet-rain-pane .leaflet-tile').doesNotExist();

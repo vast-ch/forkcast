@@ -2,12 +2,11 @@ import { module, test } from 'qunit';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'forkcast/tests/helpers';
 import { button, field } from 'forkcast/tests/helpers/find';
-import { encodeTrack } from 'forkcast/utils/route';
 
 const BERN = { lat: 46.95, lon: 7.45 };
 const LUCERNE = { lat: 47.05, lon: 8.31 };
 const ZURICH = { lat: 47.37, lon: 8.54 };
-const UUID = /route=([0-9a-f-]{36})/;
+const UUID = /routeId=([0-9a-f-]{36})/;
 
 module('Acceptance | my routes', function (hooks) {
   setupApplicationTest(hooks);
@@ -117,8 +116,9 @@ module('Acceptance | my routes', function (hooks) {
   });
 
   test('editing an imported route edits only its name', async function (assert) {
-    const track = encodeTrack([BERN, ZURICH]);
-    await visit(`/?track=${encodeURIComponent(track)}&name=Imported`);
+    const myRoutes = this.owner.lookup('service:my-routes');
+    const { id } = myRoutes.add([BERN, ZURICH], 'Imported');
+    await visit(`/?routeId=${id}`);
     assert.dom(field('Name', { optional: true })).doesNotExist();
 
     await click(button('Edit route'));
@@ -130,26 +130,11 @@ module('Acceptance | my routes', function (hooks) {
   });
 
   test('a link to a route saved in another browser warns', async function (assert) {
-    await visit('/?route=0b5e2d6c-4f1a-4c3e-9d2b-7a8f6e5d4c3b');
+    await visit('/?routeId=0b5e2d6c-4f1a-4c3e-9d2b-7a8f6e5d4c3b');
     assert
       .dom('[role="alert"]')
       .includesText('saved only in the browser where they were made');
     assert.dom('#route-picker option:checked').hasText('Route not saved here');
     assert.dom('.wt-summary').doesNotExist();
-  });
-
-  test('an old link carrying the route saves it to your routes', async function (assert) {
-    const track = encodeTrack([BERN, LUCERNE, ZURICH]);
-    await visit(`/?track=${encodeURIComponent(track)}&name=Old%20link`);
-
-    assert.dom('#route-picker option:checked').includesText('Old link');
-    assert.ok(UUID.test(currentURL()), currentURL());
-    assert.notOk(currentURL().includes('track='), 'the track leaves the link');
-
-    // The same old link again doesn't save it twice.
-    await visit(`/?track=${encodeURIComponent(track)}&name=Old%20link`);
-    assert
-      .dom('#route-picker optgroup[label="Your routes"] option')
-      .exists({ count: 1 });
   });
 });
