@@ -61,7 +61,7 @@ module('Acceptance | help', function (hooks) {
     assert
       .dom('a[href="https://github.com/vast-ch/forkcast/issues/new"]')
       .exists();
-    assert.dom('a[href="https://vast.earth"]').exists();
+    assert.dom('a[href="https://vast.ch/earth/"]').exists();
     assert.dom('img.wt-help-qr').hasAttribute('src', '/discord-qr.svg');
     await click('#about a[href="/help/sharing"]');
     assert.strictEqual(currentURL(), '/help/sharing');
