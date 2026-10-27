@@ -645,13 +645,12 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }
     });
 
-    // Where each month (or week) of the trip begins, over its night stop.
+    // Where the rider is as each month (or week) begins, over that night's stop.
     this.layer('dates', [s.trip, s.milestones], (group) => {
-      const { trip, route } = s;
-      if (!trip || !route) return;
-      for (const m of milestones(trip, s.milestones, fmtShortDate)) {
-        const at = m.n ? trip.days[m.n - 1]!.sleep : route.points[0]!;
-        label(m.label, at.lat, at.lon, 'wt-stop-date').addTo(group);
+      const { trip } = s;
+      if (!trip) return;
+      for (const { day, label: text } of milestones(trip, s.milestones)) {
+        label(text, day.sleep.lat, day.sleep.lon, 'wt-stop-date').addTo(group);
       }
     });
 

@@ -88,31 +88,31 @@ module('Unit | Utility | itinerary', function () {
     closeTo(assert, trip.rainyDays, 5 * 0.25, 5);
   });
 
-  test('it marks where each month or week of the trip begins', function (assert) {
-    // Ride, ride, rest from 29 June: 1 July is a rest day, 2 July is ridden.
+  test('it tags the 1st of each month, rest day or not', function (assert) {
+    // Ride, ride, rest from 29 June: 1 July is day 3, a rest day.
     const june = planTrip(route, climate, { ...settings, start: '2026-06-29' });
-    const day = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`;
-    assert.deepEqual(milestones(june, 'months', day), [
-      { n: 0, label: '29/6' },
-      { n: 4, label: '2/7' },
-    ]);
-    assert.deepEqual(milestones(june, 'weeks', day), [
-      { n: 0, label: 'Week 1' },
-    ]);
-    assert.deepEqual(milestones(june, 'off', day), []);
+    const tags = milestones(june, 'months');
+    assert.deepEqual(
+      tags.map((t) => t.day.n),
+      [3],
+    );
+    assert.true(tags[0]!.day.isRest);
+    assert.deepEqual(milestones(june, 'off'), []);
   });
 
-  test('a week starting on a rest day is marked at its first night ridden', function (assert) {
-    // Every other day a rest day: day 8, the first of week 2, is one.
+  test('it tags the first day of each week of the trip', function (assert) {
+    // Every other day a rest day: 9 days, so weeks 1 and 2.
     const trip = planTrip(route, climate, {
       ...settings,
       rideDays: 1,
       restDays: 1,
     });
-    assert.true(trip.days[7]!.isRest);
-    assert.deepEqual(milestones(trip, 'weeks', String)[1], {
-      n: 9,
-      label: 'Week 2',
-    });
+    assert.deepEqual(
+      milestones(trip, 'weeks').map((t) => [t.day.n, t.label]),
+      [
+        [1, 'Week 1'],
+        [8, 'Week 2'],
+      ],
+    );
   });
 });

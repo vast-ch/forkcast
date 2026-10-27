@@ -4,7 +4,7 @@
 
 ### Added
 
-- Dates on the map: tags over your route show where you'll be as each new month begins, with the date you get there, or, if you switch to weeks, where each week of the trip starts. Switch them off under "Dates on the route".
+- Dates on the map: tags over your route show where you'll be on the 1st of each month ("Nov"), or, if you switch to weeks, at the start of each week of the trip ("Week 2"). Switch them off under "Dates on the route".
 
 ### Changed
 

@@ -71,24 +71,13 @@ module('Acceptance | planner', function (hooks) {
       findAll('[aria-label="Dates on the route"] button').find(
         (b) => b.textContent?.trim() === text,
       )!;
+    const month = (m: number) =>
+      new Date(2025, m, 1).toLocaleDateString(undefined, { month: 'short' });
     await visit('/?start=2025-03-28');
     assert.deepEqual(
       dates(),
-      [
-        new Date(2025, 2, 28).toLocaleDateString(undefined, {
-          day: 'numeric',
-          month: 'short',
-        }),
-        new Date(2025, 3, 1).toLocaleDateString(undefined, {
-          day: 'numeric',
-          month: 'short',
-        }),
-        new Date(2025, 4, 1).toLocaleDateString(undefined, {
-          day: 'numeric',
-          month: 'short',
-        }),
-      ],
-      'the start, and the first nights in April and May',
+      [month(3), month(4)],
+      'where the rider is on 1 April and 1 May; no mark for March',
     );
     await click(option('Weeks'));
     assert.strictEqual(currentURL(), '/?dates=weeks&start=2025-03-28');

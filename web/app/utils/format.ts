@@ -40,6 +40,10 @@ export const fmtDaylight = (h: number): string => {
   return fmtHours(h);
 };
 
+/** The month's short name, e.g. "Nov". */
+export const fmtShortMonth = (d: Date): string =>
+  d.toLocaleDateString(undefined, { month: 'short' });
+
 /** The month's full name, e.g. "November". */
 export const fmtMonth = (d: Date): string =>
   d.toLocaleDateString(undefined, { month: 'long' });
