@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { click, currentURL, fillIn, findAll, visit } from '@ember/test-helpers';
-import { setupApplicationTest } from 'forkcast/tests/helpers';
+import { setupApplicationTest, storeAsApp } from 'forkcast/tests/helpers';
 import { button, field } from 'forkcast/tests/helpers/find';
 
 /** The summary's value for a label, e.g. "Days". */
@@ -39,12 +39,48 @@ module('Acceptance | planner', function (hooks) {
 
   test('map details switch their layers on and off', async function (assert) {
     await visit('/');
-    await click(button('Cities'));
-    assert.strictEqual(currentURL(), '/?cities=false');
-    assert.dom('.leaflet-labels-pane .wt-place').doesNotExist();
-    await click(button('Cities'));
+    assert.dom('.leaflet-relief-pane img').exists();
+    await click(button('Relief'));
+    assert.strictEqual(currentURL(), '/?relief=false');
+    assert.dom('.leaflet-relief-pane img').doesNotExist();
+    await click(button('Relief'));
     assert.strictEqual(currentURL(), '/');
+    assert.dom('.leaflet-relief-pane img').exists();
+  });
+
+  test('city names: the 10 biggest per country, the big ones, or none', async function (assert) {
+    const places = () => findAll('.leaflet-labels-pane .wt-place').length;
+    // Zoomed in on the Alps, past where only capitals are named.
+    storeAsApp('map-view', { lat: 46.5, lon: 8, zoom: 7 });
+    await visit('/');
+    const top10 = places();
+    assert.ok(top10 > 0, 'the 10 biggest per country show at first');
+    await click(button('500k+'));
+    assert.strictEqual(currentURL(), '/?cities=big');
+    assert.notStrictEqual(places(), top10, 'a different set of towns');
     assert.dom('.leaflet-labels-pane .wt-place').exists();
+    const off = findAll('[aria-label="City names shown"] button').find(
+      (b) => b.textContent?.trim() === 'Off',
+    )!;
+    await click(off);
+    assert.strictEqual(currentURL(), '/?cities=off');
+    assert.dom('.leaflet-labels-pane .wt-place').doesNotExist();
+  });
+
+  test('zoomed out on the continent, only the capitals are named', async function (assert) {
+    storeAsApp('map-view', { lat: 50, lon: 10, zoom: 5 });
+    await visit('/');
+    const places = findAll('.leaflet-labels-pane .wt-place');
+    assert.ok(places.length > 20, 'the capitals');
+    assert.true(places.every((p) => p.classList.contains('is-capital')));
+  });
+
+  test('an old link with the cities switched off still hides them', async function (assert) {
+    await visit('/?cities=false');
+    assert.dom('.leaflet-labels-pane .wt-place').doesNotExist();
+    assert
+      .dom('[aria-label="City names shown"] [aria-checked="true"]')
+      .hasText('Off');
   });
 
   test('rain shows as rainy-day emoji, or as mm dots', async function (assert) {

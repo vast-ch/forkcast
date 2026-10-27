@@ -22,7 +22,8 @@ export const DEFAULTS = {
   rain: true,
   /** Map details: country outlines, city and range names, relief shading, rivers and lakes */
   borders: true,
-  cities: true,
+  /** City names: the 10 biggest per country, every town over 500,000, or none */
+  cities: 'top10' as 'top10' | 'big' | 'off',
   relief: true,
   water: true,
   /** The preset routes other than the selected one, dashed */

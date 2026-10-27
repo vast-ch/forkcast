@@ -14,7 +14,7 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     eurovelo              official EuroVelo GPX tracks
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
-    details               Natural Earth places, mountain ranges, rivers and lakes
+    details               Natural Earth places, rivers and lakes
     cyclenet              OpenStreetMap international cycle routes via Overpass
 
 Builds (into out/, except the CRU climatology which is an intermediate in cache/):

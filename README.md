@@ -96,7 +96,7 @@ How the data is downloaded and built, and how the pipeline decides what to redo,
 - **EuroVelo routes:** the official GPX tracks from [EuroVelo.com](https://www.eurovelo.com) (ODbL, see `data/eurovelo/README.md`). Variants and spurs are resolved by taking the shortest path through the stages; holes between stages over the sea count as ferries.
 - **Demo route:** Interlaken → Rhône valley → Spain's east coast → Málaga, routed town to town with [BRouter](https://brouter.de) (trekking profile).
 - **Cycle routes for drawing:** international bicycle routes from © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, fetched with the Overpass API; the derived per-continent files are under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
-- **Borders, cities, mountain ranges, rivers and lakes:** Natural Earth (public domain). The relief shading is drawn from the climate data's terrain height.
+- **Borders, cities, rivers and lakes:** Natural Earth (public domain). The relief shading is drawn from the climate data's terrain height.
 - **Daylight:** calculated from the sun's position for each day's start and end; no data needed.
 
 These are climate normals, not forecasts: they say what is typical, not what a given year will bring.

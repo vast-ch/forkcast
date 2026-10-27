@@ -186,13 +186,19 @@ export default class Help extends Component {
               route”.
             </p>
 
+            <h3>Cities</h3>
+            <p>
+              “Cities” picks which town names the map shows:
+              <strong>10 biggest</strong>, the 10 biggest towns in each country;
+              <strong>500k+</strong>, every town of over 500,000 people; or
+              none. Capitals are in bold. Capitals always show; until you zoom
+              in on a region, only they keep their names.
+            </p>
+
             <h3>More on the map</h3>
             <p>The buttons at the bottom of “Map” switch details on and off:</p>
             <dl class="wt-help-defs">
               <div><dt>Borders</dt><dd>Country outlines.</dd></div>
-              <div><dt>Cities</dt><dd>Towns of 50,000 or more (capitals in bold)
-                  and the names of mountain ranges. They show at every zoom, so
-                  switch them off for a calmer map.</dd></div>
               <div><dt>Relief</dt><dd>Hill shading, so mountain ranges stand
                   out. It only darkens, so the temperature colours stay true.</dd></div>
               <div><dt>Water</dt><dd>Main rivers and lakes; many routes follow a
@@ -202,7 +208,7 @@ export default class Help extends Component {
                   route always shows.</dd></div>
             </dl>
             <p>
-              Cities and water are downloaded only once you switch them on.
+              City names and water are downloaded only once you switch them on.
             </p>
 
             <h3>Continents</h3>
@@ -611,7 +617,7 @@ export default class Help extends Component {
                 >Open Database License (ODbL)</a>.
               </li>
               <li>
-                <strong>Borders, cities, mountain ranges, rivers and lakes:</strong>
+                <strong>Borders, cities, rivers and lakes:</strong>
                 <a
                   href="https://www.naturalearthdata.com"
                   target="_blank"

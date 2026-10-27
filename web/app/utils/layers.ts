@@ -4,7 +4,11 @@
 
 import type ClimateGrid from './climate';
 import { DAYS_PER_MONTH, tempRgb, type RainThreshold } from './climate';
-import type { RainMetric, TempMetric } from 'forkcast/services/planner';
+import type {
+  CityLimit,
+  RainMetric,
+  TempMetric,
+} from 'forkcast/services/planner';
 
 const R = 6378137;
 const toY = (lat: number) =>
@@ -346,4 +350,34 @@ function blocks(
     }
   }
   return out;
+}
+
+/** City names: the biggest this many per country, or every town of this many people. */
+const TOP_CITIES = 10;
+const BIG_CITY = 500_000;
+
+/** Below this zoom (a few countries or more in view) only the capitals keep their names:
+ * the full list would be a blur. */
+const CAPITALS_ONLY_BELOW = 6;
+
+export const isCapitalsOnly = (zoom: number): boolean =>
+  zoom < CAPITALS_ONLY_BELOW;
+
+/**
+ * Does a town get its name on the map, with this city setting at this zoom?
+ * Capitals always do (unless names are off), so one never disappears as you
+ * zoom in.
+ */
+export function isPlaceShown(
+  limit: CityLimit,
+  zoom: number,
+  pop: number,
+  /** Its place by size in its country, 1 for the biggest */
+  rank: number,
+  isCapital: boolean,
+): boolean {
+  if (limit === 'off') return false;
+  if (isCapital) return true;
+  if (isCapitalsOnly(zoom)) return false;
+  return limit === 'big' ? pop >= BIG_CITY : rank <= TOP_CITIES;
 }

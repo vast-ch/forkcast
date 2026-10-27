@@ -28,7 +28,7 @@ work after `data`).
 | `eurovelo` | Official EuroVelo GPX tracks, one per route, gzipped | 11 MB | ODbL, see `eurovelo/README.md`. |
 | `brouter` | Geocodes the hand-made routes' stops (`forkcast_data/geocoded.json`, committed) and routes each leg with BRouter | small | Public servers: Nominatim (1 request/s) and brouter.de. |
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
-| `details` | Natural Earth populated places and geography regions (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
+| `details` | Natural Earth populated places (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
 | `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API: first an index of every route (id, version, box), then each route's ways by id, 10 routes per query, cached per route and version in `cache/cyclenet/icn/` | a few hundred routes | ODbL, © OpenStreetMap contributors. Rotates through public Overpass servers, waits when asked (429), backs off; a route that keeps failing is skipped and listed, and the next run fetches just those. `--fresh` refreshes the index; changed routes are refetched by version. |
 
 ### Builds (into `out/`, committed)
@@ -36,7 +36,7 @@ work after `data`).
 | Step | Reads | Writes |
 |---|---|---|
 | `borders` | `cache/borders/` | `out/<continent>/countries.json`, `out/world.json` |
-| `details` | `cache/details/` | `out/<continent>/places.json` (towns of 50,000 or more and capitals, mountain-range names at the centre of their area; Europe 14 kB gzipped) and `out/<continent>/water.json` (rivers and lakes to 0.01°; Europe 29 kB gzipped). The app fetches each only while its layer is on. |
+| `details` | `cache/details/` | `out/<continent>/places.json` (towns of 50,000 or more and capitals, each with its population and its rank by size in its country, for the map's city setting; Europe 18 kB gzipped) and `out/<continent>/water.json` (rivers and lakes to 0.01°; Europe 29 kB gzipped). The app fetches each only while its layer is on. |
 | `routes` | `eurovelo/`, `cache/brouter/`, `out/europe/countries.json` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `out/<continent>/climate.bin` + `climate.json` |
