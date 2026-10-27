@@ -3,7 +3,7 @@
 // re-projected rather than stretching the grid image.
 
 import type ClimateGrid from './climate';
-import { DAYS_PER_MONTH, tempRgb } from './climate';
+import { DAYS_PER_MONTH, tempRgb, type RainThreshold } from './climate';
 import type { RainMetric, TempMetric } from 'forkcast/services/planner';
 
 const R = 6378137;
@@ -224,16 +224,58 @@ export function rainDots(
   });
 }
 
+/** The rain emoji, wettest last, each a little bigger. */
+const EMOJI = [
+  { emoji: '🌦️', px: 14 },
+  { emoji: '🌧️', px: 18 },
+  { emoji: '☔', px: 22 },
+];
+
 /**
- * Rainy days as emoji, from this many a week up: fewer than one shows
- * nothing, so a dry region looks empty rather than speckled.
+ * Rainy days a week from which each emoji shows, per rainy-day threshold
+ * (mm). Fewer than one a week shows nothing, so dry regions stay clear. The
+ * heavier the threshold, the rarer such days (at 5 mm no part of Europe gets
+ * 4 a week), so each threshold gets steps that its rain actually reaches.
  */
-export const RAIN_EMOJI = [
-  { min: 1, emoji: '🌦️', px: 14, label: '1–2' },
-  { min: 2, emoji: '🌧️', px: 18, label: '2–4' },
-  { min: 4, emoji: '☔', px: 22, label: '4+ days' },
-] as const;
-export type RainEmojiTier = (typeof RAIN_EMOJI)[number];
+const EMOJI_STEPS: Record<RainThreshold, number[]> = {
+  1: [1, 2, 3],
+  5: [1, 1.5, 2],
+  10: [1, 1.5],
+};
+
+export interface RainEmojiTier {
+  min: number;
+  emoji: string;
+  px: number;
+  /** "1–1½", or "2+ days" for the last */
+  label: string;
+}
+
+const fmtDays = (n: number) =>
+  Number.isInteger(n) ? String(n) : `${Math.floor(n)}½`;
+
+/** The emoji steps for a rainy-day threshold, as the map and the legend use them. */
+export function rainEmojiTiers(threshold: number): RainEmojiTier[] {
+  const steps = EMOJI_STEPS[threshold as RainThreshold] ?? EMOJI_STEPS[5];
+  return steps.map((min, i) => {
+    const next = steps[i + 1];
+    return {
+      min,
+      ...EMOJI[i]!,
+      label: next
+        ? `${fmtDays(min)}–${fmtDays(next)}`
+        : `${fmtDays(min)}+ days`,
+    };
+  });
+}
+
+/** The emoji tier for this many rainy days a week, if any. */
+export function rainEmojiTier(
+  daysAWeek: number,
+  threshold: number,
+): RainEmojiTier | undefined {
+  return rainEmojiTiers(threshold).findLast((t) => daysAWeek >= t.min);
+}
 
 export interface RainMark {
   lat: number;
@@ -241,14 +283,9 @@ export interface RainMark {
   tier: RainEmojiTier;
 }
 
-/** The emoji tier for this many rainy days a week, if any. */
-export function rainEmojiTier(daysAWeek: number): RainEmojiTier | undefined {
-  return RAIN_EMOJI.findLast((t) => daysAWeek >= t.min);
-}
-
 /**
  * Rainy days a week as emoji, one per block of cells (their average) where
- * there is at least one; the tiers are RAIN_EMOJI.
+ * there is at least one; the tiers are rainEmojiTiers.
  */
 export function rainMarks(
   grid: ClimateGrid,
@@ -262,7 +299,7 @@ export function rainMarks(
   const value = (row: number, col: number) =>
     grid.cellRainChanceAt(phase, row, col, threshold) * 7;
   return blocks(grid, block, earlier, value).flatMap(({ lat, lon, val }) => {
-    const tier = rainEmojiTier(val);
+    const tier = rainEmojiTier(val, threshold);
     return tier ? [{ lat, lon, tier }] : [];
   });
 }

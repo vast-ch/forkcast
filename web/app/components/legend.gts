@@ -5,7 +5,7 @@ import { on } from '@ember/modifier';
 import type PlannerService from 'forkcast/services/planner';
 import { DAYS_PER_MONTH, TEMP_STOPS } from 'forkcast/utils/climate';
 import { css } from 'forkcast/utils/format';
-import { DOT_FULL, RAIN_EMOJI } from 'forkcast/utils/layers';
+import { DOT_FULL, rainEmojiTiers } from 'forkcast/utils/layers';
 
 /** The legend's sample dots, as mm in the week shown. */
 const DOT_STEPS = [
@@ -34,7 +34,10 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
     }));
   }
 
-  rainEmoji = RAIN_EMOJI;
+  /** The emoji steps for the rainy-day threshold chosen. */
+  get rainEmoji() {
+    return rainEmojiTiers(this.planner.rainThreshold);
+  }
 
   get isEmoji() {
     return this.planner.rainMetric === 'days';

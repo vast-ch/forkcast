@@ -49,10 +49,14 @@ module('Acceptance | planner', function (hooks) {
 
   test('rain shows as rainy-day emoji, or as mm dots', async function (assert) {
     await visit('/');
-    assert.dom('.wt-legend-emoji').includesText('4+ days');
+    assert.dom('.wt-legend-emoji').includesText('2+ days');
+    await click(button('1mm'));
+    assert
+      .dom('.wt-legend-emoji')
+      .includesText('3+ days', 'steps for 1 mm days');
     assert.dom('.leaflet-rain-pane .leaflet-tile').exists('emoji tiles');
     await click(button('mm'));
-    assert.strictEqual(currentURL(), '/?dots=mm');
+    assert.strictEqual(currentURL(), '/?dots=mm&rainy=1');
     assert.dom('.wt-legend-emoji').doesNotExist();
     assert.dom('.wt-legend-dots').includesText('60mm');
     assert.dom('.leaflet-rain-pane .leaflet-tile').doesNotExist();

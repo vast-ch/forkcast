@@ -106,8 +106,13 @@ Under the map, one column per day: the day number on top, a bar from the night l
   Mercator coordinates rather than stretching an image; otherwise it would
   drift off the coastlines towards the poles.
 - **Rain layer:** by default rainy days a week as emoji (`rainMarks` in
-  `web/app/utils/layers.ts`): fewer than one shows nothing, then 🌦️ (1–2),
-  🌧️ (2–4) and ☔ (4+), each a little bigger. The dots it replaced as the
+  `web/app/utils/layers.ts`): fewer than one shows nothing, then 🌦️, 🌧️
+  and ☔, each a little bigger, at steps that depend on the rainy-day
+  threshold (`EMOJI_STEPS`): 1–2–3 a week for 1 mm, 1–1½–2 for 5 mm, 1–1½
+  for 10 mm. Fixed steps of 1–2–4 left 5 mm (the default) with a ☔ nowhere
+  in Europe in any month and 🌧️ on 4% of land. With these, ☔ covers about
+  26% of land at 1 mm (any rain is common), 4% at 5 mm, and 🌧️ 1% at 10 mm
+  (heavy-rain days are rare, so that map stays mostly clear). The dots it replaced as the
   default sized every cell, so the whole map was speckled and a new rider had
   to read area as amount; tiers that start at one rainy day leave dry regions
   empty and say "wet week" at a glance. The emoji are text drawn into canvas
