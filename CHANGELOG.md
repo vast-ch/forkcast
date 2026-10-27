@@ -8,6 +8,7 @@
 
 ### Changed
 
+- The selected night stop on the map is now purple, like the selected day everywhere else in Forkcast; the other stops are ringed in dark grey, so the one you picked stands out.
 - Rain on the map is calmer and easier to read. By default it now shows how many rainy days a typical week brings: 🌦️, 🌧️ or ☔ as it gets wetter, and nothing where it's less than one, so dry regions stay clear instead of speckled with dots. What counts as a rainy day (1, 5 or 10 mm) is still your choice, and the steps follow it, since heavy rain is rarer: with the usual 5 mm, ☔ means 2 or more rainy days a week. The amount in mm, as dots, is one click away.
 
 ## v0.11.0 - 2026-10-25
