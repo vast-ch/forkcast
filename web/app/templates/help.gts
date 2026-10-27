@@ -637,7 +637,7 @@ export default class Help extends Component {
             <p>
               Forkcast is made by
               <a
-                href="https://vast.earth"
+                href="https://vast.ch/earth/"
                 target="_blank"
                 rel="noopener noreferrer"
               >vast.earth</a>. It's free, has no accounts, and nothing about you
