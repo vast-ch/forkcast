@@ -124,4 +124,30 @@ module('Acceptance | planner', function (hooks) {
       .dom('#route-picker option:checked')
       .includesText('Interlaken – Málaga');
   });
+
+  test('the start picker colours each day by the weather at the start', async function (assert) {
+    /** The temperature a day of the open calendar shows, from its title. */
+    const tempOn = (day: number) => {
+      const cell = findAll('.wt-temp-day.has-temp').find(
+        (d) =>
+          d.textContent?.trim() === String(day) &&
+          !d.classList.contains('is-outside'),
+      );
+      return Number(/(-?\d+)°C/.exec(cell?.getAttribute('title') ?? '')?.[1]);
+    };
+
+    await visit('/?start=2026-01-15');
+    await click('#start-date');
+    assert.ok(tempOn(15) < 10, 'a cold day in January at Interlaken');
+    assert
+      .dom('.wt-temp-day.has-temp')
+      .hasAttribute('style', /background: rgb/);
+
+    await click(`[data-key="2026-01-20"]`);
+    assert.true(currentURL().includes('start=2026-01-20'), 'the day is picked');
+
+    await visit('/?start=2026-07-15');
+    await click('#start-date');
+    assert.ok(tempOn(15) > 18, 'a warm one in July');
+  });
 });

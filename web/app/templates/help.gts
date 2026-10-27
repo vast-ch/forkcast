@@ -13,6 +13,7 @@ import { rainEmojiTiers } from 'forkcast/utils/layers';
 import TempScale from 'forkcast/components/help/temp-scale';
 import DaylightDemo from 'forkcast/components/help/daylight-demo';
 import AltitudeDemo from 'forkcast/components/help/altitude-demo';
+import StartDemo from 'forkcast/components/help/start-demo';
 
 export default class Help extends Component {
   @service declare atlas: AtlasService;
@@ -236,6 +237,16 @@ export default class Help extends Component {
               <strong>rest days</strong>. Ride 5, rest 2 means five riding days,
               two rest days, then again. A trip never ends on a rest day.
             </p>
+
+            <h3>Picking a start date</h3>
+            <p>
+              The start date's calendar is coloured by the weather where your
+              route begins if you set off that day: the day high, or the night
+              low when the map shows lows, in the map's colours. A good time to
+              leave stands out at a glance; hover over a day to read its
+              temperature. Try a few starting towns:
+            </p>
+            <StartDemo />
 
             <h3>The day chart</h3>
             <p>
@@ -617,6 +628,54 @@ export default class Help extends Component {
                 from the ERA5-Land terrain height above.
               </li>
             </ul>
+          </section>
+        {{/if}}
+
+        {{#if (this.shows "about")}}
+          <section id="about">
+            <h2>About Forkcast</h2>
+            <p>
+              Forkcast is made by
+              <a
+                href="https://vast.earth"
+                target="_blank"
+                rel="noopener noreferrer"
+              >vast.earth</a>. It's free, has no accounts, and nothing about you
+              or your trip leaves your browser (see
+              <LinkTo @route="help.section" @model="sharing">Sharing &amp;
+                privacy</LinkTo>).
+            </p>
+
+            <h3>Found a bug? Missing something?</h3>
+            <p>
+              Forkcast is open source on GitHub. Tell us what went wrong, or
+              what would make your planning easier:
+              <a
+                href="https://github.com/vast-ch/forkcast/issues/new"
+                target="_blank"
+                rel="noopener noreferrer"
+              >report an issue or request a feature</a>. What has changed lately
+              is under
+              <LinkTo @route="changelog">What's new</LinkTo>.
+            </p>
+
+            <h3>Chat with us</h3>
+            <p>
+              Questions, trip stories, ideas: join the Forkcast channel on
+              Discord. Scan the code with your phone, or
+              <a
+                href="https://discord.com/channels/1207261390159487026/1563578804918685880"
+                target="_blank"
+                rel="noopener noreferrer"
+              >open it here</a>.
+            </p>
+            <img
+              class="wt-help-qr"
+              src="/discord-qr.svg"
+              alt="QR code for the Forkcast channel on Discord"
+              width="160"
+              height="160"
+            />
           </section>
         {{/if}}
       </article>

@@ -5,5 +5,6 @@
   { "id": "data", "label": "Data" },
   { "id": "accuracy", "label": "Accuracy" },
   { "id": "sharing", "label": "Sharing & privacy" },
-  { "id": "sources", "label": "Sources" }
+  { "id": "sources", "label": "Sources" },
+  { "id": "about", "label": "About" }
 ]

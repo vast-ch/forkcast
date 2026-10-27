@@ -6,7 +6,11 @@ import type AtlasService from './atlas';
 import type MyRoutesService from './my-routes';
 import { isOwnRouteId } from './my-routes';
 import type IndexController from 'forkcast/controllers/index';
-import type { DayClimate, RainThreshold } from 'forkcast/utils/climate';
+import {
+  climateOn,
+  type DayClimate,
+  type RainThreshold,
+} from 'forkcast/utils/climate';
 import {
   planTrip,
   type Milestones,
@@ -368,6 +372,21 @@ export default class PlannerService extends Service {
       restDays: this.restDays,
       rainThreshold: this.rainThreshold,
     });
+  }
+
+  /**
+   * The temperature (the map's high or low) at the route's start on a date:
+   * what the first day would be like when starting then. For the start date
+   * picker; undefined without a route or data there.
+   */
+  startTempOn(date: Date): number | undefined {
+    const start = this.route?.points[0];
+    const climate = this.atlas.climate;
+    if (!start || !climate) return undefined;
+    const t = climateOn(climate, date, start, this.rainThreshold)[
+      this.tempMetric
+    ];
+    return Number.isNaN(t) ? undefined : t;
   }
 
   /** Select a route, loading its track if it is a preset. */

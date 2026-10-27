@@ -21,6 +21,7 @@
   --wt-border: #2d3a46;
   --wt-accent: #0d6b78;
   --wt-accent-soft: #dcefef;
+  --wt-popover-shadow: 0 10px 28px rgb(23 33 43 / 28%);
   --wt-rain: #112f6e;
   --wt-danger: #b42318;
   --wt-sun: #f2b632;
@@ -895,6 +896,16 @@ body {
   border: 1px solid var(--wt-line);
   border-radius: 8px;
 }
+/* The Discord QR code on the help's About tab. */
+.wt-help-qr {
+  margin-top: 0.9rem;
+  border: 1px solid var(--wt-line);
+  border-radius: 8px;
+}
+/* The help's start date calendar: as wide as its days, not the card. */
+.wt-help-calendar {
+  align-self: flex-start;
+}
 .wt-help p,
 .wt-help li {
   line-height: 1.6;
@@ -947,6 +958,29 @@ body {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.25rem;
   }
+}
+
+/* Frontile popovers (date pickers, and any select or menu to come): its theme
+   gives them only a faint border and no shadow, so they blend into the panel
+   behind. A clear edge and lift in the app's own colours, for all of them.
+   Popovers are the only overlays with a placement. */
+[data-component="overlay"][data-placement] {
+  border-color: var(--wt-border);
+  box-shadow: var(--wt-popover-shadow);
+}
+
+/* A temperature calendar's day (the start picker, the help demo): tinted
+   inside the day button, so the selected day's fill shows as a ring. */
+.wt-temp-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--calendar-cell-size) - 0.25rem - 6px);
+  height: calc(var(--calendar-cell-size) - 0.25rem - 6px);
+  border-radius: 9999px;
+}
+.wt-temp-day.is-outside.has-temp {
+  opacity: 0.45;
 }
 
 /* stylelint-enable */

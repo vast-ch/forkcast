@@ -30,6 +30,7 @@ import Logo from 'forkcast/components/logo';
 import HelpLink from 'forkcast/components/help-link';
 import RangeInput from 'forkcast/components/range-input';
 import RouteEditor from 'forkcast/components/route-editor';
+import TempCalendar from 'forkcast/components/temp-calendar';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 
 type MapSetting =
@@ -191,6 +192,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
   setStart = (d: Date | null) => {
     if (d) this.planner.setStart(isoDate(d));
   };
+
+  /** The start picker's days: the temperature at the route's start. */
+  startTempOn = (date: Date) => this.planner.startTempOn(date);
+
+  get startTempLabel() {
+    return `${this.planner.tempMetric === 'high' ? 'High' : 'Low'} at the start`;
+  }
 
   startDrawing = () => this.planner.startDrawing();
 
@@ -365,13 +373,28 @@ export default class SidePanel extends Component<SidePanelSignature> {
           <div class="grid grid-cols-2 gap-2">
             <div class="col-span-2">
               <DatePicker
+                @id="start-date"
                 @label="Start"
                 @inputSize="sm"
                 @value={{this.planner.start}}
                 @onChange={{this.setStart}}
                 @weekStartsOn={{1}}
                 @formatOptions={{this.startFormat}}
-              />
+              >
+                <:calendar as |cal|>
+                  <TempCalendar
+                    @color={{cal.color}}
+                    @value={{cal.value}}
+                    @onChange={{cal.onChange}}
+                    @locale={{cal.locale}}
+                    @labelledBy={{cal.labelledBy}}
+                    @autofocus={{cal.autofocus}}
+                    @tempOn={{this.startTempOn}}
+                    @tempLabel={{this.startTempLabel}}
+                    class="p-2"
+                  />
+                </:calendar>
+              </DatePicker>
             </div>
             {{#each this.tripFields as |f|}}
               <div>

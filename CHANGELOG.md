@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+
+- An About page in the help: who makes Forkcast, where to report a problem or ask for a feature, and a QR code to our Discord channel.
+- The start date's calendar is coloured by the weather: each day shows, in the map's colours, how warm it usually is where your route begins if you set off that day, so a good time to leave stands out at a glance. The help's “Your trip” page lets you try it for a few starting towns.
+
+### Changed
+
+- Pop-up calendars now have a clear edge and shadow, so they stand out from the panel behind them.
+
 ## v0.13.0 - 2026-10-27
 
 ### Changed
