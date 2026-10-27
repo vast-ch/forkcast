@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.12.0 - 2026-10-27
+
 ### Added
 
 - Dates on the map: tags over your route show where you'll be on the 1st of each month ("Nov"), or, if you switch to weeks, at the start of each week of the trip ("Week 2"). Switch them off under "Dates on the route".
