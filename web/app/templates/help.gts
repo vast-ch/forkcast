@@ -124,9 +124,13 @@ export default class Help extends Component {
             <p>
               The map shows how many
               <strong>rainy days</strong>
-              a week brings: nothing where it's fewer than one, then 🌦️ for 1–2,
-              🌧️ for 2–4 and ☔ for 4 or more. A rainy day is one with at least
-              1, 5 or 10 mm of rain, your choice under “Rainy day”. Switch to
+              a week brings: nothing where it's fewer than one, then 🌦️, 🌧️ and
+              ☔ as it gets wetter. A rainy day is one with at least 1, 5 or 10
+              mm of rain, your choice under “Rainy day”. Days with 10 mm are
+              much rarer than days with 1 mm, so each choice has its own steps:
+              with 5 mm, for example, 🌦️ is 1–1½ rainy days a week, 🌧️ 1½–2 and
+              ☔ 2 or more. The legend gives the steps for your choice. Switch
+              to
               <strong>mm</strong>
               for the amount instead, as dots whose area grows with the week's
               rain. When you zoom out, neighbouring spots merge into one showing
