@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Rain on the map is calmer and easier to read. It now shows rainy days a week by default: nothing where there's less than one, then 🌦️, 🌧️ or ☔ as the week gets wetter, so dry regions stay clear. The amount in mm, as dots, is still one click away.
+
 ## v0.11.0 - 2026-10-25
 
 ### Added

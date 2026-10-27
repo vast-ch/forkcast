@@ -213,9 +213,72 @@ export function rainDots(
     (metric === 'mm'
       ? Math.max(0, grid.cellAt('pre', phase, row, col))
       : grid.cellRainChanceAt(phase, row, col, threshold)) * DAYS_PER_MONTH;
-  const dots: RainDot[] = [];
-  // Blocks are aligned to the worldwide grid, not to this continent's corner,
-  // so neighbouring continents merge cells into the same pattern of dots.
+  return blocks(grid, block, earlier, value).map(({ lat, lon, val }) => {
+    const half =
+      (cellM * block * Math.min(1, Math.cos((lat * Math.PI) / 180))) / 2;
+    return {
+      lat,
+      lon,
+      radius: half * Math.sqrt(Math.min(1.3, val / full)) * 0.85,
+    };
+  });
+}
+
+/**
+ * Rainy days as emoji, from this many a week up: fewer than one shows
+ * nothing, so a dry region looks empty rather than speckled.
+ */
+export const RAIN_EMOJI = [
+  { min: 1, emoji: '🌦️', px: 14, label: '1–2' },
+  { min: 2, emoji: '🌧️', px: 18, label: '2–4' },
+  { min: 4, emoji: '☔', px: 22, label: '4+ days' },
+] as const;
+export type RainEmojiTier = (typeof RAIN_EMOJI)[number];
+
+export interface RainMark {
+  lat: number;
+  lon: number;
+  tier: RainEmojiTier;
+}
+
+/** The emoji tier for this many rainy days a week, if any. */
+export function rainEmojiTier(daysAWeek: number): RainEmojiTier | undefined {
+  return RAIN_EMOJI.findLast((t) => daysAWeek >= t.min);
+}
+
+/**
+ * Rainy days a week as emoji, one per block of cells (their average) where
+ * there is at least one; the tiers are RAIN_EMOJI.
+ */
+export function rainMarks(
+  grid: ClimateGrid,
+  /** Position in the year, 0 … 1 */
+  phase: number,
+  threshold: number,
+  block = 1,
+  /** Grids drawn before this one: their area is left to them. */
+  earlier: ClimateGrid[] = [],
+): RainMark[] {
+  const value = (row: number, col: number) =>
+    grid.cellRainChanceAt(phase, row, col, threshold) * 7;
+  return blocks(grid, block, earlier, value).flatMap(({ lat, lon, val }) => {
+    const tier = rainEmojiTier(val);
+    return tier ? [{ lat, lon, tier }] : [];
+  });
+}
+
+/**
+ * The average of `value` over block × block cells, at each block's centre.
+ * Blocks are aligned to the worldwide grid, not to this continent's corner,
+ * so neighbouring continents merge cells into the same pattern.
+ */
+function blocks(
+  grid: ClimateGrid,
+  block: number,
+  earlier: ClimateGrid[],
+  value: (row: number, col: number) => number,
+): { lat: number; lon: number; val: number }[] {
+  const out: { lat: number; lon: number; val: number }[] = [];
   const rowStart = -(Math.round((90 - grid.lat0) / grid.step) % block);
   const colStart = -(Math.round((grid.lon0 + 180) / grid.step) % block);
   for (let r0 = rowStart; r0 < grid.rows; r0 += block) {
@@ -242,14 +305,8 @@ export function rainDots(
       const lat = grid.lat0 - (r0 + (block - 1) / 2) * grid.step;
       const lonC = grid.lon0 + (c0 + (block - 1) / 2) * grid.step;
       if (earlier.some((g) => hasCell(g, 'pre', lat, lonC))) continue;
-      const half =
-        (cellM * block * Math.min(1, Math.cos((lat * Math.PI) / 180))) / 2;
-      dots.push({
-        lat,
-        lon: lonC,
-        radius: half * Math.sqrt(Math.min(1.3, val / full)) * 0.85,
-      });
+      out.push({ lat, lon: lonC, val });
     }
   }
-  return dots;
+  return out;
 }

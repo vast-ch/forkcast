@@ -148,7 +148,8 @@ body {
   .wt-legend .wt-tick:not(:last-child) .wt-tick-unit {
     display: none;
   }
-  .wt-legend-dots {
+  .wt-legend-dots,
+  .wt-legend-emoji {
     gap: 0.45rem !important;
   }
   /* Draw / Import / Export: one per row, full width; three across wrap. */

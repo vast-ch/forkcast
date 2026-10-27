@@ -47,7 +47,7 @@ anyone the rider didn't send it to.
 1. **On start:** the code, `manifest.json` (the continents and their preset routes, a few kB), `world.json` (one outline per continent, ~120 kB) and Europe's climate grid and borders (1.2 MB gzipped). The app opens straight on the planner; there is no separate start page.
 2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.7 to 4.8 MB gzipped, added to what is already shown. Continents not shown yet are drawn from `world.json` as light, clickable shapes.
 
-Continents add up rather than replace each other, because a trip can cross from one to another (Europe into Asia, say). They are all cut from the same worldwide grid, so where two overlap their values are identical: `ClimateSet` in `web/app/utils/climate.ts` answers each point from the first loaded continent that covers it, and the map draws overlapping cells only once (rain dots are grouped on the worldwide grid so the patterns line up).
+Continents add up rather than replace each other, because a trip can cross from one to another (Europe into Asia, say). They are all cut from the same worldwide grid, so where two overlap their values are identical: `ClimateSet` in `web/app/utils/climate.ts` answers each point from the first loaded continent that covers it, and the map draws overlapping cells only once (rain emoji and dots are grouped on the worldwide grid so the patterns line up).
 3. **When a route is picked:** that route's full track (`routes/<id>.json`). Every other preset route is drawn dashed from `routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped, loaded at start), so the map shows what is available without downloading each track; clicking a dashed route selects it.
 
 Every data file is imported through `web/app/utils/assets.ts`, so the
@@ -105,10 +105,20 @@ Under the map, one column per day: the day number on top, a bar from the night l
   (Web Mercator) is not, so the layer is rendered into a canvas row by row in
   Mercator coordinates rather than stretching an image; otherwise it would
   drift off the coastlines towards the poles.
-- **Rain layer:** one dot per grid cell, its area proportional to the rain or
-  rainy days at that time of year (the legend gives them for the week shown), drawn as metre-sized circles on a canvas. When zoomed
-  out, neighbouring cells are merged into one dot so they stay readable
-  instead of turning into a striped pattern.
+- **Rain layer:** by default rainy days a week as emoji (`rainMarks` in
+  `web/app/utils/layers.ts`): fewer than one shows nothing, then 🌦️ (1–2),
+  🌧️ (2–4) and ☔ (4+), each a little bigger. The dots it replaced as the
+  default sized every cell, so the whole map was speckled and a new rider had
+  to read area as amount; tiers that start at one rainy day leave dry regions
+  empty and say "wet week" at a glance. The emoji are text drawn into canvas
+  tiles (an `L.GridLayer`), so thousands stay cheap and keep their pixel size
+  at every zoom. "A week" is 7 days at the rate of the quarter-month shown
+  (the climate is a smooth seasonal curve, sampled at the slot's middle).
+  The other option, mm, is one dot per grid cell, its area proportional to
+  the rain at that time of year (the legend gives it for the week shown),
+  drawn as metre-sized circles on a canvas. Either way, when zoomed out,
+  neighbouring cells are merged into one so they stay readable instead of
+  turning into a striped pattern.
 - **Map details,** each a toggle (Frontile `ButtonGroup` of `ToggleButton`s)
   and a URL setting (`borders`, `cities`, `relief`, `water`, `routes`):
   - **Routes** shows or hides the dashed preset routes other than the
@@ -125,7 +135,7 @@ Under the map, one column per day: the day number on top, a bar from the night l
     north-west, slopes exaggerated ×10 since the cells are 25 km, drawn in
     greys that the pane multiplies onto the colours below, so it only darkens.
 - **The legend** is a button: a click folds it into a small chip (a bit of the
-  colour scale and a rain dot) and back. Whether it is folded isn't remembered:
+  colour scale and a rain emoji or dot) and back. Whether it is folded isn't remembered:
   the URL holds the plan, and nothing else is stored.
 - The map shows **cell averages**; the altitude correction only applies to
   route points (see below), because only they have a known height.
