@@ -8,7 +8,7 @@ import { LinkTo } from '@ember/routing';
 import { ButtonGroup, SegmentedControl } from 'frontile/buttons';
 import { DatePicker, Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
-import { MAP_DETAILS } from 'forkcast/services/planner';
+import { MAP_DETAILS, MILESTONE_CHOICES } from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
 import { MONTHS, RAIN_THRESHOLDS } from 'forkcast/utils/climate';
 import {
@@ -29,7 +29,12 @@ import RouteEditor from 'forkcast/components/route-editor';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 
 type MapSetting =
-  'showTemp' | 'showRain' | 'tempMetric' | 'rainMetric' | 'rainThreshold';
+  | 'showTemp'
+  | 'showRain'
+  | 'tempMetric'
+  | 'rainMetric'
+  | 'rainThreshold'
+  | 'milestones';
 
 interface SidePanelSignature {
   Args: {
@@ -70,6 +75,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
     year: 'numeric',
   };
   rainThresholds = RAIN_THRESHOLDS;
+  milestoneChoices = MILESTONE_CHOICES;
 
   get weekValue() {
     return String(this.planner.week);
@@ -469,6 +475,20 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 {{/each}}
               </SegmentedControl>
             </span>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm">Dates on the route</span>
+            <SegmentedControl
+              @value={{this.planner.milestones}}
+              @onChange={{fn this.setMap "milestones"}}
+              @size="sm"
+              aria-label="Dates on the route"
+              as |Ctl|
+            >
+              {{#each this.milestoneChoices as |c|}}
+                <Ctl.Item @value={{c.value}}>{{c.label}}</Ctl.Item>
+              {{/each}}
+            </SegmentedControl>
           </div>
           <ButtonGroup
             @size="xs"

@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { planTrip } from 'forkcast/utils/itinerary';
+import { milestones, planTrip } from 'forkcast/utils/itinerary';
 import { withDistances } from 'forkcast/utils/route';
 import type { ClimateSource, DayClimate } from 'forkcast/utils/climate';
 import { closeTo } from 'forkcast/tests/helpers/close-to';
@@ -86,5 +86,33 @@ module('Unit | Utility | itinerary', function () {
 
   test('it adds up the rain chances into expected rainy days', function (assert) {
     closeTo(assert, trip.rainyDays, 5 * 0.25, 5);
+  });
+
+  test('it marks where each month or week of the trip begins', function (assert) {
+    // Ride, ride, rest from 29 June: 1 July is a rest day, 2 July is ridden.
+    const june = planTrip(route, climate, { ...settings, start: '2026-06-29' });
+    const day = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`;
+    assert.deepEqual(milestones(june, 'months', day), [
+      { n: 0, label: '29/6' },
+      { n: 4, label: '2/7' },
+    ]);
+    assert.deepEqual(milestones(june, 'weeks', day), [
+      { n: 0, label: 'Week 1' },
+    ]);
+    assert.deepEqual(milestones(june, 'off', day), []);
+  });
+
+  test('a week starting on a rest day is marked at its first night ridden', function (assert) {
+    // Every other day a rest day: day 8, the first of week 2, is one.
+    const trip = planTrip(route, climate, {
+      ...settings,
+      rideDays: 1,
+      restDays: 1,
+    });
+    assert.true(trip.days[7]!.isRest);
+    assert.deepEqual(milestones(trip, 'weeks', String)[1], {
+      n: 9,
+      label: 'Week 2',
+    });
   });
 });

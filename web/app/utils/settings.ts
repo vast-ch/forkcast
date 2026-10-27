@@ -27,6 +27,8 @@ export const DEFAULTS = {
   water: true,
   /** The preset routes other than the selected one, dashed */
   routes: true,
+  /** Dates over the night stops: where each month or week of the trip begins, or none */
+  dates: 'months' as 'months' | 'weeks' | 'off',
   /** Rain on the map: rainy days as emoji, or mm as dots */
   dots: 'days' as 'mm' | 'days',
   /** mm of rain from which a day counts as rainy */

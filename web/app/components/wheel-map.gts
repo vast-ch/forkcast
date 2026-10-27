@@ -7,7 +7,12 @@ import type Owner from '@ember/owner';
 import type AtlasService from 'forkcast/services/atlas';
 import type PlannerService from 'forkcast/services/planner';
 import type LastVisitService from 'forkcast/services/last-visit';
-import { dayAtKm, type Trip } from 'forkcast/utils/itinerary';
+import {
+  dayAtKm,
+  milestones,
+  type Milestones,
+  type Trip,
+} from 'forkcast/utils/itinerary';
 import {
   temperatureRaster,
   rainDots,
@@ -70,7 +75,8 @@ type GroupLayer =
   | 'cyclenet'
   | 'drawn'
   | 'routes'
-  | 'stops';
+  | 'stops'
+  | 'dates';
 
 interface MapState {
   /** Quarter-month shown, 0–47, and its position in the year */
@@ -92,6 +98,8 @@ interface MapState {
   sketch: { lat: number; lon: number }[];
   drawn: { lat: number; lon: number }[];
   highlightedDay?: number;
+  /** Dates over the night stops */
+  milestones: Milestones;
   /** Map details switched on in the Map section */
   details: Record<MapDetail, boolean>;
   /** How many detail files have arrived, so the map redraws when one does */
@@ -122,6 +130,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     rain?: L.LayerGroup;
     routes?: L.LayerGroup;
     stops?: L.LayerGroup;
+    dates?: L.LayerGroup;
     drawn?: L.LayerGroup;
     cursor?: L.CircleMarker;
   } = {};
@@ -636,6 +645,16 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }
     });
 
+    // Where each month (or week) of the trip begins, over its night stop.
+    this.layer('dates', [s.trip, s.milestones], (group) => {
+      const { trip, route } = s;
+      if (!trip || !route) return;
+      for (const m of milestones(trip, s.milestones, fmtShortDate)) {
+        const at = m.n ? trip.days[m.n - 1]!.sleep : route.points[0]!;
+        label(m.label, at.lat, at.lon, 'wt-stop-date').addTo(group);
+      }
+    });
+
     // A double-click zooms in, except while drawing: there it finishes the route.
     if (this.changed('drawing', s.isDrawing)) {
       if (s.isDrawing) map.doubleClickZoom.disable();
@@ -786,6 +805,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
       sketch: [...p.sketch],
       drawn: p.drawn,
       highlightedDay: p.highlightedDay,
+      milestones: p.milestones,
       details: Object.fromEntries(
         MAP_DETAILS.map(({ key }) => [key, p.showDetail(key)]),
       ) as Record<MapDetail, boolean>,

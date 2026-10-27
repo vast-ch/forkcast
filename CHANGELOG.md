@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Dates on the map: tags over your route show where you'll be as each new month begins, with the date you get there, or, if you switch to weeks, where each week of the trip starts. Switch them off under "Dates on the route".
+
 ### Changed
 
 - Rain on the map is calmer and easier to read. By default it now shows how many rainy days a typical week brings: 🌦️, 🌧️ or ☔ as it gets wetter, and nothing where it's less than one, so dry regions stay clear instead of speckled with dots. What counts as a rainy day (1, 5 or 10 mm) is still your choice, and the steps follow it, since heavy rain is rarer: with the usual 5 mm, ☔ means 2 or more rainy days a week. The amount in mm, as dots, is one click away.

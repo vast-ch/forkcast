@@ -11,7 +11,12 @@ import {
   type DayClimate,
   type RainThreshold,
 } from 'forkcast/utils/climate';
-import { planTrip, type Trip, type TripDay } from 'forkcast/utils/itinerary';
+import {
+  planTrip,
+  type Milestones,
+  type Trip,
+  type TripDay,
+} from 'forkcast/utils/itinerary';
 import {
   decodeTrack,
   reversed,
@@ -39,6 +44,11 @@ export const MAP_DETAILS: { key: MapDetail; label: string }[] = [
   { key: 'routes', label: 'Routes' },
 ];
 export type RainMetric = 'mm' | 'days';
+export const MILESTONE_CHOICES: { value: Milestones; label: string }[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'months', label: 'Months' },
+  { value: 'weeks', label: 'Weeks' },
+];
 
 /** How far a click may be from a cycle route to be moved onto it, km. */
 const CLICK_SNAP_KM = 25;
@@ -174,6 +184,15 @@ export default class PlannerService extends Service {
 
   toggleDetail(key: MapDetail): void {
     this.write(key, !this.read(key));
+  }
+
+  /** Dates over the night stops on the map. */
+  get milestones(): Milestones {
+    const v = this.read('dates');
+    return MILESTONE_CHOICES.find((c) => c.value === v)?.value ?? 'months';
+  }
+  set milestones(v: Milestones) {
+    this.write('dates', v);
   }
 
   get rainMetric(): RainMetric {

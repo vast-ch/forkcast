@@ -62,6 +62,42 @@ module('Acceptance | planner', function (hooks) {
     assert.dom('.leaflet-rain-pane .leaflet-tile').doesNotExist();
   });
 
+  test('dates over the night stops: months, weeks or none', async function (assert) {
+    const dates = () =>
+      findAll('.leaflet-labels-pane .wt-stop-date').map((d) =>
+        d.textContent?.trim(),
+      );
+    const option = (text: string) =>
+      findAll('[aria-label="Dates on the route"] button').find(
+        (b) => b.textContent?.trim() === text,
+      )!;
+    await visit('/?start=2025-03-28');
+    assert.deepEqual(
+      dates(),
+      [
+        new Date(2025, 2, 28).toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'short',
+        }),
+        new Date(2025, 3, 1).toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'short',
+        }),
+        new Date(2025, 4, 1).toLocaleDateString(undefined, {
+          day: 'numeric',
+          month: 'short',
+        }),
+      ],
+      'the start, and the first nights in April and May',
+    );
+    await click(option('Weeks'));
+    assert.strictEqual(currentURL(), '/?dates=weeks&start=2025-03-28');
+    assert.strictEqual(dates()[0], 'Week 1');
+    assert.strictEqual(dates()[1], 'Week 2');
+    await click(option('Off'));
+    assert.deepEqual(dates(), []);
+  });
+
   test('cancel leaves the route as it was', async function (assert) {
     await visit('/');
     await click(button('Draw a route'));
