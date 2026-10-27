@@ -921,6 +921,14 @@ body {
   border: 1px solid var(--wt-line);
   border-radius: 6px;
 }
+.wt-help-rain-step {
+  margin-right: 0.75rem;
+  white-space: nowrap;
+}
+.wt-help-rain-kind {
+  color: var(--wt-muted);
+  white-space: nowrap;
+}
 .wt-help-defs dt {
   font-family: var(--wt-font-data);
   font-weight: 500;

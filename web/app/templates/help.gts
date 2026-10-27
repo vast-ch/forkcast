@@ -8,6 +8,8 @@ import SECTIONS from 'forkcast/help-sections.json';
 import type AtlasService from 'forkcast/services/atlas';
 import Logo from 'forkcast/components/logo';
 import Legend from 'forkcast/components/legend';
+import { RAIN_THRESHOLDS } from 'forkcast/utils/climate';
+import { rainEmojiTiers } from 'forkcast/utils/layers';
 import TempScale from 'forkcast/components/help/temp-scale';
 import DaylightDemo from 'forkcast/components/help/daylight-demo';
 import AltitudeDemo from 'forkcast/components/help/altitude-demo';
@@ -46,6 +48,15 @@ export default class Help extends Component {
   }
 
   shows = (id: string) => this.section === id;
+
+  /** The rain emoji's steps for each rainy-day threshold, as the map uses them. */
+  rainSteps = RAIN_THRESHOLDS.map((mm) => ({
+    mm,
+    kind: { 1: 'any rain', 5: 'a real shower; the default', 10: 'a soaking' }[
+      mm
+    ],
+    tiers: rainEmojiTiers(mm),
+  }));
 
   get years() {
     const y = this.atlas.climate?.years;
@@ -122,19 +133,34 @@ export default class Help extends Component {
 
             <h3>Rain</h3>
             <p>
-              The map shows how many
+              The emoji show how many
               <strong>rainy days</strong>
-              a week brings: nothing where it's fewer than one, then 🌦️, 🌧️ and
-              ☔ as it gets wetter. A rainy day is one with at least 1, 5 or 10
-              mm of rain, your choice under “Rainy day”. Days with 10 mm are
-              much rarer than days with 1 mm, so each choice has its own steps:
-              with 5 mm, for example, 🌦️ is 1–1½ rainy days a week, 🌧️ 1½–2 and
-              ☔ 2 or more. The legend gives the steps for your choice. Switch
-              to
+              a typical week brings. Where it's fewer than one there's nothing,
+              so the clear parts of the map are the dry ones.
+            </p>
+            <p>
+              What counts as a rainy day is your choice under “Rainy day”: at
+              least 1, 5 or 10 mm of rain. Heavier rain is rarer, so the steps
+              follow your choice (the legend always shows the current ones), in
+              rainy days a week:
+            </p>
+            <dl class="wt-help-defs">
+              {{#each this.rainSteps as |r|}}
+                <div><dt>{{r.mm}} mm</dt><dd>
+                    {{#each r.tiers as |t|}}
+                      <span class="wt-help-rain-step">{{t.emoji}}
+                        {{t.label}}</span>
+                    {{/each}}
+                    <span class="wt-help-rain-kind">({{r.kind}})</span>
+                  </dd></div>
+              {{/each}}
+            </dl>
+            <p>
+              Switch to
               <strong>mm</strong>
-              for the amount instead, as dots whose area grows with the week's
-              rain. When you zoom out, neighbouring spots merge into one showing
-              their average, so the map stays readable.
+              to see the amount instead, as dots that grow with the week's rain.
+              When you zoom out, neighbouring emoji or dots merge into one
+              showing their average.
             </p>
 
             <h3>The legend</h3>
