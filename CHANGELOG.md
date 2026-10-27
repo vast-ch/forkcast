@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- City names on the map are now a choice instead of a long fixed list: the 10 biggest towns in each country (the new default, a much calmer map), every town of over 500,000 people, or none. Until you zoom in on a region, only the capitals keep their names, so the map stays readable.
+- The names of mountain ranges are gone from the map; the relief shading shows where the mountains are.
+
 ## v0.12.0 - 2026-10-27
 
 ### Added

@@ -383,8 +383,7 @@ body {
 }
 /* Names sit on a zero-size marker at their point; a white halo keeps them
    readable over any colour. */
-.wt-place span,
-.wt-range-name span {
+.wt-place span {
   position: absolute;
   white-space: nowrap;
   pointer-events: none;
@@ -431,15 +430,6 @@ body {
   line-height: 1.5;
   color: #fff;
   background: color-mix(in srgb, var(--wt-ink) 85%, transparent);
-}
-.wt-range-name span {
-  transform: translate(-50%, -50%);
-  font-family: var(--wt-font-body);
-  font-size: 10px;
-  font-style: italic;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #6b4f2e;
 }
 /* The legend is a button: it shrinks to a chip and back. */
 .wt-legend {

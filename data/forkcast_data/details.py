@@ -1,13 +1,16 @@
-"""Map details: city and mountain-range names, rivers and lakes.
+"""Map details: city names, rivers and lakes.
 
-- download: Natural Earth (public domain) populated places (1:10m), geography
-  regions (1:10m, for mountain-range names), rivers and lake centerlines and
+- download: Natural Earth (public domain) populated places (1:10m), rivers and
+  lake centerlines and
   lakes (1:50m) into cache/details/.
 - build, per continent:
-  - out/<continent>/places.json: {"places": [[name, lon, lat, isCapital]],
-    "ranges": [[name, lon, lat]]}. Places are towns of 50,000 or more and
-    capitals; a range's name sits at the centre of its area. Every label is
-    shown at every zoom: the map's toggles are how a rider thins them out.
+  - out/<continent>/places.json: {"places": [[name, lon, lat, isCapital,
+    population, rank]]}. Places are towns of
+    50,000 or more and capitals; rank is a town's place by size in its country
+    (1 for the biggest), counted over the whole world so a country split
+    between continents ranks the same in both. The map's city setting (off, the 10 biggest per
+    country, or over 500,000) picks the towns, and zoomed out only capitals
+    keep their names.
   - out/<continent>/water.json: {"rivers": [[[lon, lat], …], …], "lakes":
     [[[lon, lat], …], …]}, coordinates to 0.01° (about 1 km).
 
@@ -32,7 +35,6 @@ SOURCES = {
     name: BASE + name
     for name in (
         "ne_10m_populated_places_simple.geojson",
-        "ne_10m_geography_regions_polys.geojson",
         "ne_50m_rivers_lake_centerlines.geojson",
         "ne_50m_lakes.geojson",
     )
@@ -81,38 +83,38 @@ def _round(line: list) -> list:
     return out
 
 
-def _centre(rings: list[list]) -> tuple[float, float]:
-    """Centre of the largest ring's bounding box: where a range's name goes."""
-    ring = max(rings, key=len)
-    xs = [p[0] for p in ring]
-    ys = [p[1] for p in ring]
-    return (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
-
-
 def _inside(lon: float, lat: float, bbox) -> bool:
     return bbox[0] <= lon <= bbox[2] and bbox[1] <= lat <= bbox[3]
 
 
+def _ranks() -> dict[str, int]:
+    """Each place's rank by population within its country, 1 for the biggest, by name and country."""
+    by_country: dict[str, list[tuple[int, str]]] = {}
+    for f in _features("ne_10m_populated_places_simple.geojson"):
+        p = f["properties"]
+        by_country.setdefault(p["adm0name"], []).append((p.get("pop_max", 0), p["name"]))
+    ranks = {}
+    for country, towns in by_country.items():
+        for i, (_, name) in enumerate(sorted(towns, reverse=True)):
+            ranks.setdefault(f"{country}/{name}", i + 1)
+    return ranks
+
+
 def _places(bbox) -> dict:
+    ranks = _ranks()
     places = []
     for f in _features("ne_10m_populated_places_simple.geojson"):
         p = f["properties"]
         lon, lat = f["geometry"]["coordinates"][:2]
         is_capital = p.get("adm0cap") == 1
-        if not _inside(lon, lat, bbox) or (p.get("pop_max", 0) < MIN_POPULATION and not is_capital):
+        pop = p.get("pop_max", 0)
+        if not _inside(lon, lat, bbox) or (pop < MIN_POPULATION and not is_capital):
             continue
-        places.append([p["name"], round(lon, 3), round(lat, 3), int(is_capital)])
+        rank = ranks[f"{p['adm0name']}/{p['name']}"]
+        places.append([p["name"], round(lon, 3), round(lat, 3), int(is_capital), pop, rank])
     # Capitals first, then by size, so the biggest names draw on top.
-    places.sort(key=lambda r: -r[3])
-    ranges = []
-    for f in _features("ne_10m_geography_regions_polys.geojson"):
-        p = f["properties"]
-        if p.get("FEATURECLA") != "Range/mtn":
-            continue
-        lon, lat = _centre(_lines(f["geometry"]))
-        if _inside(lon, lat, bbox):
-            ranges.append([p["NAME"], round(lon, 2), round(lat, 2)])
-    return {"places": places, "ranges": ranges}
+    places.sort(key=lambda r: (-r[3], -r[4]))
+    return {"places": places}
 
 
 def _water(bbox) -> dict:
@@ -146,7 +148,7 @@ def build(fresh: bool = False) -> None:
         (folder / "water.json").write_text(json.dumps(water, separators=(",", ":")))
         size = sum((folder / n).stat().st_size for n in ("places.json", "water.json"))
         log(
-            f"  {c['id']:14} {len(places['places']):4} places, {len(places['ranges']):3} ranges, "
+            f"  {c['id']:14} {len(places['places']):4} places, "
             f"{len(water['rivers']):4} rivers, {len(water['lakes']):3} lakes, {size / 1e3:.0f} kB"
         )
     stamp.done()

@@ -42,12 +42,10 @@ export interface RouteOverview {
   lon: number[];
 }
 
-/** City and mountain-range names of a continent (data/forkcast_data/details.py). */
+/** City names of a continent (data/forkcast_data/details.py). */
 export interface PlacesJson {
-  /** name, lon, lat, 1 for a capital */
-  places: [string, number, number, number][];
-  /** name, lon, lat */
-  ranges: [string, number, number][];
+  /** name, lon, lat, 1 for a capital, population, rank by size in its country (1 the biggest) */
+  places: [string, number, number, number, number, number][];
 }
 
 /** Rivers (lines) and lakes (outer rings) of a continent, as [lon, lat] points. */

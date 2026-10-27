@@ -124,17 +124,29 @@ Under the map, one column per day: the day number on top, a bar from the night l
   drawn as metre-sized circles on a canvas. Either way, when zoomed out,
   neighbouring cells are merged into one so they stay readable instead of
   turning into a striped pattern.
+- **City names** are a choice rather than a toggle (URL setting `cities`:
+  `top10`, the default, `big` or `off`; old links' `cities=false` reads as
+  off): the 10 biggest towns per country, or every town over 500,000. A
+  continent-wide top 10 would leave most countries blank, and a fixed size
+  limit alone either floods the map or empties small countries, so both are
+  offered. `places.json` carries each town's population and its rank in its
+  country, ranked over the whole world so a country split between continents
+  (Russia, Turkey) ranks the same in both. Zoom has one breakpoint, the same
+  for every setting: below zoom 6 (a few countries or more in view) only capitals keep
+  their names; closer in, the chosen set shows (`isPlaceShown` in
+  `web/app/utils/layers.ts`). Capitals show with every setting but off, even
+  under 500,000 (Bern), so none disappears as you zoom in. There are no
+  mountain-range names: they cluttered the map without helping plan a ride,
+  and the relief shading shows where the mountains are.
 - **Map details,** each a toggle (Frontile `ButtonGroup` of `ToggleButton`s)
-  and a URL setting (`borders`, `cities`, `relief`, `water`, `routes`):
+  and a URL setting (`borders`, `relief`, `water`, `routes`):
   - **Routes** shows or hides the dashed preset routes other than the
     selected one (already loaded at start, from `routes/overview.json`).
   - **Borders** only shows or hides the country outlines; the country file
     always loads, because it also draws the land.
-  - **Cities** (town names and mountain ranges) and **Water** (rivers, lakes)
-    come in small per-continent files (`places.json`, `water.json`, Europe 14
-    and 29 kB gzipped) that `AtlasService.loadDetail` fetches the first time
-    the layer is on, never while it's off. Names show at every zoom: the
-    toggles, not the zoom, decide how busy the map is.
+  - **Water** (rivers, lakes), like the city names, comes in a small per-continent file (`water.json`, `places.json`, Europe
+    29 and 18 kB gzipped) that `AtlasService.loadDetail` fetches the first
+    time the layer is on, never while it's off.
   - **Relief** needs no file: hillshading from the terrain height already in
     the climate grid (`reliefRaster` in `web/app/utils/layers.ts`), lit from the
     north-west, slopes exaggerated ×10 since the cells are 25 km, drawn in

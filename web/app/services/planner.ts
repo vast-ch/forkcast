@@ -35,10 +35,9 @@ import { WEEKS, weekOfDate, type WeekSlot } from 'forkcast/utils/weeks';
 
 export type TempMetric = 'high' | 'low';
 /** The map's optional layers, toggled in the Map section. */
-export type MapDetail = 'borders' | 'cities' | 'relief' | 'water' | 'routes';
+export type MapDetail = 'borders' | 'relief' | 'water' | 'routes';
 export const MAP_DETAILS: { key: MapDetail; label: string }[] = [
   { key: 'borders', label: 'Borders' },
-  { key: 'cities', label: 'Cities' },
   { key: 'relief', label: 'Relief' },
   { key: 'water', label: 'Water' },
   { key: 'routes', label: 'Routes' },
@@ -49,6 +48,18 @@ export const MILESTONE_CHOICES: { value: Milestones; label: string }[] = [
   { value: 'months', label: 'Months' },
   { value: 'weeks', label: 'Weeks' },
 ];
+/** Which city names the map shows. */
+export type CityLimit = 'top10' | 'big' | 'off';
+export const CITY_LIMITS: { value: CityLimit; label: string; title: string }[] =
+  [
+    { value: 'off', label: 'Off', title: 'No city names' },
+    {
+      value: 'top10',
+      label: '10 biggest',
+      title: 'The 10 biggest in each country',
+    },
+    { value: 'big', label: '500k+', title: 'Every town over 500,000 people' },
+  ];
 
 /** How far a click may be from a cycle route to be moved onto it, km. */
 const CLICK_SNAP_KM = 25;
@@ -193,6 +204,16 @@ export default class PlannerService extends Service {
   }
   set milestones(v: Milestones) {
     this.write('dates', v);
+  }
+
+  /** City names on the map; links from before the choice said `cities=false`. */
+  get cityLimit(): CityLimit {
+    const v: string = this.read('cities');
+    if (v === 'false') return 'off';
+    return CITY_LIMITS.find((c) => c.value === v)?.value ?? DEFAULTS.cities;
+  }
+  set cityLimit(v: CityLimit) {
+    this.write('cities', v);
   }
 
   get rainMetric(): RainMetric {

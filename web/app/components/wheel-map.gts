@@ -19,6 +19,8 @@ import {
   rainMarks,
   reliefRaster,
   type RainMark,
+  isCapitalsOnly,
+  isPlaceShown,
 } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
 import { climateOn, tempSwatch } from 'forkcast/utils/climate';
@@ -27,6 +29,7 @@ import type { DetailKind } from 'forkcast/services/atlas';
 import {
   MAP_DETAILS,
   OWN_COLOR,
+  type CityLimit,
   type MapDetail,
   type RainMetric,
   type TempMetric,
@@ -104,6 +107,8 @@ interface MapState {
   milestones: Milestones;
   /** Map details switched on in the Map section */
   details: Record<MapDetail, boolean>;
+  /** Which city names show */
+  cityLimit: CityLimit;
   /** How many detail files have arrived, so the map redraws when one does */
   detailFiles: number;
   /** Drawing with snapping on: show the cycle network to snap to */
@@ -357,13 +362,15 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }
     });
 
-    this.layer('labels', [ids, s.detailFiles, s.details.cities], (group) => {
-      if (!s.details.cities) return;
+    // Only the capitals when zoomed out, so a whole continent stays readable.
+    const zoom = this.map!.getZoom();
+    const deps = [ids, s.detailFiles, s.cityLimit, isCapitalsOnly(zoom)];
+    this.layer('labels', deps, (group) => {
+      if (s.cityLimit === 'off') return;
       for (const p of files('places')) {
-        for (const [name, lon, lat] of p.ranges) {
-          label(name, lat, lon, 'wt-range-name').addTo(group);
-        }
-        for (const [name, lon, lat, isCapital] of p.places) {
+        for (const [name, lon, lat, isCapital, pop, rank] of p.places) {
+          if (!isPlaceShown(s.cityLimit, zoom, pop, rank, isCapital === 1))
+            continue;
           label(
             name,
             lat,
@@ -810,6 +817,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
       details: Object.fromEntries(
         MAP_DETAILS.map(({ key }) => [key, p.showDetail(key)]),
       ) as Record<MapDetail, boolean>,
+      cityLimit: p.cityLimit,
       detailFiles: this.atlas.details.size,
       showCycleNet: p.isDrawing && p.snapToRoutes,
     };

@@ -8,7 +8,11 @@ import { LinkTo } from '@ember/routing';
 import { ButtonGroup, SegmentedControl } from 'frontile/buttons';
 import { DatePicker, Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
-import { MAP_DETAILS, MILESTONE_CHOICES } from 'forkcast/services/planner';
+import {
+  CITY_LIMITS,
+  MAP_DETAILS,
+  MILESTONE_CHOICES,
+} from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
 import { MONTHS, RAIN_THRESHOLDS } from 'forkcast/utils/climate';
 import {
@@ -34,7 +38,8 @@ type MapSetting =
   | 'tempMetric'
   | 'rainMetric'
   | 'rainThreshold'
-  | 'milestones';
+  | 'milestones'
+  | 'cityLimit';
 
 interface SidePanelSignature {
   Args: {
@@ -76,6 +81,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
   };
   rainThresholds = RAIN_THRESHOLDS;
   milestoneChoices = MILESTONE_CHOICES;
+  cityLimits = CITY_LIMITS;
 
   get weekValue() {
     return String(this.planner.week);
@@ -487,6 +493,23 @@ export default class SidePanel extends Component<SidePanelSignature> {
             >
               {{#each this.milestoneChoices as |c|}}
                 <Ctl.Item @value={{c.value}}>{{c.label}}</Ctl.Item>
+              {{/each}}
+            </SegmentedControl>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm">Cities</span>
+            <SegmentedControl
+              @value={{this.planner.cityLimit}}
+              @onChange={{fn this.setMap "cityLimit"}}
+              @size="sm"
+              aria-label="City names shown"
+              as |Ctl|
+            >
+              {{#each this.cityLimits as |c|}}
+                <Ctl.Item
+                  @value={{c.value}}
+                  title={{c.title}}
+                >{{c.label}}</Ctl.Item>
               {{/each}}
             </SegmentedControl>
           </div>
