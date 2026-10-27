@@ -32,10 +32,12 @@ import {
   type TempMetric,
 } from 'forkcast/services/planner';
 
-/** The night stops' rings and the highlighted day's stretch: a vivid purple
- * that stands out on every temperature colour (it glows a little, see
- * .wt-stop and .wt-day-stretch in app.css). */
+/** The selected day, as everywhere in the app: its night stop's ring and its
+ * stretch of route, a vivid purple that stands out on every temperature
+ * colour (it glows a little, see .wt-stop.is-active and .wt-day-stretch in
+ * app.css). The other stops are ringed in plain ink. */
 const ROUTE_ACCENT = '#a020f0';
+const STOP_RING = '#17212b';
 
 /** Room around a route when the map is fitted to it. */
 const FIT = { padding: [30, 30] as [number, number] };
@@ -613,7 +615,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         const m = L.circleMarker(latLng(d.sleep), {
           pane: 'stops',
           radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
-          color: isHi ? '#111' : ROUTE_ACCENT,
+          color: isHi ? ROUTE_ACCENT : STOP_RING,
           weight: isHi ? 3 : 2,
           className: isHi ? 'wt-stop is-active' : 'wt-stop',
           fillColor: tempSwatch(d.weather.high, '#888'),

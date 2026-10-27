@@ -202,14 +202,16 @@ body {
   font-weight: 500;
 }
 /* Night stops and the highlighted day's stretch: a soft purple glow. */
-.wt-stop,
+/* The night stops: a white halo keeps them apart from the colours below; the
+   selected one and its day's stretch glow purple, the app's selection colour. */
+.wt-stop {
+  filter: drop-shadow(0 0 2px rgb(255 255 255 / 0.9));
+}
+.wt-stop.is-active,
 .wt-day-stretch {
   filter: drop-shadow(
     0 0 2px color-mix(in srgb, var(--wt-pick) 90%, transparent)
   );
-}
-.wt-stop.is-active {
-  filter: drop-shadow(0 0 3px rgb(255 255 255 / 0.9));
 }
 
 .wt-h2 {
