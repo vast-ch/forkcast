@@ -413,6 +413,23 @@ body {
   font-weight: 600;
   font-size: 11px;
 }
+/* A date over a night stop: a small tag just above the pin. */
+.wt-stop-date span {
+  position: absolute;
+  left: 0;
+  bottom: 8px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-family: var(--wt-font-body);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #fff;
+  background: color-mix(in srgb, var(--wt-ink) 85%, transparent);
+}
 .wt-range-name span {
   transform: translate(-50%, -50%);
   font-family: var(--wt-font-body);

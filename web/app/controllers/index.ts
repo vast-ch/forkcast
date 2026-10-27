@@ -20,6 +20,7 @@ export default class IndexController extends Controller {
   @tracked relief = DEFAULTS.relief;
   @tracked water = DEFAULTS.water;
   @tracked routes = DEFAULTS.routes;
+  @tracked dates = DEFAULTS.dates;
   @tracked dots = DEFAULTS.dots;
   @tracked rainy = DEFAULTS.rainy;
   @tracked route = DEFAULTS.route;

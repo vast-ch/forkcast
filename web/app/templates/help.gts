@@ -174,6 +174,18 @@ export default class Help extends Component {
               <Legend />
             </div>
 
+            <h3>Dates on the route</h3>
+            <p>
+              Small tags over your route's night stops show when you get where:
+              with
+              <strong>Months</strong>, the start and the first night of each new
+              month, with the date you arrive (“2 Nov”); with
+              <strong>Weeks</strong>, the start and the first night of each week
+              of the trip (“Week 2”). A rest day never gets a tag of its own, as
+              you sleep where the day before ended. Switch them off under “Dates
+              on the route”.
+            </p>
+
             <h3>More on the map</h3>
             <p>The buttons at the bottom of “Map” switch details on and off:</p>
             <dl class="wt-help-defs">
