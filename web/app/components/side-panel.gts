@@ -9,9 +9,9 @@ import { ButtonGroup, SegmentedControl } from 'frontile/buttons';
 import { DatePicker, Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
 import {
-  CITY_LIMITS,
+  CITY_CHOICES,
   MAP_DETAILS,
-  MILESTONE_CHOICES,
+  DATE_CHOICES,
 } from 'forkcast/services/planner';
 import type AtlasService from 'forkcast/services/atlas';
 import { MONTHS, RAIN_THRESHOLDS } from 'forkcast/utils/climate';
@@ -38,8 +38,8 @@ type MapSetting =
   | 'tempMetric'
   | 'rainMetric'
   | 'rainThreshold'
-  | 'milestones'
-  | 'cityLimit';
+  | 'dates'
+  | 'cities';
 
 interface SidePanelSignature {
   Args: {
@@ -80,8 +80,8 @@ export default class SidePanel extends Component<SidePanelSignature> {
     year: 'numeric',
   };
   rainThresholds = RAIN_THRESHOLDS;
-  milestoneChoices = MILESTONE_CHOICES;
-  cityLimits = CITY_LIMITS;
+  dateChoices = DATE_CHOICES;
+  cityChoices = CITY_CHOICES;
 
   get weekValue() {
     return String(this.planner.week);
@@ -112,7 +112,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
       list.push({
         id: r.id,
         label: `${r.name} · ${fmtKm(r.km)}`,
-        isSelected: r.id === this.planner.routeId,
+        isSelected: r.id === this.planner.selectedRouteId,
       });
       byGroup.set(r.group, list);
     }
@@ -122,11 +122,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
   }
 
   get selected() {
-    return this.planner.choices.find((r) => r.id === this.planner.routeId);
+    return this.planner.choices.find(
+      (r) => r.id === this.planner.selectedRouteId,
+    );
   }
 
   get isLoadingRoute() {
-    return this.atlas.loadingRouteId === this.planner.routeId;
+    return this.atlas.loadingRouteId === this.planner.selectedRouteId;
   }
 
   /** The trip at a glance, as label and value pairs. */
@@ -150,7 +152,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
   get mapDetails() {
     return MAP_DETAILS.map(({ key, label }) => ({
       label,
-      isOn: this.planner.showDetail(key),
+      isOn: this.planner[key],
       toggle: () => this.planner.toggleDetail(key),
     }));
   }
@@ -159,10 +161,10 @@ export default class SidePanel extends Component<SidePanelSignature> {
   get tripFields() {
     const p = this.planner;
     const fields: { key: LimitedKey; label: string; value: number }[] = [
-      { key: 'km', label: 'km per day', value: p.kmPerDay },
+      { key: 'kmPerDay', label: 'km per day', value: p.kmPerDay },
       { key: 'speed', label: 'Avg speed (km/h)', value: p.speed },
-      { key: 'ride', label: 'Ride days', value: p.rideDays },
-      { key: 'rest', label: 'Rest days', value: p.restDays },
+      { key: 'rideDays', label: 'Ride days', value: p.rideDays },
+      { key: 'restDays', label: 'Rest days', value: p.restDays },
     ];
     return fields.map((f) => ({
       ...f,
@@ -183,8 +185,8 @@ export default class SidePanel extends Component<SidePanelSignature> {
     void this.planner.selectRoute((e.target as HTMLSelectElement).value);
   };
 
-  deleteSelected = () => this.planner.deleteRoute(this.planner.routeId);
-  editSelected = () => this.planner.editRoute(this.planner.routeId);
+  deleteSelected = () => this.planner.deleteRoute(this.planner.selectedRouteId);
+  editSelected = () => this.planner.editRoute(this.planner.selectedRouteId);
   /** From the date picker: a Date (or null if cleared, which it can't be here). */
   setStart = (d: Date | null) => {
     if (d) this.planner.setStart(isoDate(d));
@@ -485,13 +487,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
           <div class="flex items-center justify-between gap-3">
             <span class="text-sm">Dates on the route</span>
             <SegmentedControl
-              @value={{this.planner.milestones}}
-              @onChange={{fn this.setMap "milestones"}}
+              @value={{this.planner.dates}}
+              @onChange={{fn this.setMap "dates"}}
               @size="sm"
               aria-label="Dates on the route"
               as |Ctl|
             >
-              {{#each this.milestoneChoices as |c|}}
+              {{#each this.dateChoices as |c|}}
                 <Ctl.Item @value={{c.value}}>{{c.label}}</Ctl.Item>
               {{/each}}
             </SegmentedControl>
@@ -499,13 +501,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
           <div class="flex items-center justify-between gap-3">
             <span class="text-sm">Cities</span>
             <SegmentedControl
-              @value={{this.planner.cityLimit}}
-              @onChange={{fn this.setMap "cityLimit"}}
+              @value={{this.planner.cities}}
+              @onChange={{fn this.setMap "cities"}}
               @size="sm"
               aria-label="City names shown"
               as |Ctl|
             >
-              {{#each this.cityLimits as |c|}}
+              {{#each this.cityChoices as |c|}}
                 <Ctl.Item
                   @value={{c.value}}
                   title={{c.title}}

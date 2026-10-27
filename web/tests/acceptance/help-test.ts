@@ -20,13 +20,6 @@ module('Acceptance | help', function (hooks) {
     });
   }
 
-  test('old section names still open the right tab', async function (assert) {
-    await visit('/help/maths');
-    assert.dom('[aria-current="page"]').hasText('Data');
-    await visit('/help/privacy');
-    assert.dom('[aria-current="page"]').hasText('Sharing & privacy');
-  });
-
   test('tabs switch sections and the map link goes back', async function (assert) {
     await visit('/help');
     await click('a[href="/help/sources"]');

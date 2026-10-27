@@ -206,7 +206,7 @@ ${pts}
 // Your own routes are saved in the browser (services/my-routes.ts) in a compact
 // text form: the Google polyline encoding (1e-5 degrees), with elevation in
 // whole metres as a third value when the track has it. A "3" or "2" prefix says
-// which. Old links carried a route in this form too (the `track` parameter).
+// which.
 
 function encodeValue(v: number, out: string[]): void {
   let n = v < 0 ? ~(v << 1) : v << 1;

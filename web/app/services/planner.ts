@@ -6,11 +6,7 @@ import type AtlasService from './atlas';
 import type MyRoutesService from './my-routes';
 import { isOwnRouteId } from './my-routes';
 import type IndexController from 'forkcast/controllers/index';
-import {
-  RAIN_THRESHOLDS,
-  type DayClimate,
-  type RainThreshold,
-} from 'forkcast/utils/climate';
+import type { DayClimate, RainThreshold } from 'forkcast/utils/climate';
 import {
   planTrip,
   type Milestones,
@@ -26,6 +22,7 @@ import {
 } from 'forkcast/utils/route';
 import {
   DEFAULTS,
+  PARSE,
   inLimits,
   isIsoDate,
   type LimitedKey,
@@ -43,23 +40,50 @@ export const MAP_DETAILS: { key: MapDetail; label: string }[] = [
   { key: 'routes', label: 'Routes' },
 ];
 export type RainMetric = 'mm' | 'days';
-export const MILESTONE_CHOICES: { value: Milestones; label: string }[] = [
+export const DATE_CHOICES: { value: Milestones; label: string }[] = [
   { value: 'off', label: 'Off' },
   { value: 'months', label: 'Months' },
   { value: 'weeks', label: 'Weeks' },
 ];
 /** Which city names the map shows. */
 export type CityLimit = 'top10' | 'big' | 'off';
-export const CITY_LIMITS: { value: CityLimit; label: string; title: string }[] =
-  [
-    { value: 'off', label: 'Off', title: 'No city names' },
-    {
-      value: 'top10',
-      label: '10 biggest',
-      title: 'The 10 biggest in each country',
+export const CITY_CHOICES: {
+  value: CityLimit;
+  label: string;
+  title: string;
+}[] = [
+  { value: 'off', label: 'Off', title: 'No city names' },
+  {
+    value: 'top10',
+    label: '10 biggest',
+    title: 'The 10 biggest in each country',
+  },
+  { value: 'big', label: '500k+', title: 'Every town over 500,000 people' },
+];
+
+/**
+ * A setting: the index controller's query parameter of the same name, so it
+ * lives in the URL. Reads are checked by its parser in `utils/settings.ts`
+ * (anything else reads as the default); outside the planner route it is the
+ * default and writes go nowhere.
+ */
+function setting(_target: object, name: string): void {
+  const key = name as SettingKey;
+  return {
+    configurable: true,
+    enumerable: true,
+    get(this: PlannerService) {
+      const v: unknown = this.qp?.[key];
+      return PARSE[key](v) ?? DEFAULTS[key];
     },
-    { value: 'big', label: '500k+', title: 'Every town over 500,000 people' },
-  ];
+    set(this: PlannerService, value: unknown) {
+      if (this.qp)
+        (this.qp as unknown as Record<SettingKey, unknown>)[key] = value;
+    },
+    // Legacy decorators replace the field with the descriptor returned;
+    // TypeScript types them as returning nothing.
+  } as unknown as void;
+}
 
 /** How far a click may be from a cycle route to be moved onto it, km. */
 const CLICK_SNAP_KM = 25;
@@ -114,42 +138,39 @@ export default class PlannerService extends Service {
   /** The name in the editor while drawing or editing; applied on save. */
   @tracked draftName = '';
 
-  private read<K extends SettingKey>(key: K): (typeof DEFAULTS)[K] {
-    return this.qp ? this.qp[key] : DEFAULTS[key];
-  }
-
-  /** A numeric trip setting from the URL, or its default when out of range. */
-  private limited(key: LimitedKey): number {
-    const v = Number(this.read(key));
-    return inLimits(key, v) ? v : DEFAULTS[key];
-  }
-
-  private write<K extends SettingKey>(
-    key: K,
-    value: (typeof DEFAULTS)[K],
-  ): void {
-    if (this.qp)
-      (this.qp as unknown as Record<SettingKey, unknown>)[key] = value;
-  }
-
-  /** Continents whose climate is shown, in the order they were added. */
-  get continents(): string[] {
-    return this.read('continents').split(',').filter(Boolean);
-  }
+  // Settings (in the URL; see `setting`)
+  @setting declare continents: string;
+  /** Quarter-month shown on the map, 0–47 */
+  @setting declare week: number;
+  @setting declare tempMetric: TempMetric;
+  @setting declare showTemp: boolean;
+  @setting declare showRain: boolean;
+  @setting declare borders: boolean;
+  @setting declare relief: boolean;
+  @setting declare water: boolean;
+  @setting declare routes: boolean;
+  /** City names on the map */
+  @setting declare cities: CityLimit;
+  /** Dates over the night stops on the map */
+  @setting declare dates: Milestones;
+  @setting declare rainMetric: RainMetric;
+  @setting declare rainThreshold: RainThreshold;
+  @setting declare start: string;
+  @setting declare kmPerDay: number;
+  /** Average riding speed, km/h */
+  @setting declare speed: number;
+  @setting declare rideDays: number;
+  @setting declare restDays: number;
+  @setting declare isReversed: boolean;
+  /** The highlighted trip day's number, 0 for none */
+  @setting declare highlightedDay: number;
+  /** The selected route as the link has it ('' for the default); see `selectedRouteId` */
+  @setting declare routeId: string;
 
   /** Show another continent as well (loads its data). */
   addContinent(id: string): void {
-    if (this.continents.includes(id)) return;
-    this.write('continents', [...this.continents, id].join(','));
-  }
-
-  /** Quarter-month shown on the map, 0–47 */
-  get week(): number {
-    const w = Math.round(Number(this.read('week'))) - 1;
-    return w >= 0 && w < WEEKS.length ? w : DEFAULTS.week - 1;
-  }
-  set week(w: number) {
-    this.write('week', w + 1);
+    const ids = this.continents.split(',').filter(Boolean);
+    if (!ids.includes(id)) this.continents = [...ids, id].join(',');
   }
 
   /** The map's quarter-month, with its dates and position in the year. */
@@ -167,119 +188,8 @@ export default class PlannerService extends Service {
     this.week = weekOfDate(date);
   }
 
-  get tempMetric(): TempMetric {
-    return this.read('temp') === 'low' ? 'low' : 'high';
-  }
-  set tempMetric(v: TempMetric) {
-    this.write('temp', v);
-  }
-
-  get showTemp(): boolean {
-    return this.read('heat');
-  }
-  set showTemp(v: boolean) {
-    this.write('heat', v);
-  }
-
-  get showRain(): boolean {
-    return this.read('rain');
-  }
-  set showRain(v: boolean) {
-    this.write('rain', v);
-  }
-
-  /** Which map details are on (each a URL setting of the same name). */
-  showDetail(key: MapDetail): boolean {
-    return this.read(key);
-  }
-
   toggleDetail(key: MapDetail): void {
-    this.write(key, !this.read(key));
-  }
-
-  /** Dates over the night stops on the map. */
-  get milestones(): Milestones {
-    const v = this.read('dates');
-    return MILESTONE_CHOICES.find((c) => c.value === v)?.value ?? 'months';
-  }
-  set milestones(v: Milestones) {
-    this.write('dates', v);
-  }
-
-  /** City names on the map; links from before the choice said `cities=false`. */
-  get cityLimit(): CityLimit {
-    const v: string = this.read('cities');
-    if (v === 'false') return 'off';
-    return CITY_LIMITS.find((c) => c.value === v)?.value ?? DEFAULTS.cities;
-  }
-  set cityLimit(v: CityLimit) {
-    this.write('cities', v);
-  }
-
-  get rainMetric(): RainMetric {
-    return this.read('dots') === 'mm' ? 'mm' : 'days';
-  }
-  set rainMetric(v: RainMetric) {
-    this.write('dots', v);
-  }
-
-  get rainThreshold(): RainThreshold {
-    const v = Number(this.read('rainy'));
-    return RAIN_THRESHOLDS.find((t) => t === v) ?? 5;
-  }
-  set rainThreshold(v: RainThreshold) {
-    this.write('rainy', v);
-  }
-
-  get start(): string {
-    const v = this.read('start');
-    return isIsoDate(v) ? v : DEFAULTS.start;
-  }
-  set start(v: string) {
-    this.write('start', v);
-  }
-
-  get kmPerDay(): number {
-    return this.limited('km');
-  }
-  set kmPerDay(v: number) {
-    this.write('km', v);
-  }
-
-  /** Average riding speed, km/h */
-  get speed(): number {
-    return this.limited('speed');
-  }
-  set speed(v: number) {
-    this.write('speed', v);
-  }
-
-  get rideDays(): number {
-    return this.limited('ride');
-  }
-  set rideDays(v: number) {
-    this.write('ride', v);
-  }
-
-  get restDays(): number {
-    return this.limited('rest');
-  }
-  set restDays(v: number) {
-    this.write('rest', v);
-  }
-
-  get isReversed(): boolean {
-    return this.read('reverse');
-  }
-  set isReversed(v: boolean) {
-    this.write('reverse', v);
-  }
-
-  get highlightedDay(): number | undefined {
-    return Number(this.read('day')) || undefined;
-  }
-  set highlightedDay(n: number | undefined) {
-    this.write('day', n ?? 0);
+    this[key] = !this[key];
   }
 
   /** Generic setter used by the UI. */
@@ -290,7 +200,7 @@ export default class PlannerService extends Service {
   /** Set a numeric trip setting from an input; values out of range are ignored. */
   setLimited(key: LimitedKey, value: string): void {
     const v = Number(value);
-    if (inLimits(key, v)) this.write(key, v);
+    if (inLimits(key, v)) this[key] = v;
   }
 
   /**
@@ -320,7 +230,7 @@ export default class PlannerService extends Service {
     const days = this.trip?.days ?? [];
     const selected = days.find((d) => d.n === this.highlightedDay);
     if (selected && this.inMapWeek(selected)) return;
-    this.highlightedDay = days.find(this.inMapWeek)?.n;
+    this.highlightedDay = days.find(this.inMapWeek)?.n ?? 0;
   }
 
   /**
@@ -350,14 +260,14 @@ export default class PlannerService extends Service {
 
   /** Highlight a trip day, or clear the highlight if it is that day already. */
   toggleDay(day: TripDay): void {
-    if (this.highlightedDay === day.n) this.highlightedDay = undefined;
+    if (this.highlightedDay === day.n) this.highlightedDay = 0;
     else this.highlightDay(day);
   }
 
   /** Ride the route the other way; the day numbers change, so the highlight goes. */
   toggleReversed(): void {
     this.isReversed = !this.isReversed;
-    this.highlightedDay = undefined;
+    this.highlightedDay = 0;
   }
 
   // --- Routes ---------------------------------------------------------------
@@ -397,8 +307,8 @@ export default class PlannerService extends Service {
    * continents. A link to one of your routes keeps its id even where the
    * route isn't saved (see `isMissingRoute`).
    */
-  get routeId(): string {
-    const id = this.read('route');
+  get selectedRouteId(): string {
+    const id = this.routeId;
     if (id && (isOwnRouteId(id) || this.choices.some((r) => r.id === id)))
       return id;
     return this.atlas.presets[0]?.id ?? this.ownRoutes[0]?.id ?? '';
@@ -406,19 +316,18 @@ export default class PlannerService extends Service {
 
   /** The link points to someone's own route that isn't saved in this browser. */
   get isMissingRoute(): boolean {
-    const id = this.read('route');
-    return isOwnRouteId(id) && !this.myRoutes.find(id);
+    return isOwnRouteId(this.routeId) && !this.myRoutes.find(this.routeId);
   }
 
   /** The selected route, if it's one of yours: as saved. */
   get selectedOwn() {
-    return this.myRoutes.find(this.routeId);
+    return this.myRoutes.find(this.selectedRouteId);
   }
 
   /** The selected route in its original direction, once its track is loaded. */
   @cached
   get baseRoute(): Route | undefined {
-    const id = this.routeId;
+    const id = this.selectedRouteId;
     if (this.isRedrawing) return this.redrawnRoute;
     if (isOwnRouteId(id)) return this.ownRoutes.find((r) => r.id === id);
     return this.atlas.tracks.get(id);
@@ -426,7 +335,7 @@ export default class PlannerService extends Service {
 
   /** Drawing the selected route further: the trip follows the new line. */
   get isRedrawing(): boolean {
-    return this.isDrawing && this.editingId === this.routeId;
+    return this.isDrawing && this.editingId === this.selectedRouteId;
   }
 
   /** The route as it's being redrawn (not saved yet). */
@@ -464,14 +373,14 @@ export default class PlannerService extends Service {
   /** Select a route, loading its track if it is a preset. */
   async selectRoute(id: string): Promise<void> {
     const isDefault = id === (this.atlas.presets[0]?.id ?? '');
-    this.write('route', isDefault ? '' : id);
-    this.highlightedDay = undefined;
+    this.routeId = isDefault ? '' : id;
+    this.highlightedDay = 0;
     await this.loadSelected();
   }
 
   /** Make sure the selected preset's track is loaded. */
   async loadSelected(): Promise<void> {
-    const id = this.routeId;
+    const id = this.selectedRouteId;
     if (id && !isOwnRouteId(id)) await this.atlas.loadRoute(id);
   }
 
@@ -484,17 +393,17 @@ export default class PlannerService extends Service {
   }
 
   #selectOwn(id: string): void {
-    this.write('route', id);
-    this.write('reverse', false);
-    this.highlightedDay = undefined;
+    this.routeId = id;
+    this.isReversed = false;
+    this.highlightedDay = 0;
   }
 
   /** Delete one of your routes; if it was selected, the default comes back. */
   deleteRoute(id: string): void {
     this.myRoutes.remove(id);
-    if (this.read('route') === id) {
-      this.write('route', '');
-      this.highlightedDay = undefined;
+    if (this.routeId === id) {
+      this.routeId = '';
+      this.highlightedDay = 0;
       void this.loadSelected();
     }
   }
@@ -593,7 +502,7 @@ export default class PlannerService extends Service {
         const sketch = [...this.sketch];
         if (id) {
           this.myRoutes.redraw(id, coords, sketch, this.snapToRoutes);
-          this.highlightedDay = undefined;
+          this.highlightedDay = 0;
         } else {
           const saved = this.myRoutes.add(coords, this.draftName, {
             sketch,

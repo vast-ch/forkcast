@@ -21,18 +21,18 @@ module('Acceptance | last visit', function (hooks) {
     (owner.lookup('service:last-visit') as LastVisitService).view;
 
   test('opening Forkcast with nothing in the address picks up the last settings', async function (assert) {
-    leftAt('km=120&speed=18');
+    leftAt('kmPerDay=120&speed=18');
     await visit('/');
 
-    assert.ok(currentURL().includes('km=120'), currentURL());
+    assert.ok(currentURL().includes('kmPerDay=120'), currentURL());
     assert.ok(currentURL().includes('speed=18'), currentURL());
   });
 
   test('a link with settings opens what it says, and is remembered', async function (assert) {
-    leftAt('km=120');
-    await visit('/?km=90');
-    assert.notOk(currentURL().includes('km=120'), currentURL());
-    assert.strictEqual(storedByApp('last-plan'), 'km=90');
+    leftAt('kmPerDay=120');
+    await visit('/?kmPerDay=90');
+    assert.notOk(currentURL().includes('kmPerDay=120'), currentURL());
+    assert.strictEqual(storedByApp('last-plan'), 'kmPerDay=90');
   });
 
   test('the map opens where it was left instead of fitting the route', async function (assert) {
@@ -47,7 +47,7 @@ module('Acceptance | last visit', function (hooks) {
 
   test('a link with settings fits its route instead', async function (assert) {
     leftAt('', VIEW);
-    await visit('/?km=100');
+    await visit('/?kmPerDay=100');
     assert.notDeepEqual(savedView(this.owner), VIEW);
   });
 });
