@@ -5,23 +5,15 @@ import { on } from '@ember/modifier';
 import type PlannerService from 'forkcast/services/planner';
 import { DAYS_PER_MONTH, TEMP_STOPS } from 'forkcast/utils/climate';
 import { css } from 'forkcast/utils/format';
-import { DOT_FULL } from 'forkcast/utils/layers';
+import { DOT_FULL, RAIN_EMOJI } from 'forkcast/utils/layers';
 
-/** The legend's sample dots, as amounts in the week shown. */
-const DOT_STEPS = {
-  mm: [
-    { label: '5', value: 5 },
-    { label: '15', value: 15 },
-    { label: '30', value: 30 },
-    { label: '60mm', value: 60 },
-  ],
-  days: [
-    { label: '0.5', value: 0.5 },
-    { label: '1', value: 1 },
-    { label: '2', value: 2 },
-    { label: '5 days', value: 5 },
-  ],
-};
+/** The legend's sample dots, as mm in the week shown. */
+const DOT_STEPS = [
+  { label: '5', value: 5 },
+  { label: '15', value: 15 },
+  { label: '30', value: 30 },
+  { label: '60mm', value: 60 },
+];
 
 export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   @service declare planner: PlannerService;
@@ -42,11 +34,17 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
     }));
   }
 
+  rainEmoji = RAIN_EMOJI;
+
+  get isEmoji() {
+    return this.planner.rainMetric === 'days';
+  }
+
   /** Sized like the map's dots, which scale with the rate (see rainDots). */
   get dots() {
-    const full = DOT_FULL[this.planner.rainMetric];
+    const full = DOT_FULL.mm;
     const toMonth = DAYS_PER_MONTH / this.planner.weekSlot.days;
-    return DOT_STEPS[this.planner.rainMetric].map((d) => ({
+    return DOT_STEPS.map((d) => ({
       ...d,
       size: Math.max(
         3,
@@ -64,7 +62,7 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   get rainLabel() {
     return this.planner.rainMetric === 'mm'
       ? 'Rain per week'
-      : `Days with ${this.planner.rainThreshold}mm or more per week`;
+      : `Rainy days a week (${this.planner.rainThreshold}mm or more)`;
   }
 
   /** Collapsed to a small chip; it stays out of the way of the map. Not kept
@@ -120,30 +118,51 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
             </span>
           {{/if}}
           {{#if this.planner.showRain}}
-            <span class="wt-legend-dots flex items-end gap-3 tabular-nums">
-              {{#each this.dots as |dot|}}
-                <span class="flex items-center gap-1">
-                  <span
-                    class="wt-dot"
-                    style={{css
-                      "width: "
-                      dot.size
-                      "px; height: "
-                      dot.size
-                      "px"
-                    }}
-                  ></span>
-                  {{dot.label}}
-                </span>
-              {{/each}}
-            </span>
+            {{#if this.isEmoji}}
+              <span
+                class="wt-legend-emoji flex items-center gap-3 tabular-nums"
+                title={{this.rainLabel}}
+              >
+                {{#each this.rainEmoji as |t|}}
+                  <span class="flex items-center gap-1">
+                    <span
+                      aria-hidden="true"
+                      style={{css "font-size: " t.px "px; line-height: 1"}}
+                    >{{t.emoji}}</span>
+                    {{t.label}}
+                  </span>
+                {{/each}}
+              </span>
+            {{else}}
+              <span class="wt-legend-dots flex items-end gap-3 tabular-nums">
+                {{#each this.dots as |dot|}}
+                  <span class="flex items-center gap-1">
+                    <span
+                      class="wt-dot"
+                      style={{css
+                        "width: "
+                        dot.size
+                        "px; height: "
+                        dot.size
+                        "px"
+                      }}
+                    ></span>
+                    {{dot.label}}
+                  </span>
+                {{/each}}
+              </span>
+            {{/if}}
           {{/if}}
         {{else}}
           <span
             class="block h-2 w-8 rounded-sm"
             style={{css "background: " this.gradient}}
           ></span>
-          <span class="wt-dot" style={{css "width: 8px; height: 8px"}}></span>
+          {{#if this.isEmoji}}
+            <span aria-hidden="true">🌧️</span>
+          {{else}}
+            <span class="wt-dot" style={{css "width: 8px; height: 8px"}}></span>
+          {{/if}}
         {{/if}}
       </button>
     {{/if}}

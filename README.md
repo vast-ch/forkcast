@@ -13,7 +13,7 @@ A bikepacking weather planner built on climate records rather than forecasts, so
 
 **Live at [forkcast.vast.earth](https://forkcast.vast.earth).** What changed in each release: [CHANGELOG.md](CHANGELOG.md), also shown in the app at [/changelog](https://forkcast.vast.earth/changelog).
 
-- **The map:** 15 years of climate records for any week of the year: average day highs or night lows as colour, rain (mm, or rainy days over 1, 5 or 10mm) as dots on top. It opens on Europe; click another continent to add it.
+- **The map:** 15 years of climate records for any week of the year: average day highs or night lows as colour, rain on top: rainy days a week (over 1, 5 or 10mm) as emoji, or mm as dots. It opens on Europe; click another continent to add it.
 - **Routes:** all 17 EuroVelo routes and a demo route, Interlaken – Málaga, are built in. You can also draw your own or import a GPX, and export any route as GPX.
 - **The trip:** set a start date, km per day, average speed and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat).
 - **Each day:** the expected high, night low and chance of rain where you'll be on that date, plus climbing, riding time and hours of daylight. A 🔦 marks days with more riding than daylight.

@@ -177,7 +177,7 @@ export default class PlannerService extends Service {
   }
 
   get rainMetric(): RainMetric {
-    return this.read('dots') === 'days' ? 'days' : 'mm';
+    return this.read('dots') === 'mm' ? 'mm' : 'days';
   }
   set rainMetric(v: RainMetric) {
     this.write('dots', v);

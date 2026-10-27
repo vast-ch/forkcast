@@ -11,7 +11,9 @@ import { dayAtKm, type Trip } from 'forkcast/utils/itinerary';
 import {
   temperatureRaster,
   rainDots,
+  rainMarks,
   reliefRaster,
+  type RainMark,
 } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
 import { climateOn, tempSwatch } from 'forkcast/utils/climate';
@@ -386,10 +388,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     this.keep(() => this.map!.fitBounds(bounds, FIT));
   }
 
-  /** Cells per rain dot, so a dot spans at least ~9 px at the current zoom. */
-  rainBlock(step: number): number {
+  /** Cells per rain dot (or emoji), so they are at least `px` apart at the current zoom. */
+  rainBlock(step: number, px: number): number {
     const pxPerDeg = (256 * 2 ** (this.map?.getZoom() ?? 5)) / 360;
-    return Math.max(1, Math.ceil(9 / (step * pxPerDeg)));
+    return Math.max(1, Math.ceil(px / (step * pxPerDeg)));
   }
 
   sync(s: MapState) {
@@ -467,12 +469,20 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           }).addTo(group);
         });
       });
-      const block = this.rainBlock(grids[0]!.step);
+      const isEmoji = s.rainMetric === 'days';
+      const block = this.rainBlock(grids[0]!.step, isEmoji ? 30 : 9);
       this.layer(
         'rain',
         [ids, s.week, s.rainMetric, s.rainThreshold, s.showRain, block],
         (group) => {
           if (!s.showRain) return;
+          if (isEmoji) {
+            const marks = grids.flatMap((g, k) =>
+              rainMarks(g, s.phase, s.rainThreshold, block, grids.slice(0, k)),
+            );
+            new EmojiLayer(marks).addTo(group);
+            return;
+          }
           const renderer = (this.rainRenderer ??= L.canvas({
             pane: 'rain',
             padding: 0.3,
@@ -663,6 +673,48 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         interactive: false,
       }).addTo(group);
     });
+  }
+}
+
+/**
+ * Rainy-day emoji drawn into map tiles: text on a canvas, so thousands of them
+ * stay cheap, at the same size in pixels at every zoom.
+ */
+class EmojiLayer extends L.GridLayer {
+  constructor(readonly marks: RainMark[]) {
+    super({ pane: 'rain', updateWhenZooming: false });
+  }
+
+  createTile(coords: L.Coords): HTMLCanvasElement {
+    const size = this.getTileSize();
+    const tile = document.createElement('canvas');
+    const ratio = window.devicePixelRatio || 1;
+    tile.width = size.x * ratio;
+    tile.height = size.y * ratio;
+    const ctx = tile.getContext('2d')!;
+    ctx.scale(ratio, ratio);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Clouds are white and grey: a soft shadow keeps them apart from pale land.
+    ctx.shadowColor = 'rgb(0 0 0 / 0.45)';
+    ctx.shadowBlur = 3;
+    const map = this._map;
+    const origin = coords.scaleBy(size);
+    // Emoji near the edge spill into the next tile: draw those too.
+    const margin = 16;
+    for (const m of this.marks) {
+      const p = map.project([m.lat, m.lon], coords.z).subtract(origin);
+      if (
+        p.x < -margin ||
+        p.y < -margin ||
+        p.x > size.x + margin ||
+        p.y > size.y + margin
+      )
+        continue;
+      ctx.font = `${m.tier.px}px sans-serif`;
+      ctx.fillText(m.tier.emoji, p.x, p.y);
+    }
+    return tile;
   }
 }
 

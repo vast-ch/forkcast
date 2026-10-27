@@ -47,6 +47,17 @@ module('Acceptance | planner', function (hooks) {
     assert.dom('.leaflet-labels-pane .wt-place').exists();
   });
 
+  test('rain shows as rainy-day emoji, or as mm dots', async function (assert) {
+    await visit('/');
+    assert.dom('.wt-legend-emoji').includesText('4+ days');
+    assert.dom('.leaflet-rain-pane .leaflet-tile').exists('emoji tiles');
+    await click(button('mm'));
+    assert.strictEqual(currentURL(), '/?dots=mm');
+    assert.dom('.wt-legend-emoji').doesNotExist();
+    assert.dom('.wt-legend-dots').includesText('60mm');
+    assert.dom('.leaflet-rain-pane .leaflet-tile').doesNotExist();
+  });
+
   test('cancel leaves the route as it was', async function (assert) {
     await visit('/');
     await click(button('Draw a route'));

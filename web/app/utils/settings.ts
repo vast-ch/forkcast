@@ -27,8 +27,8 @@ export const DEFAULTS = {
   water: true,
   /** The preset routes other than the selected one, dashed */
   routes: true,
-  /** Rain dots: monthly mm or rainy days */
-  dots: 'mm' as 'mm' | 'days',
+  /** Rain on the map: rainy days as emoji, or mm as dots */
+  dots: 'days' as 'mm' | 'days',
   /** mm of rain from which a day counts as rainy */
   rainy: 5,
   /** Selected route: a preset's id, or one of your routes' UUID; '' means the continent's default */

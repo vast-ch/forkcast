@@ -122,18 +122,23 @@ export default class Help extends Component {
 
             <h3>Rain</h3>
             <p>
-              Each dot's area grows with the week's rain, in millimetres, or
-              with the number of rainy days if you switch to that. A rainy day
-              is one with at least 1, 5 or 10 mm of rain, your choice under
-              “Rainy day”. When you zoom out, neighbouring dots merge into one
-              showing their average, so they stay readable.
+              The map shows how many
+              <strong>rainy days</strong>
+              a week brings: nothing where it's fewer than one, then 🌦️ for 1–2,
+              🌧️ for 2–4 and ☔ for 4 or more. A rainy day is one with at least
+              1, 5 or 10 mm of rain, your choice under “Rainy day”. Switch to
+              <strong>mm</strong>
+              for the amount instead, as dots whose area grows with the week's
+              rain. When you zoom out, neighbouring spots merge into one showing
+              their average, so the map stays readable.
             </p>
 
             <h3>The legend</h3>
             <p>
-              The legend in the corner of the map gives the colour scale and the
-              dot sizes for the week. Click it to fold it into a chip, and again
-              to bring it back; this one works too:
+              The legend in the corner of the map gives the colour scale and
+              what the rain emoji (or the dot sizes) mean for the week. Click it
+              to fold it into a chip, and again to bring it back; this one works
+              too:
             </p>
             <div class="wt-help-demo">
               <Legend />
