@@ -140,10 +140,13 @@ Under the map, one column per day: the day number on top, a bar from the night l
     north-west, slopes exaggerated ×10 since the cells are 25 km, drawn in
     greys that the pane multiplies onto the colours below, so it only darkens.
 - **Dates on the route** (URL setting `dates`: `months`, the default,
-  `weeks` or `off`): a tag over the start and over the first night ridden in
-  each new month (the arrival date, "2 Nov") or each week of the trip
-  ("Week 2"); `milestones` in `web/app/utils/itinerary.ts`. Only where a
-  period begins, not every stop, so a long trip stays readable at any zoom.
+  `weeks` or `off`): a tag over the night stop of the 1st of each month
+  ("Nov") or of the first day of each week of the trip ("Week 2");
+  `milestones` in `web/app/utils/itinerary.ts`. The tag marks where the
+  rider is at that moment, so a rest day on the 1st isn't moved to the next
+  day ridden: it sits on the stop where the rider rests. The trip's start has
+  no tag of its own unless it falls on a 1st. Only where a period begins, not
+  every stop, so a long trip stays readable at any zoom.
   They're in the labels pane, above the stops, and never take the pointer, so
   a stop's own tooltip and click still work.
 - **The legend** is a button: a click folds it into a small chip (a bit of the

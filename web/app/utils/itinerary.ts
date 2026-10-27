@@ -3,6 +3,7 @@
 
 import { climateOn, type ClimateSource, type DayClimate } from './climate';
 import { climbBetween, pointAt, type Route, type RoutePoint } from './route';
+import { fmtShortMonth } from './format';
 import { daylightHours } from './sun';
 
 export interface TripSettings {
@@ -142,39 +143,22 @@ export function planTrip(
 /** Where the map marks the trip's progress: at each new month or week, or nowhere. */
 export type Milestones = 'months' | 'weeks' | 'off';
 
-export interface Milestone {
-  /** The night stop: 0 for the start, else the trip day whose night it is */
-  n: number;
-  /** "3 Feb" (the date you get there) or "Week 2" */
-  label: string;
-}
-
 /**
- * The trip's start and the first night of each new month (or each new week of
- * the trip), labelled with the date you arrive there, or the week number.
- * Rest days sleep where the day before ended, so they never add a stop.
+ * The days that get a tag on the map, at their night stop: the 1st of each
+ * month ("Nov") or the first day of each week of the trip ("Week 2"). A rest
+ * day is tagged like any other, where the rider rests.
  */
 export function milestones(
   trip: Trip,
   by: Milestones,
-  fmtDay: (d: Date) => string,
-): Milestone[] {
-  const first = trip.days[0];
-  if (by === 'off' || !first) return [];
-  const period = (d: TripDay) =>
-    by === 'months'
-      ? d.date.getFullYear() * 12 + d.date.getMonth()
-      : Math.floor((d.n - 1) / 7);
-  const label = (d: TripDay) =>
-    by === 'months' ? fmtDay(d.date) : `Week ${period(d) + 1}`;
-  const out: Milestone[] = [{ n: 0, label: label(first) }];
-  let last = period(first);
-  for (const d of trip.days) {
-    if (d.isRest || period(d) === last) continue;
-    last = period(d);
-    out.push({ n: d.n, label: label(d) });
-  }
-  return out;
+): { day: TripDay; label: string }[] {
+  return trip.days.flatMap((day) => {
+    if (by === 'months' && day.date.getDate() === 1)
+      return [{ day, label: fmtShortMonth(day.date) }];
+    if (by === 'weeks' && (day.n - 1) % 7 === 0)
+      return [{ day, label: `Week ${(day.n - 1) / 7 + 1}` }];
+    return [];
+  });
 }
 
 /** The trip day during which a rider passes `km`. */

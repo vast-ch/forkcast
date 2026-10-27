@@ -176,14 +176,14 @@ export default class Help extends Component {
 
             <h3>Dates on the route</h3>
             <p>
-              Small tags over your route's night stops show when you get where:
-              with
-              <strong>Months</strong>, the start and the first night of each new
-              month, with the date you arrive (“2 Nov”); with
-              <strong>Weeks</strong>, the start and the first night of each week
-              of the trip (“Week 2”). A rest day never gets a tag of its own, as
-              you sleep where the day before ended. Switch them off under “Dates
-              on the route”.
+              Small tags over your route's night stops show where you'll be as
+              time passes. With
+              <strong>Months</strong>, a tag such as “Nov” marks where you sleep
+              on the 1st of that month; with
+              <strong>Weeks</strong>, “Week 2” marks where you sleep on the
+              first day of that week of the trip. If that day is a rest day, the
+              tag sits where you're resting. Switch them off under “Dates on the
+              route”.
             </p>
 
             <h3>More on the map</h3>
