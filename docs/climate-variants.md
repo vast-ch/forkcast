@@ -94,8 +94,8 @@ change of highs:
 ## Filtering the ENSO years: tested, not used
 
 Would El Niño come out cleaner using only months where nothing else was
-going on? Two checks (scratch script, results in
-`cache/variants/checks-1981-2025.md` when it was run):
+going on? Two checks (`python -m forkcast_data.variants_research checks`,
+results in `cache/variants/checks-1981-2025.md`):
 
 - **Volcanoes.** Leaving out 1982–83 (El Chichón) and 1991–93 (Pinatubo), from
   the events, the random sets and the trend: the El Niño average changed little

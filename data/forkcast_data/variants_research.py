@@ -18,8 +18,17 @@ Two tests per phase, both against random sets of as many years (per month):
   sets at that very cell (10 % by chance). "Both" is what a variant would
   really add.
 
+`checks` tests two ways of picking cleaner ENSO months, and writes
+cache/variants/checks-<from>-<to>.md:
+- volcanoes: leave out 1982–83 (El Chichón) and 1991–93 (Pinatubo), from the
+  events, the random sets and the trend. Does the signal get clearer?
+- IOD companions: El Niño with and without its months that were also IOD+
+  (La Niña: IOD−). How much of each ENSO average is the Indian Ocean Dipole?
+IOD months come from NOAA PSL's Dipole Mode Index (HadISST), downloaded into
+cache/variants/dmi.txt: months in a run of ≥ 3 at |DMI| ≥ 0.4 within May–December.
+
 Usage (in the data container, after `download oni` and `build years`):
-    uv run python -m forkcast_data.variants_research [--from Y0] [--to Y1]
+    uv run python -m forkcast_data.variants_research [analyse|checks] [--from Y0] [--to Y1]
 """
 
 from __future__ import annotations
@@ -32,10 +41,13 @@ import numpy as np
 from . import pipeline
 from .__main__ import YEARS as APP_PERIOD
 from .continents import CONTINENTS
-from .pipeline import log
+from .pipeline import ensure, http_get, log
 from .variants import DIR, HISTORY, MIN_YEARS, ONI_FILE, RANDOM_SETS, SEED, boxes, enso_months, parse_oni, residuals, year_file
 
 REPORT = DIR / "report.md"
+DMI_URL = "https://psl.noaa.gov/gcos_wgsp/Timeseries/Data/dmi.had.long.data"
+DMI_FILE = DIR / "dmi.txt"
+VOLCANIC = {1982, 1983, 1991, 1992, 1993}  # El Chichón, Pinatubo: years with cooling aerosols
 FIELDS = ["tmx", "tmn", "pre", "r1"]
 APP_YEARS = list(range(APP_PERIOD[0], APP_PERIOD[1] + 1))
 WINDOWS = {"last10": APP_YEARS[-10:], "last5": APP_YEARS[-5:]}
@@ -190,13 +202,157 @@ def report(table: dict, masks: dict[str, np.ndarray], years: list[int]) -> str:
     return "\n".join(lines) + "\n"
 
 
+# --- Checks: cleaner ENSO months? ----------------------------------------------
+
+
+def parse_dmi(text: str) -> dict[int, list[float]]:
+    """{year: 12 monthly values} from PSL's long-format file (missing months are -9999)."""
+    rows = {}
+    for line in text.splitlines():
+        parts = line.split()
+        if len(parts) == 13 and parts[0].isdigit():
+            rows[int(parts[0])] = [float(x) for x in parts[1:]]
+    return rows
+
+
+def _check_dmi(path) -> None:
+    rows = parse_dmi(path.read_text())
+    if not {HISTORY[0], HISTORY[1]} <= set(rows):
+        raise ValueError(f"DMI covers {min(rows, default=0)}–{max(rows, default=0)}, not {HISTORY[0]}–{HISTORY[1]}")
+
+
+def iod_months(rows: dict[int, list[float]], sign: int) -> set[tuple[int, int]]:
+    """Months (year, 0–11) in a positive (sign +1) or negative (−1) IOD event: ≥ 3 in a row at |DMI| ≥ 0.4, May–December."""
+    out: set[tuple[int, int]] = set()
+    for y, vals in rows.items():
+        run: list[int] = []
+        for m in range(4, 13):
+            if m < 12 and sign * vals[m] >= 0.4 and vals[m] > -999:
+                run.append(m)
+                continue
+            if len(run) >= 3:
+                out.update((y, i) for i in run)
+            run = []
+    return out
+
+
+def detrend_on(a: np.ndarray, years: list[int], use: np.ndarray) -> np.ndarray:
+    """Departures of (year, …) values from each point's linear trend, fitted on the years in `use` only."""
+    t = np.array(years, dtype=np.float32)
+    t -= t[use].mean()
+    mu = a[use].mean(axis=0)
+    slope = np.tensordot(t[use], a[use] - mu, axes=1) / np.float32((t[use] ** 2).sum())
+    return a - mu - t.reshape(-1, *[1] * (a.ndim - 1)) * slope
+
+
+def checks(years: list[int]) -> None:
+    oni = parse_oni(ONI_FILE.read_text())
+    dmi = parse_dmi(DMI_FILE.read_text())
+    nino, nina = enso_months(oni, 1), enso_months(oni, -1)
+    iodp, iodn = iod_months(dmi, 1), iod_months(dmi, -1)
+    clean = np.array([y not in VOLCANIC for y in years])
+    every = np.ones(len(years), bool)
+
+    def mask(months, keep=lambda y, m: True) -> np.ndarray:
+        return np.array([[(y, m) in months and keep(y, m) for m in range(12)] for y in years])
+
+    def calm(y, m):
+        return y not in VOLCANIC
+
+    # name: (months, years for the trend and the random sets)
+    variants = {
+        "elnino": (mask(nino), every),
+        "elnino −volc": (mask(nino, calm), clean),
+        "elnino −volc −iod+": (mask(nino, lambda y, m: calm(y, m) and (y, m) not in iodp), clean),
+        "elnino −volc, only iod+": (mask(nino, lambda y, m: calm(y, m) and (y, m) in iodp), clean),
+        "lanina": (mask(nina), every),
+        "lanina −volc": (mask(nina, calm), clean),
+        "lanina −volc −iod−": (mask(nina, lambda y, m: calm(y, m) and (y, m) not in iodn), clean),
+        "lanina −volc, only iod−": (mask(nina, lambda y, m: calm(y, m) and (y, m) in iodn), clean),
+    }
+    pairs = [("elnino −volc", "elnino"), ("elnino −volc −iod+", "elnino −volc"), ("lanina −volc", "lanina"), ("lanina −volc −iod−", "lanina −volc")]
+    app = np.array([y in APP_YEARS for y in years])
+    z = np.load(year_file(years[0]))
+    cut = boxes(z["lat"], z["lon"])
+    conts = list(cut)
+    out = [f"# ENSO checks, {years[0]}–{years[-1]}", "", "Event months per variant (summed over the years):", ""]
+    out += [f"- {n}: {int(mk.sum())} months in {int(mk.any(axis=1).sum())} years" for n, (mk, _) in variants.items()]
+    for field in FIELDS:
+        a16 = np.stack([np.load(year_file(y))[field] for y in years])
+        stats = {}  # (variant, continent) -> [cells, noticeable, real, both, random noticeable per set]
+        cmp = {}  # (pair, continent) -> [cells, noticeably different, Σx, Σy, Σx², Σy², Σxy]
+        for cid, (rs, cs) in cut.items():
+            for m in range(12):
+                rng = np.random.default_rng([SEED, m])
+                raw = a16[:, m, rs, cs].astype(np.float32)
+                base = raw[app].mean(axis=0)
+                ok = np.isfinite(base)
+                res = {"every": detrend_on(raw, years, every), "clean": detrend_on(raw, years, clean)}
+                d = {}
+                for name, (mk, pool) in variants.items():
+                    sel = mk[:, m]
+                    s = stats.setdefault((name, cid), [0, 0, 0, 0, np.zeros(RANDOM_SETS)])
+                    if sel.sum() < MIN_YEARS:
+                        continue
+                    rr = res["clean" if pool is clean else "every"]
+                    d[name] = rr[sel].mean(axis=0)
+                    comps = np.stack([rr[rng.choice(np.where(pool)[0], int(sel.sum()), replace=False)].mean(axis=0) for _ in range(RANDOM_SETS)])
+                    hit = noticeable(d[name], base, field) & ok
+                    real = (np.abs(d[name]) > np.percentile(np.abs(comps), 90, axis=0)) & ok
+                    s[0] += ok.sum()
+                    s[1] += hit.sum()
+                    s[2] += real.sum()
+                    s[3] += (real & hit).sum()
+                    s[4] += np.array([(noticeable(c, base, field) & ok).sum() for c in comps])
+                for p in pairs:
+                    if p[0] in d and p[1] in d:
+                        x, y = d[p[0]][ok], d[p[1]][ok]
+                        c = cmp.setdefault((p, cid), np.zeros(7))
+                        c += [ok.sum(), noticeable(d[p[0]] - d[p[1]], base, field)[ok].sum(), x.sum(), y.sum(), (x * x).sum(), (y * y).sum(), (x * y).sum()]
+            log(f"  checked {field} {cid}")
+        out += ["", f"## {field}", "", "real / both (10 % by chance); noticeable (random sets' 90th percentile)", ""]
+        out += ["| variant | " + " | ".join(conts) + " |", "|---|" + "---|" * len(conts)]
+        for name in variants:
+            cells = []
+            for cid in conts:
+                n, hit, real, both, rnd = stats[(name, cid)]
+                cells.append("–" if n == 0 else f"{real / n:.0%} / {both / n:.0%}; {hit / n:.0%} ({np.percentile(rnd / n, 90):.0%})")
+            out.append(f"| {name} | " + " | ".join(cells) + " |")
+        out += ["", "Pairs: share of cell-months where the two averages differ noticeably; correlation of their patterns", ""]
+        out += ["| pair | " + " | ".join(conts) + " |", "|---|" + "---|" * len(conts)]
+        for p in pairs:
+            cells = []
+            for cid in conts:
+                if (p, cid) not in cmp:
+                    cells.append("–")
+                    continue
+                n, diff, sx, sy, sxx, syy, sxy = cmp[(p, cid)]
+                r = (sxy / n - sx / n * sy / n) / np.sqrt((sxx / n - (sx / n) ** 2) * (syy / n - (sy / n) ** 2))
+                cells.append(f"{diff / n:.0%}, r={r:.2f}")
+            out.append(f"| {p[0]} vs {p[1]} | " + " | ".join(cells) + " |")
+        del a16
+    text = "\n".join(out) + "\n"
+    path = DIR / f"checks-{years[0]}-{years[-1]}.md"
+    path.write_text(text)
+    print(text)
+    log(f"  wrote {path.relative_to(pipeline.ROOT)}")
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="python -m forkcast_data.variants_research", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--from", dest="y0", type=int, default=HISTORY[0], help="first year analysed")
     ap.add_argument("--to", dest="y1", type=int, default=HISTORY[1], help="last year analysed")
+    ap.add_argument("command", nargs="?", default="analyse", choices=["analyse", "checks"])
     a = ap.parse_args(argv)
-    log("analyse variants")
-    analyse(list(range(a.y0, a.y1 + 1)))
+    years = list(range(a.y0, a.y1 + 1))
+    if a.command == "analyse":
+        log("analyse variants")
+        analyse(years)
+    else:
+        log("download DMI")
+        log("  " + ensure(DMI_FILE, lambda to: http_get(DMI_URL, to), _check_dmi))
+        log("check ENSO months")
+        checks(years)
 
 
 if __name__ == "__main__":

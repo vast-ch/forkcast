@@ -283,12 +283,15 @@ behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
   per year), `build variants` (a few minutes). Both need the ERA5-Land
   downloads for 1981–2025.
 
-Research (not a build step): `python -m forkcast_data.variants_research`
+Research (not a build step, not part of `all`): `variants_research`
 compares each variant with the random-year noise floor, per continent, into
-`cache/variants/report.md`:
+`cache/variants/report.md`; its `checks` tests leaving out volcanic years and
+Indian Ocean Dipole months (downloading NOAA's Dipole Mode Index first) into
+`cache/variants/checks-1981-2025.md`. A few minutes each:
 
 ```sh
-docker compose --profile tools run --rm --entrypoint uv data run python -m forkcast_data.variants_research
+docker compose --profile tools run --rm --entrypoint uv data run python -m forkcast_data.variants_research          # analyse
+docker compose --profile tools run --rm --entrypoint uv data run python -m forkcast_data.variants_research checks
 ```
 
 ## Licences and attribution

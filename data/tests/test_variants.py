@@ -142,3 +142,20 @@ def test_check_holds_known_data_flaws_to_their_own_limit():
     stats[("last5", name, "tmn", 0)] = limit + 1
     with pytest.raises(SystemExit, match=name):
         variants.check(stats, [cid])
+
+
+DMI = """\
+ 1870 2026
+2000    0.0    0.0    0.0    0.0    0.5    0.6    0.7    0.1    0.0    0.0    0.0    0.0
+2001    0.0    0.0    0.0    0.0    0.0    0.0   -0.5   -0.6   -0.9   -0.4    0.0    0.5
+2026    0.1    0.5    0.3    0.3    0.1 -9999.000 -9999.000 -9999.000 -9999.000 -9999.000 -9999.000 -9999.000
+-9999
+DMI HadISST1.1
+"""
+
+
+def test_iod_months_need_three_in_a_row_from_may_to_december():
+    rows = variants_research.parse_dmi(DMI)
+    assert sorted(rows) == [2000, 2001, 2026]
+    assert variants_research.iod_months(rows, 1) == {(2000, 4), (2000, 5), (2000, 6)}
+    assert variants_research.iod_months(rows, -1) == {(2001, m) for m in (6, 7, 8, 9)}  # missing months never count
