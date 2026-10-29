@@ -238,15 +238,16 @@ layer instead of the 12 months, so the app reads the curves directly:
 - **Size:** 42% fewer bytes, about half gzipped (the 6 continents' grids, all
   climates, before tiling: 59.5 → 31.5 MB gzipped).
 - **Encoding**, one byte per number, each term its own scale
-  (`pack.ENCODING`): mean highs and lows in 0.25 °C steps (each from its own
-  lowest value), the yearly wave in 0.2 °C steps, the shorter waves in
+  (`pack.ENCODING`): mean highs and lows in 0.29 °C steps (from −28 °C for
+  highs and −38 °C for lows, the same everywhere: the world's range from
+  Greenland to the Sahara fits in a byte), the yearly wave in 0.2 °C steps, the shorter waves in
   0.05 °C; rain's mean on a square-root scale (mm per day) and its waves as a
   share of that mean, so dry places keep their precision; rainy days as the
   share of days. A value outside a scale stops the build instead of being
   clipped.
-- **What it costs,** against the curves the app fitted from the monthly bytes
-  before: highs and lows 0.1 °C (RMS; at most 0.3 °C), rain 0.4 mm a week
-  (at most about 3% of the week's rain), rainy days 0.02 a week.
+- **What it costs,** against the same curves unrounded, every day of the
+  year: highs and lows 0.1 °C (RMS; at most 0.3 °C), rain 0.24 mm a week
+  (RMS; 99.9% of weeks within 1.5 mm), rainy days 0.02 a week.
 - **Finer seasons don't pay:** curves fitted to the 15 years of daily rain
   with more waves, or quarter-month values, look sharper but predict other
   years worse. Fitted on 2011, 2013, … 2025 and checked against the even

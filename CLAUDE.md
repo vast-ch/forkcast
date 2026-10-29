@@ -12,7 +12,7 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 - Web tests are Ember's (QUnit, `ember-qunit`, `@ember/test-helpers`, `qunit-dom`), by kind: `tests/unit/` for plain logic (`app/utils`), `tests/integration/components|helpers/` for rendering tests, `tests/acceptance/` for whole screens on the real data. Shared finders and assertions are in `tests/helpers/`. `pnpm test` builds into `web/dist-tests` and runs them in the container's Chromium; while developing, open https://ui.forkcast.orb.local/tests to run them live (`?filter=` to pick some). Write new tests the Ember way, not with Vitest.
 - No `setTimeout`, `waitUntil` or other polling, in tests or in the app. Async work in the app registers with `@ember/test-waiters` instead, so `await visit()`/`click()` settle when it's done: data files already do (`app/utils/assets.ts` wraps every fetch in `waitForPromise`); wrap any new promise the UI depends on the same way.
 - Ruff skips a few style rules in `pipeline.py` and `cru.py` on purpose: build stamps hash module source, so restyling them would force every climate build to rerun.
-- Data: `docker compose --profile tools run --rm data [climate|routes|basemap]`. Outputs go to `data/out/` (committed). BRouter responses are cached in `data/cache/brouter/`, so re-running `routes` only fetches changed legs; be polite to the public BRouter and Nominatim servers.
+- Data: `docker compose --profile tools run --rm data [all|status|download …|build …]` (see Data below). Outputs go to `data/out/` (committed). BRouter responses are cached in `data/cache/brouter/`, so re-running `routes` only fetches changed legs; be polite to the public BRouter and Nominatim servers.
 
 ## Web app structure
 
@@ -36,7 +36,7 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 - Builds never touch the network; downloads are the only steps that do. The CDS needs one request at a time.
 - EuroVelo routes: `forkcast_data/eurovelo.py`. Raw tracks in `data/eurovelo/` (ODbL; the full attribution notice stays on the help page's sources section, and the map keeps its short line: © OpenStreetMap · EuroVelo · a Credits link to it).
 - Hand-made routes are the town lists in `forkcast_data/anchors.py` (the first is the app's default); stops are geocoded into `geocoded.json` by the `brouter` download.
-- Map details (city and range names, rivers, lakes): `forkcast_data/details.py`, one world file each; the app fetches each file only while its layer is on.
+- Map details (city names, rivers, lakes): `forkcast_data/details.py`, one world file each; the app fetches each file only while its layer is on.
 - Climate variants (last 10/5 years, El Niño, La Niña): `forkcast_data/variants.py` builds `climate-<variant>.bin` as the 2011–2025 grid plus a correction and stops the build if known ENSO effects come out wrong (`check`); the app's `climate` setting picks one. Research behind them: `forkcast_data/variants_research.py`, `docs/climate-variants.md`.
 - The climate and variants builds write monthly grids to `cache/grids/`; `forkcast_data/pack.py` publishes them to `out/climate/` as the seasonal-curve coefficients the app evaluates (`ClimateGrid`), 7 bytes per layer and cell, in 10° tiles (`<lat>_<lon>.bin`, south-west corner) plus a 1° world overview.
 

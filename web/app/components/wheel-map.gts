@@ -92,7 +92,7 @@ const PANES: [name: string, zIndex: number, isInteractive: boolean][] = [
   // The start and the night stops, above every line (the route and the
   // selected day's stretch pass under them), below the names.
   ['stops', 420, true],
-  // City and range names, above the routes so they stay readable.
+  // City names, above the routes so they stay readable.
   ['labels', 450, false],
 ];
 

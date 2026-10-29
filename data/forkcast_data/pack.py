@@ -14,9 +14,12 @@ A month's average flattens each wave a little compared with its value at
 mid-month (by sin(πk/12) / (πk/12) for the k-th wave), so the fitted waves are
 scaled back up by that factor.
 
-Output per continent and climate: out/<continent>/climate[-<variant>].bin and
-.json. One byte per value (255 = no data), laid out [layer][term][row][col],
-then the static layers [row][col] as in the monthly grid. Terms are the mean,
+Output per climate (`last15` and each variant): out/climate/<climate>.json,
+the header, and out/climate/<climate>/ with a file per 10° tile with land
+(<lat>_<lon>.bin, by its south-west corner, 41 × 41 cells sharing its edges
+with its neighbours) and overview.bin (the world at 1°). One byte per value
+(255 = no data), laid out [layer][term][row][col], then the static layers
+[row][col] as in the monthly grid. Terms are the mean,
 then cos and sin of each wave. Each term has its own encoding, value =
 byte / scale + offset (or (byte / scale)² for "sqrt"); rain's waves are
 "relative": a share of the cell's mean rain, so dry places keep their
