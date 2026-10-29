@@ -320,7 +320,9 @@ export default class Help extends Component {
                   the arrival date.</dd></div>
               <div><dt>Average high</dt><dd>Over riding days only.</dd></div>
               <div><dt>Rainy riding days</dt><dd>The day-by-day chances added
-                  up: how many to expect, not a promise.</dd></div>
+                  up: how many to expect, not a promise. In brackets, the range
+                  8 trips out of 10 fall in. Rain comes in spells, so some trips
+                  catch a lot more and some a lot less.</dd></div>
               <div><dt>Coldest night</dt><dd>The trip's lowest night, and its
                   date.</dd></div>
             </dl>

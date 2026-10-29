@@ -224,7 +224,15 @@ Under the map, one column per day: the day number on top, a bar from the night l
 - **Climbing** sums every ascent along the stretch from the track's elevation.
 - **Daylight** (`web/app/utils/sun.ts`) is sunrise at the start of the stretch to sunset at its end, from the sunrise equation NOAA's solar calculator uses (within a minute or two). Both are absolute times, so the difference needs no time zones, which is why the app shows the duration rather than clock times: those would need each place's time zone (Spain, for one, keeps Central European time west of Greenwich). Midnight sun counts as 24 h, polar night as none.
 - **Rainy riding days** is the sum of the daily chances: an expected number,
-  not a forecast.
+  not a forecast. Its range (`rainyDaysRange`) is where 8 trips out of 10
+  fall: the count taken as beta-binomial, with the spread widened from what
+  independent days would give, because rain comes in spells. How much wider
+  was measured on the daily ERA5-Land rain, 2011–2025: across land, the
+  number of rainy days in a week to two months varies from year to year
+  about 2× as much (variance) as independent days would at 1 mm, 1.6× at
+  5 mm and 1.5× at 10 mm (medians; the middle half of places 1.4–2.7× at
+  1 mm). That is for one place; a trip moves on, but at a day's ride it
+  stays within the same weather systems.
 
 ## Routes
 
