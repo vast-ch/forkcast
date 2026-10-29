@@ -1,8 +1,8 @@
 """Climate variants: the other climates a rider can switch the app to.
 
-The app's climate is the average of 2011–2025 (cache/grids/<continent>/climate.bin).
-This step builds four more grids per continent, each that grid plus a
-correction, in the same format:
+The app's climate is the average of 2011–2025 (cache/grids/climate.bin, the
+world). This step builds four more grids, each that grid plus a correction,
+in the same format:
 
   last10, last5   the last 10 or 5 years of the period: the correction is the
                   window's average minus the period's
@@ -28,8 +28,8 @@ byte for byte.
   coldest hour of the month's average day, rain, rainy days at 1/5/10 mm) into
   cache/variants/<year>.npz (float16, ~110 MB a year, ~10 s each), one stamp
   per year, so only years whose input or extraction code changed run again.
-- build variants: cache/grids/<continent>/climate-<variant>.bin and .json
-  (monthly; the pack step publishes them, pack.py). Checks the
+- build variants: cache/grids/climate-<variant>.bin and .json (monthly; the
+  pack step publishes them, pack.py). Checks the
   result against known ENSO effects and plausible ranges (`check`) and stops
   if it looks wrong.
 
@@ -47,10 +47,9 @@ from pathlib import Path
 
 import numpy as np
 
-from . import continents, pipeline
 from . import era5land as e
 from . import era5land_download as dl
-from .continents import CONTINENTS
+from . import pipeline
 from .pipeline import CACHE, Stamp, code_hash, ensure, http_get, log
 
 DIR = CACHE / "variants"
@@ -84,8 +83,8 @@ def windows(app: tuple[int, int]) -> dict[str, list[int]]:
     return {"last10": list(range(app[1] - 9, app[1] + 1)), "last5": list(range(app[1] - 4, app[1] + 1))}
 
 
-def grid_file(cid: str, variant: str, ext: str) -> Path:
-    return e.GRIDS / cid / f"climate-{variant}.{ext}"
+def grid_file(variant: str, ext: str) -> Path:
+    return e.GRIDS / f"climate-{variant}.{ext}"
 
 
 # --- ONI -----------------------------------------------------------------------
@@ -247,12 +246,12 @@ def decode(name: str, b: np.ndarray) -> np.ndarray:
 
 
 class BaseGrid:
-    """A continent's monthly grid of the app's period (era5land.grid_file)."""
+    """The world's monthly grid of the app's period (era5land.grid_file)."""
 
-    def __init__(self, cid: str):
-        self.header = h = json.loads(e.grid_file(cid, "json").read_text())
+    def __init__(self):
+        self.header = h = json.loads(e.grid_file("json").read_text())
         n = len(h["vars"]) * 12 * h["rows"] * h["cols"]
-        raw = np.frombuffer(e.grid_file(cid, "bin").read_bytes(), dtype=np.uint8)
+        raw = np.frombuffer(e.grid_file("bin").read_bytes(), dtype=np.uint8)
         self.layers = dict(zip(h["vars"], raw[:n].reshape(len(h["vars"]), 12, h["rows"], h["cols"]), strict=True))
         self.static = raw[n:]
 
@@ -260,28 +259,22 @@ class BaseGrid:
         return decode(name, self.layers[name])
 
 
-def boxes(lat: np.ndarray, lon: np.ndarray) -> dict[str, tuple[slice, slice]]:
-    """Each continent's rows and columns of the world grid, cut as the climate build cuts them."""
-    out = {}
-    for c in CONTINENTS:
-        x0, ya, x1, yb = c["bbox"]
-        r = np.where((lat >= ya) & (lat <= yb))[0]
-        k = np.where((lon >= x0) & (lon <= x1))[0]
-        out[c["id"]] = (slice(int(r[0]), int(r[-1]) + 1), slice(int(k[0]), int(k[-1]) + 1))
-    return out
+def areas(lat: np.ndarray, lon: np.ndarray) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Each of AREAS as an index into a grid with these cell centres."""
+    return {n: _region(box, lat, lon) for n, box in AREAS.items()}
 
 
 def outputs() -> list[Path]:
-    return [grid_file(c["id"], v, x) for c in CONTINENTS for v in VARIANTS for x in ("bin", "json")]
+    return [grid_file(v, x) for v in VARIANTS for x in ("bin", "json")]
 
 
 def inputs(app: tuple[int, int]) -> list[Path]:
     files = [year_file(y) for y in history_years(app)] + [ONI_FILE]
-    return files + [e.grid_file(c["id"], x) for c in CONTINENTS for x in ("bin", "json")]
+    return files + [e.grid_file(x) for x in ("bin", "json")]
 
 
 def build(app: tuple[int, int], fresh: bool = False) -> None:
-    code = code_hash(sys.modules[__name__], e, continents, pipeline)
+    code = code_hash(sys.modules[__name__], e, pipeline)
     stamp = Stamp("variants", inputs(app), outputs(), code, {"years": list(app), "history": list(HISTORY)})
     if not fresh and stamp.up_to_date():
         log("  climate variants are up to date")
@@ -294,60 +287,58 @@ def build(app: tuple[int, int], fresh: bool = False) -> None:
     picks |= {v: np.array([[(y, m) in ms for m in range(12)] for y in years]) for v, ms in months.items()}
     is_app = np.array([app[0] <= y <= app[1] for y in years])
     z = np.load(year_file(years[0]))
-    lat, lon = z["lat"], z["lon"]
-    cut = boxes(lat, lon)
-    bases = {cid: BaseGrid(cid) for cid in cut}
-    for cid, (rs, cs) in cut.items():
-        h = bases[cid].header
-        if (rs.stop - rs.start, cs.stop - cs.start) != (h["rows"], h["cols"]):
-            raise SystemExit(f"{cid}: climate.bin is {h['rows']}x{h['cols']}, the extracted years' cut differs. Rebuild climate.")
-    regions = {cid: {n: _region(box, lat[rs], lon[cs]) for n, (box, c) in REGIONS.items() if c == cid} for cid, (rs, cs) in cut.items()}
-    quirks = {cid: {n: _region(box, lat[rs], lon[cs]) for n, (box, c, _) in QUIRKS.items() if c == cid} for cid, (rs, cs) in cut.items()}
-    usual = {cid: _outside(quirks[cid].values(), (rs.stop - rs.start, cs.stop - cs.start)) for cid, (rs, cs) in cut.items()}
-    layers = {(v, cid): {} for v in VARIANTS for cid in cut}  # encoded, per field
+    rows = z["lat"] >= e.SOUTH  # the climate build's cut
+    lat, lon = z["lat"][rows], z["lon"]
+    base = BaseGrid()
+    h = base.header
+    if (len(lat), len(lon)) != (h["rows"], h["cols"]):
+        raise SystemExit(f"climate.bin is {h['rows']}x{h['cols']}, the extracted years are {len(lat)}x{len(lon)}. Rebuild climate.")
+    regions = {n: _region(box, lat, lon) for n, box in REGIONS.items()}
+    quirks = {n: _region(box, lat, lon) for n, (box, _) in QUIRKS.items()}
+    usual = _outside(quirks.values(), (len(lat), len(lon)))
+    cut = areas(lat, lon)
+    layers: dict[str, dict] = {v: {} for v in VARIANTS}  # encoded, per field
     stats: dict = {}  # what `check` needs of the corrections
     for field in FIELDS:
-        a16 = np.stack([np.load(year_file(y))[field] for y in years])  # (year, month, lat, lon)
-        for cid, (rs, cs) in cut.items():
-            base = bases[cid].field(field)
-            out = {v: np.empty_like(base) for v in VARIANTS}
-            for m in range(12):
-                raw = a16[:, m, rs, cs].astype(np.float32)
-                res = residuals(raw, years)
-                rng = np.random.default_rng([SEED, m])
-                noise: dict = {}
-                for v, pick in picks.items():
-                    if v in ENSO:
-                        d, ref = enso_correction(res, pick[:, m], rng, noise), raw.mean(axis=0)
-                    else:
-                        ref = raw[is_app].mean(axis=0)
-                        d = raw[pick].mean(axis=0) - ref
-                    out[v][m] = apply(field, base[m], d, ref, m)
-                    stats[(v, cid, field, m)] = (float(np.nanmean(d)), _largest(d[usual[cid]]))
-                    for name, at in regions[cid].items():
-                        stats[(v, name, field, m)] = float(np.nanmean(d[at]))
-                    for name, at in quirks[cid].items():
-                        stats[(v, name, field, m)] = _largest(d[at])
-            for v in VARIANTS:
-                layers[(v, cid)][field] = e.encode(field, out[v])
+        a16 = np.stack([np.load(year_file(y))[field][:, rows] for y in years])  # (year, month, lat, lon)
+        ref_grid = base.field(field)
+        out = {v: np.empty_like(ref_grid) for v in VARIANTS}
+        for m in range(12):
+            raw = a16[:, m].astype(np.float32)
+            res = residuals(raw, years)
+            rng = np.random.default_rng([SEED, m])
+            noise: dict = {}
+            for v, pick in picks.items():
+                if v in ENSO:
+                    d, ref = enso_correction(res, pick[:, m], rng, noise), raw.mean(axis=0)
+                else:
+                    ref = raw[is_app].mean(axis=0)
+                    d = raw[pick].mean(axis=0) - ref
+                out[v][m] = apply(field, ref_grid[m], d, ref, m)
+                for name, at in cut.items():
+                    stats[(v, name, field, m)] = (float(np.nanmean(d[at])), _largest(d[at][usual[at]]))
+                for name, at in regions.items():
+                    stats[(v, name, field, m)] = float(np.nanmean(d[at]))
+                for name, at in quirks.items():
+                    stats[(v, name, field, m)] = _largest(d[at])
+        for v in VARIANTS:
+            layers[v][field] = e.encode(field, out[v])
         log(f"  {field}")
         del a16
-    check(stats, list(cut))
-    for (v, cid), enc in layers.items():
+    check(stats)
+    for v, enc in layers.items():
         # Rainy days share one encoding, so r10 ≤ r5 ≤ r1 can be kept on the bytes (sea is 255 in all three).
         enc["r5"] = np.minimum(enc["r5"], enc["r1"])
         enc["r10"] = np.minimum(enc["r10"], enc["r5"])
-        b = bases[cid]
-        _write(grid_file(cid, v, "bin"), np.stack([enc[k] for k in b.header["vars"]]).tobytes() + b.static.tobytes())
+        _write(grid_file(v, "bin"), np.stack([enc[k] for k in h["vars"]]).tobytes() + base.static.tobytes())
         # "years" stays the period the grid is a correction of; what was averaged is added.
-        h = dict(b.header, variant=v)
+        hv = dict(h, variant=v)
         if v in ENSO:
-            h["enso"] = {"years": list(HISTORY), "months": len(months[v])}
+            hv["enso"] = {"years": list(HISTORY), "months": len(months[v])}
         else:
-            h["window"] = [windows(app)[v][0], app[1]]
-        _write(grid_file(cid, v, "json"), json.dumps(h, separators=(",", ":")).encode())
-    for v in VARIANTS:
-        changed = np.mean([(layers[(v, cid)]["tmx"] != bases[cid].layers["tmx"]).mean() for cid in cut])
+            hv["window"] = [windows(app)[v][0], app[1]]
+        _write(grid_file(v, "json"), json.dumps(hv, separators=(",", ":")).encode())
+        changed = (layers[v]["tmx"] != base.layers["tmx"]).mean()
         log(f"  {v:7} highs differ from {app[0]}–{app[1]} in {changed:.0%} of cell-months")
     stamp.done()
 
@@ -357,7 +348,7 @@ def _largest(d: np.ndarray) -> float:
 
 
 def _outside(regions, shape: tuple[int, int]) -> np.ndarray:
-    """True for the cells of a continent outside every one of `regions`."""
+    """True for the cells outside every one of `regions`."""
     out = np.ones(shape, dtype=bool)
     for at in regions:
         out[at] = False
@@ -391,45 +382,53 @@ KNOWN = [
     ("lanina", "western Canada", "tmx", [11, 0, 1], -1),
     ("elnino", "southern US", "pre", [11, 0, 1], +1),  # wet winter along the Gulf
 ]
-REGIONS = {  # (lon_min, lat_min, lon_max, lat_max), continent
-    "eastern Australia": ((140, -38, 154, -20), "oceania"),
-    "northern South America": ((-75, -10, -50, 8), "south-america"),
-    "southern Africa": ((20, -30, 35, -15), "africa"),
-    "western Canada": ((-125, 49, -105, 60), "north-america"),
-    "southern US": ((-98, 26, -80, 34), "north-america"),
+REGIONS = {  # (lon_min, lat_min, lon_max, lat_max)
+    "eastern Australia": (140, -38, 154, -20),
+    "northern South America": (-75, -10, -50, 8),
+    "southern Africa": (20, -30, 35, -15),
+    "western Canada": (-125, 49, -105, 60),
+    "southern US": (-98, 26, -80, 34),
 }
-# A continent's mean change in highs per variant, °C: windows show the warming, phases average out.
+# Large areas, each checked on its own: over the whole world a mistake in one
+# could be cancelled out by the others.
+AREAS = {
+    "Europe": (-25.0, 27.0, 45.0, 72.0),
+    "Africa": (-26.0, -36.0, 56.0, 38.0),
+    "Asia": (25.0, -11.0, 180.0, 78.0),
+    "North America": (-170.0, 7.0, -50.0, 75.0),
+    "South America": (-82.0, -56.0, -34.0, 13.0),
+    "Oceania": (110.0, -48.0, 180.0, 0.0),
+}
+# An area's mean change in highs per variant, °C: windows show the warming, phases average out.
 MEAN_TMX = {"last10": (-0.3, 0.8), "last5": (-0.5, 1.2), "elnino": (-0.4, 0.4), "lanina": (-0.4, 0.4)}
 MAX_TEMP = 6.0  # no cell's highs or lows may move further, °C (except in QUIRKS)
 # Known flaws of the source data, with their own limit, °C. On the Tibetan
 # Plateau, ERA5-Land's winter highs and lows jump by up to 14 °C from 2021 on
 # (e.g. 31.5° N 100.75° E, January lows about −25 °C until 2020, −11 °C after),
 # most likely its snow cover; so the last 5 years warm it by up to ~7.5 °C.
-QUIRKS = {"Tibetan Plateau": ((84, 27, 104, 36), "asia", 10.0)}
+QUIRKS = {"Tibetan Plateau": ((84, 27, 104, 36), 10.0)}
 
 
-def check(stats: dict, cids: list[str]) -> None:
+def check(stats: dict) -> None:
     """Stop the build if the corrections contradict known ENSO effects or are implausibly large."""
     problems = []
     for v, region, field, ms, sign in KNOWN:
         mean = float(np.mean([stats[(v, region, field, m)] for m in ms]))
         if not sign * mean > 0:
             problems.append(f"{v} in {region}: mean {field} correction {mean:+.2f}, expected {'more' if sign > 0 else 'less'}")
-    for cid in cids:
+    for area in AREAS:
         for v, (lo, hi) in MEAN_TMX.items():
-            mean = float(np.mean([stats[(v, cid, "tmx", m)][0] for m in range(12)]))
+            mean = float(np.mean([stats[(v, area, "tmx", m)][0] for m in range(12)]))
             if not lo <= mean <= hi:
-                problems.append(f"{v} in {cid}: mean change in highs {mean:+.2f} °C, outside {lo}…{hi}")
-            worst = max(stats[(v, cid, f, m)][1] for f in ("tmx", "tmn") for m in range(12))
+                problems.append(f"{v} in {area}: mean change in highs {mean:+.2f} °C, outside {lo}…{hi}")
+            worst = max(stats[(v, area, f, m)][1] for f in ("tmx", "tmn") for m in range(12))
             if worst > MAX_TEMP:
-                problems.append(f"{v} in {cid}: highs or lows move by up to {worst:.1f} °C")
-    for name, (_, cid, limit) in QUIRKS.items():
-        if cid not in cids:
-            continue
+                problems.append(f"{v} in {area}: highs or lows move by up to {worst:.1f} °C")
+    for name, (_, limit) in QUIRKS.items():
         for v in VARIANTS:
             worst = max(stats[(v, name, f, m)] for f in ("tmx", "tmn") for m in range(12))
             if worst > limit:
                 problems.append(f"{v} on the {name}: highs or lows move by up to {worst:.1f} °C")
     if problems:
         raise SystemExit("Climate variants failed their checks:\n  " + "\n  ".join(problems))
-    log(f"  checks passed: {len(KNOWN)} known ENSO effects, temperature ranges on {len(cids)} continents")
+    log(f"  checks passed: {len(KNOWN)} known ENSO effects, temperature ranges in {len(AREAS)} areas")

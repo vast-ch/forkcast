@@ -1,4 +1,3 @@
-import json
 
 import numpy as np
 import pytest
@@ -35,21 +34,54 @@ LAYERS = {
 
 def test_packed_curves_match_the_monthly_fit():
     data, header = _grid(LAYERS)
-    packed, h = pack.pack(data, header)
-    assert h["terms"] == pack.TERMS
-    raw = np.frombuffer(packed, dtype=np.uint8)
-    cells = 2
+    coef, static = pack.curves(data, header)
     tolerance = {"tmx": 0.3, "tmn": 0.3, "pre": 0.3, "r1": 0.01, "r5": 0.01, "r10": 0.01}  # °C, mm a day, share of days
-    for i, n in enumerate(header["vars"]):
-        b = raw[i * pack.TERMS * cells : (i + 1) * pack.TERMS * cells].reshape(pack.TERMS, 1, cells)
+    for n in header["vars"]:
+        b = pack.encode(n, coef[n])
         got = pack.evaluate(pack.decode(n, b), PHASE)
         monthly = variants.decode(n, _monthly(n, LAYERS[n]))
         want = pack.evaluate(pack.fit(monthly.astype(np.float64), n not in ("tmx", "tmn")), PHASE)
         assert np.nanmax(np.abs(got - want)[:, 0, 0]) < tolerance[n], n
         assert np.isnan(got[:, 0, 1]).all(), f"{n}: sea stays without data"
     # The static layer is carried over as it was.
-    assert raw[-2:].tolist() == era5land.encode("elev", np.array([[800.0, np.nan]])).ravel().tolist()
-    json.dumps(h)
+    assert static.ravel().tolist() == era5land.encode("elev", np.array([[800.0, np.nan]])).ravel().tolist()
+
+
+WORLD = {"lon0": -180.0, "lat0": 84.0, "step": 0.25, "rows": 577, "cols": 1440}
+
+
+def test_tiles_cover_the_world_and_share_their_edges():
+    t = pack.tiles(WORLD)
+    rows, cols = t["40_10"]
+    assert len(rows) == len(cols) == 41
+    # 50° N is row 136 (84 − 136 × 0.25); 10° E is column 760.
+    assert (rows[0], rows[-1], cols[0], cols[-1]) == (136, 176, 760, 800)
+    east_rows, east_cols = t["40_20"]
+    assert east_cols[0] == cols[-1], "neighbours share their edge column"
+    assert t["30_10"][0][0] == rows[-1], "and their edge row"
+    # The last column of the tile at 170° E is 180°, which is −180°: column 0.
+    assert t["40_170"][1][-1] == 0
+    assert "80_0" in t and "-60_0" in t and "-70_0" not in t
+
+
+def test_tiles_beyond_the_grid_are_sea():
+    a = np.zeros((1, 3, 4), dtype=np.uint8)
+    out = pack._cut(a, np.array([-1, 0, 1]), np.array([3, 0]))
+    assert out[0, 0].tolist() == [era5land.NODATA] * 2
+    assert out[0, 1:].tolist() == [[0, 0], [0, 0]]
+
+
+def test_the_overview_averages_land_cells():
+    coef = {"tmx": np.full((pack.TERMS, 4, 8), np.nan)}
+    coef["tmx"][:, 0, 0] = 10.0
+    coef["tmx"][:, 1, 1] = 20.0
+    static = era5land.encode("elev", np.full((1, 4, 8), np.nan))
+    header = {"lon0": -180.0, "lat0": 84.0, "step": 0.25, "rows": 4, "cols": 8, "static": ["elev"]}
+    out, _, geo = pack.overview(coef, static, header)
+    assert out["tmx"].shape == (pack.TERMS, 1, 2)
+    assert out["tmx"][0, 0, 0] == 15.0, "the two land cells of the block, averaged"
+    assert np.isnan(out["tmx"][0, 0, 1]), "a block of sea stays sea"
+    assert geo == {"lon0": -179.625, "lat0": 83.625, "step": 1.0, "rows": 1, "cols": 2}
 
 
 def test_the_fit_reproduces_monthly_averages():

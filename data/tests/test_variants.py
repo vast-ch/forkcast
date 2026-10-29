@@ -104,44 +104,48 @@ def test_decode_inverts_encode():
         assert np.allclose(variants.decode(name, era5land.encode(name, a)), a, equal_nan=True)
 
 
-def test_check_stops_the_build_on_a_flipped_enso_effect(monkeypatch):
-    import pytest
-
-    stats = {}
-    for v, region, field, ms, sign in variants.KNOWN:
-        for m in ms:
-            stats[(v, region, field, m)] = sign * 1.0
-    cids = ["europe"]
+def _calm_stats() -> dict:
+    """Stats that pass every check: known effects the right way, small changes everywhere."""
+    stats = {(v, region, f, m): s * 1.0 for v, region, f, ms, s in variants.KNOWN for m in ms}
     for v in variants.VARIANTS:
         for f in ("tmx", "tmn"):
             for m in range(12):
-                stats[(v, "europe", f, m)] = (0.1, 1.0)
-    variants.check(stats, cids)  # passes
+                for area in variants.AREAS:
+                    stats[(v, area, f, m)] = (0.1, 1.0)
+                for name in variants.QUIRKS:
+                    stats[(v, name, f, m)] = 1.0
+    return stats
+
+
+def test_check_stops_the_build_on_a_flipped_enso_effect():
+    import pytest
+
+    stats = _calm_stats()
+    variants.check(stats)  # passes
     v, region, field, ms, _ = variants.KNOWN[0]
     for m in ms:
         stats[(v, region, field, m)] *= -1
     with pytest.raises(SystemExit, match=region):
-        variants.check(stats, cids)
+        variants.check(stats)
     stats[(v, region, field, ms[0])] *= -1
-    stats[("elnino", "europe", "tmx", 3)] = (0.1, 9.0)
+    stats[("elnino", "Europe", "tmx", 3)] = (0.1, 9.0)
     with pytest.raises(SystemExit, match="up to 9.0"):
-        variants.check(stats, cids)
+        variants.check(stats)
 
 
 def test_check_holds_known_data_flaws_to_their_own_limit():
     import pytest
 
-    (name, (_, cid, limit)), = variants.QUIRKS.items()
-    stats = {(v, region, f, m): s * 1.0 for v, region, f, ms, s in variants.KNOWN for m in ms}
+    ((name, (_, limit)),) = variants.QUIRKS.items()
+    stats = _calm_stats()
     for v in variants.VARIANTS:
         for f in ("tmx", "tmn"):
             for m in range(12):
-                stats[(v, cid, f, m)] = (0.1, 1.0)
                 stats[(v, name, f, m)] = variants.MAX_TEMP + 1  # beyond the usual limit, within its own
-    variants.check(stats, [cid])
+    variants.check(stats)
     stats[("last5", name, "tmn", 0)] = limit + 1
     with pytest.raises(SystemExit, match=name):
-        variants.check(stats, [cid])
+        variants.check(stats)
 
 
 DMI = """\
