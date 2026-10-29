@@ -1,5 +1,12 @@
 import { module, test } from 'qunit';
-import { click, currentURL, fillIn, findAll, visit } from '@ember/test-helpers';
+import {
+  click,
+  currentURL,
+  fillIn,
+  find,
+  findAll,
+  visit,
+} from '@ember/test-helpers';
 import { setupApplicationTest, storeAsApp } from 'forkcast/tests/helpers';
 import { button, field } from 'forkcast/tests/helpers/find';
 
@@ -55,6 +62,33 @@ module('Acceptance | planner', function (hooks) {
     assert.strictEqual(currentURL(), '/');
     assert.strictEqual(july(), usual.july, 'back to the usual one');
     assert.deepEqual(colours(), usual.colours);
+  });
+
+  test('the climate switch fills its row, and scrolls sideways on a narrow panel', async function (assert) {
+    await visit('/');
+    const panel = find('.wt-panel') as HTMLElement;
+    const content = find('.wt-panel-scroll') as HTMLElement;
+    const control = find('[aria-label="Climate"]') as HTMLElement;
+    const block = control.closest('div.flex-col') as HTMLElement;
+    // Layout widths: the test page shows the app scaled down, which
+    // getBoundingClientRect() would include.
+    panel.style.width = '600px';
+    assert.strictEqual(
+      control.offsetWidth,
+      control.parentElement!.clientWidth,
+      'as wide as its row',
+    );
+    panel.style.width = '240px';
+    const width = content.scrollWidth;
+    block.style.display = 'none';
+    assert.strictEqual(
+      content.scrollWidth,
+      width,
+      "it doesn't widen a narrow panel's content",
+    );
+    block.style.display = '';
+    const row = control.parentElement!;
+    assert.true(row.scrollWidth > row.clientWidth, 'it scrolls instead');
   });
 
   test('a climate in the URL is loaded, an unknown one reads as the usual', async function (assert) {
