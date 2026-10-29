@@ -99,7 +99,7 @@ export default class AtlasService extends Service {
   /** By "<climate>/<continent id>" */
   #gridLoads = new Map<string, Promise<ClimateGrid>>();
   #countryLoads = new Map<string, Promise<CountriesJson>>();
-  #routeLoads = new Map<string, Promise<Route | undefined>>();
+  #routeLoads = new Map<string, Promise<Route>>();
   #detailLoads = new Map<string, Promise<void>>();
 
   /** All loaded continents' climate as one (the first grid covering a point answers). */
@@ -137,7 +137,10 @@ export default class AtlasService extends Service {
     return this.#manifest;
   }
 
-  /** A promise from `cache` under `key`, made by `make` once; forgotten if it fails, so it can be retried. */
+  /**
+   * A promise from `cache` under `key`, made by `make` the first time; a
+   * failed one is forgotten, so asking again retries it.
+   */
   #once<T>(
     cache: Map<string, Promise<T>>,
     key: string,
@@ -207,38 +210,28 @@ export default class AtlasService extends Service {
    */
   loadDetail(kind: DetailKind, continentId: string): Promise<void> {
     const key = `${kind}/${continentId}`;
-    let load = this.#detailLoads.get(key);
-    if (!load && !hasAsset(`${continentId}/${kind}.json`)) {
-      load = Promise.resolve();
-      this.#detailLoads.set(key, load);
-    }
-    if (!load) {
-      load = fetchJson<DetailFiles[DetailKind]>(
-        `${continentId}/${kind}.json`,
-      ).then(
-        (data) => {
-          this.details.set(key, data);
-        },
-        (e: unknown) => {
-          this.#detailLoads.delete(key);
-          this.error = errorMessage(e);
-        },
-      );
-      this.#detailLoads.set(key, load);
-    }
-    return load;
+    const path = `${continentId}/${kind}.json`;
+    if (!hasAsset(path)) return Promise.resolve(); // not every continent has every file
+    return this.#once(this.#detailLoads, key, () =>
+      fetchJson<DetailFiles[DetailKind]>(path).then((data) => {
+        this.details.set(key, data);
+      }),
+    ).catch((e: unknown) => {
+      this.error = errorMessage(e);
+    });
   }
 
+  /** A preset route's track, once; undefined if it couldn't be loaded. */
   loadRoute(id: string): Promise<Route | undefined> {
-    let p = this.#routeLoads.get(id);
-    if (!p) {
-      p = this.#loadRoute(id);
-      this.#routeLoads.set(id, p);
-    }
-    return p;
+    return this.#once(this.#routeLoads, id, () => this.#loadRoute(id)).catch(
+      (e: unknown) => {
+        this.error = errorMessage(e);
+        return undefined;
+      },
+    );
   }
 
-  async #loadRoute(id: string): Promise<Route | undefined> {
+  async #loadRoute(id: string): Promise<Route> {
     this.loadingRouteId = id;
     try {
       const route = routeFromJson(
@@ -246,10 +239,6 @@ export default class AtlasService extends Service {
       );
       this.tracks.set(id, route);
       return route;
-    } catch (e) {
-      this.#routeLoads.delete(id);
-      this.error = errorMessage(e);
-      return undefined;
     } finally {
       if (this.loadingRouteId === id) this.loadingRouteId = undefined;
     }
