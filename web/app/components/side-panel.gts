@@ -426,22 +426,27 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
         <section aria-labelledby="h-map" class="wt-sec-map flex flex-col gap-3">
           <h2 id="h-map" class="wt-h2">Map</h2>
-          <div class="flex flex-col gap-1.5">
+          <div class="flex min-w-0 flex-col gap-1.5">
             <span class="text-sm">Climate</span>
-            <SegmentedControl
-              @value={{this.planner.climate}}
-              @onChange={{fn this.setMap "climate"}}
-              @size="sm"
-              aria-label="Climate"
-              as |Ctl|
-            >
-              {{#each this.climateChoices as |c|}}
-                <Ctl.Item
-                  @value={{c.value}}
-                  title={{c.title}}
-                >{{c.label}}</Ctl.Item>
-              {{/each}}
-            </SegmentedControl>
+            {{! Full width; on a narrow panel it scrolls sideways instead of widening it. }}
+            <div class="wt-climate-scroll min-w-0 overflow-x-auto">
+              <SegmentedControl
+                @value={{this.planner.climate}}
+                @onChange={{fn this.setMap "climate"}}
+                @size="sm"
+                @isFullWidth={{true}}
+                class="w-full min-w-max"
+                aria-label="Climate"
+                as |Ctl|
+              >
+                {{#each this.climateChoices as |c|}}
+                  <Ctl.Item
+                    @value={{c.value}}
+                    title={{c.title}}
+                  >{{c.label}}</Ctl.Item>
+                {{/each}}
+              </SegmentedControl>
+            </div>
           </div>
           <div class="wt-range-wrap">
             <div class="wt-range-scale is-top" aria-hidden="true">
