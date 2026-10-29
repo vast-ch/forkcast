@@ -2,8 +2,12 @@ import { module, test } from 'qunit';
 import ClimateGrid, {
   type ClimateHeader,
   type Encoding,
+  type GridGeometry,
 } from 'forkcast/utils/climate';
 import { closeTo } from 'forkcast/tests/helpers/close-to';
+
+/** One cell, at 47° N 8° E. */
+const CELL: GridGeometry = { lon0: 8, lat0: 47, step: 0.25, cols: 1, rows: 1 };
 
 /** No seasonal waves: every term after the mean decodes to 0. */
 const FLAT: Encoding = { kind: 'linear', scale: 1, offset: 0 };
@@ -20,11 +24,11 @@ function grid(pre: number, r1: number): ClimateGrid {
   const header: ClimateHeader = {
     source: 'test',
     years: [2011, 2025],
-    lon0: 8,
-    lat0: 47,
     step: 0.25,
-    cols: 1,
-    rows: 1,
+    tile: 10,
+    size: 1,
+    tiles: [],
+    overview: CELL,
     dtype: 'u8',
     vars: ['tmx', 'tmn', 'pre', 'r1', 'r5', 'r10'],
     terms: 7,
@@ -40,7 +44,7 @@ function grid(pre: number, r1: number): ClimateGrid {
   };
   const means = [168, 148, Math.sqrt(pre) * 40, r1 * 200, 0, 0];
   const data = new Uint8Array(means.flatMap((m) => [m, 0, 0, 0, 0, 0, 0]));
-  return new ClimateGrid(header, data.buffer);
+  return new ClimateGrid(header, CELL, data.buffer);
 }
 
 module('Unit | Utility | climate', function () {
