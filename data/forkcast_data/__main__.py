@@ -27,6 +27,7 @@ Builds (into out/, except the CRU climatology which is an intermediate in cache/
     climate    per-continent climate grids (ERA5-Land, calibrated with CRU)
     years      each year's monthly fields, 1981–2025 (intermediate)
     variants   per-continent grids of the other climates: last 10 and 5 years, El Niño, La Niña
+    pack       the climates as the app's seasonal curves, published to out/
     manifest   the list of continents the app loads first
 
 See data/README.md for how skipping, checking and --fresh work.
@@ -38,7 +39,7 @@ import argparse
 import sys
 import time
 
-from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, manifest, routes, variants
+from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, manifest, pack, routes, variants
 from .pipeline import STAMPS, is_verified, log
 
 YEARS = (2011, 2025)
@@ -75,6 +76,7 @@ BUILDS = {
     "climate": lambda a: era5land.build(a.y0, a.y1, a.fresh),
     "years": lambda a: variants.extract(_history(a), a.fresh),
     "variants": lambda a: variants.build((a.y0, a.y1), a.fresh),
+    "pack": lambda a: pack.build(a.fresh),
     "manifest": lambda a: manifest.build(a.fresh),
     "cyclenet": lambda a: cyclenet.build(a.fresh),
 }

@@ -209,9 +209,9 @@ export default class Help extends Component {
             <h3>Continents</h3>
             <p>
               Forkcast opens on Europe. Other continents are drawn as light
-              shapes: click one to add its climate, a one-off download of 1–5
-              MB. You can show several at once, for a trip that crosses from one
-              into another.
+              shapes: click one to add its climate, a one-off download of under
+              3 MB. You can show several at once, for a trip that crosses from
+              one into another.
             </p>
 
             <h3>Pointing at the map</h3>

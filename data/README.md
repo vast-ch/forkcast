@@ -40,9 +40,10 @@ work after `data`).
 | `details` | `cache/details/` | `out/<continent>/places.json` (towns of 50,000 or more and capitals, each with its population and its rank by size in its country, for the map's city setting; Europe 18 kB gzipped) and `out/<continent>/water.json` (rivers and lakes to 0.01°; Europe 29 kB gzipped). The app fetches each only while its layer is on. |
 | `routes` | `eurovelo/`, `cache/brouter/`, `out/europe/countries.json` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
-| `climate` | ERA5-Land rain and temperature, CRU climatology | `out/<continent>/climate.bin` + `climate.json` |
+| `climate` | ERA5-Land rain and temperature, CRU climatology | `cache/grids/<continent>/climate.bin` + `climate.json`, monthly (intermediate) |
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
-| `variants` | `cache/variants/`, `out/<continent>/climate.*` | `out/<continent>/climate-<variant>.bin` + `.json` for `last10`, `last5`, `elnino`, `lanina` (see "Climate variants") |
+| `variants` | `cache/variants/`, `cache/grids/<continent>/climate.*` | `cache/grids/<continent>/climate-<variant>.bin` + `.json` for `last10`, `last5`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
+| `pack` | `cache/grids/` | `out/<continent>/climate.bin` + `.json` and `climate-<variant>.*`: each climate as the app's seasonal curves (see "Seasonal curves, packed at build") |
 | `manifest` | everything above | `out/manifest.json` |
 | `cyclenet` | `cache/cyclenet/icn/` | `out/<continent>/cyclenet.json`: the ways of every route whose box touches the continent, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches a continent's file only when it is shown and the rider draws with snapping on. |
 
@@ -214,15 +215,35 @@ app's first version used it alone; now it calibrates ERA5-Land.
   in. The files get content-hashed names in the app build and are cached by
   browsers for a year.
 
-### Monthly values, smooth in the app
+### Seasonal curves, packed at build
 
-The grids hold monthly values; the app fits a smooth seasonal curve through
-them per cell (see docs/how-it-works.md, "Through the year"), so the map can
-show quarter-months and every trip day gets its own value without bigger
-downloads. Known trade-off: sharp seasonal edges, such as the start of a
-monsoon, are softened. Improvement left for later: compute weekly rain totals
-and rainy-day counts from the daily rain already in `cache/era5land/` and
-store those (or their seasonal-curve coefficients) instead of monthly rain.
+The `climate` and `variants` builds make 12 monthly values per layer, in
+`cache/grids/`. The app never uses months as such: it draws each cell's year
+as a smooth curve, the yearly mean plus three waves (12-, 6- and 4-month
+cycles; see docs/how-it-works.md, "Through the year"), so the map can show
+quarter-months and every trip day gets its own value. The `pack` step
+(`forkcast_data/pack.py`) fits those curves and publishes their 7 numbers per
+layer instead of the 12 months, so the app reads the curves directly:
+
+- **Size:** 42% fewer bytes, about half gzipped (all continents and climates:
+  59.5 → 31.5 MB gzipped; Europe's grid 1.1 → 0.6 MB per climate).
+- **Encoding**, one byte per number, each term its own scale
+  (`pack.ENCODING`): mean highs and lows in 0.25 °C steps (each from its own
+  lowest value), the yearly wave in 0.2 °C steps, the shorter waves in
+  0.05 °C; rain's mean on a square-root scale (mm per day) and its waves as a
+  share of that mean, so dry places keep their precision; rainy days as the
+  share of days. A value outside a scale stops the build instead of being
+  clipped.
+- **What it costs,** against the curves the app fitted from the monthly bytes
+  before: highs and lows 0.1 °C (RMS; at most 0.3 °C), rain 0.4 mm a week
+  (at most about 3% of the week's rain), rainy days 0.02 a week.
+- **Finer seasons don't pay:** curves fitted to the 15 years of daily rain
+  with more waves, or quarter-month values, look sharper but predict other
+  years worse. Fitted on 2011, 2013, … 2025 and checked against the even
+  years, the error in rainy days per week was 0.58 for today's curves, 0.59
+  with 6 waves and 0.67 for quarter-months (rain: 4.7, 4.8 and 5.4 mm a
+  week): the extra detail is that sample's weather, not the season's. So a
+  monsoon's onset stays softened over about a month.
 
 ### Period
 
@@ -239,12 +260,13 @@ Niña (`forkcast_data/variants.py`; why these and not others, and the research
 behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
 
 - **What a variant is:** the 2011–2025 grid plus a correction, written in the
-  same format as `climate-<variant>.bin` / `.json` next to `climate.bin`.
+  same format as `cache/grids/<continent>/climate-<variant>.bin` / `.json`
+  next to `climate.bin`, then packed like it.
   Highs and lows get °C added, rain is multiplied by a ratio (0.5–2, so a dry
   month can't go negative), rainy days get days added (kept within the month,
   r10 ≤ r5 ≤ r1). Where the correction is zero the bytes equal `climate.bin`'s.
-  Each variant adds what `climate.bin` weighs: about 42 MB for the world,
-  committed; the app loads only the one picked, for the continents shown.
+  Each variant adds what `climate.bin` weighs: about 26 MB for the world
+  (6 MB gzipped), committed; the app loads only the one picked, for the continents shown.
 - **Windows** (`last10`, `last5`): the window's average minus 2011–2025's,
   from the same yearly fields. Building them as corrections, rather than
   re-running the climate build on fewer years, keeps the CRU calibration of

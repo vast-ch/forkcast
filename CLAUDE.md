@@ -38,7 +38,8 @@ The reasoning behind the design is in `docs/how-it-works.md` (app) and `data/REA
 - Hand-made routes are the town lists in `forkcast_data/anchors.py` (the first is the app's default); stops are geocoded into `geocoded.json` by the `brouter` download.
 - Continents (ids, names, bounding boxes) are in `forkcast_data/continents.py`.
 - Map details (city and range names, rivers, lakes): `forkcast_data/details.py`, per continent; the app fetches each file only while its layer is on.
-- Climate variants (last 10/5 years, El Niño, La Niña): `forkcast_data/variants.py` builds `out/<continent>/climate-<variant>.bin` as the 2011–2025 grid plus a correction and stops the build if known ENSO effects come out wrong (`check`); the app's `climate` setting picks one. Research behind them: `forkcast_data/variants_research.py`, `docs/climate-variants.md`.
+- Climate variants (last 10/5 years, El Niño, La Niña): `forkcast_data/variants.py` builds `climate-<variant>.bin` as the 2011–2025 grid plus a correction and stops the build if known ENSO effects come out wrong (`check`); the app's `climate` setting picks one. Research behind them: `forkcast_data/variants_research.py`, `docs/climate-variants.md`.
+- The climate and variants builds write monthly grids to `cache/grids/`; `forkcast_data/pack.py` publishes them to `out/` as the seasonal-curve coefficients the app evaluates (`ClimateGrid`), 7 bytes per layer and cell.
 
 ## Commits and changelog
 

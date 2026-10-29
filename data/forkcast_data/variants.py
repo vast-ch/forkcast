@@ -1,6 +1,6 @@
 """Climate variants: the other climates a rider can switch the app to.
 
-The app's climate is the average of 2011–2025 (out/<continent>/climate.bin).
+The app's climate is the average of 2011–2025 (cache/grids/<continent>/climate.bin).
 This step builds four more grids per continent, each that grid plus a
 correction, in the same format:
 
@@ -28,7 +28,8 @@ byte for byte.
   coldest hour of the month's average day, rain, rainy days at 1/5/10 mm) into
   cache/variants/<year>.npz (float16, ~110 MB a year, ~10 s each), one stamp
   per year, so only years whose input or extraction code changed run again.
-- build variants: out/<continent>/climate-<variant>.bin and .json. Checks the
+- build variants: cache/grids/<continent>/climate-<variant>.bin and .json
+  (monthly; the pack step publishes them, pack.py). Checks the
   result against known ENSO effects and plausible ranges (`check`) and stops
   if it looks wrong.
 
@@ -50,7 +51,7 @@ from . import continents, pipeline
 from . import era5land as e
 from . import era5land_download as dl
 from .continents import CONTINENTS
-from .pipeline import CACHE, OUT, Stamp, code_hash, ensure, http_get, log
+from .pipeline import CACHE, Stamp, code_hash, ensure, http_get, log
 
 DIR = CACHE / "variants"
 ONI_URL = "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
@@ -84,7 +85,7 @@ def windows(app: tuple[int, int]) -> dict[str, list[int]]:
 
 
 def grid_file(cid: str, variant: str, ext: str) -> Path:
-    return OUT / cid / f"climate-{variant}.{ext}"
+    return e.GRIDS / cid / f"climate-{variant}.{ext}"
 
 
 # --- ONI -----------------------------------------------------------------------
@@ -246,12 +247,12 @@ def decode(name: str, b: np.ndarray) -> np.ndarray:
 
 
 class BaseGrid:
-    """A continent's grid of the app's period (out/<id>/climate.bin)."""
+    """A continent's monthly grid of the app's period (era5land.grid_file)."""
 
     def __init__(self, cid: str):
-        self.header = h = json.loads((OUT / cid / "climate.json").read_text())
+        self.header = h = json.loads(e.grid_file(cid, "json").read_text())
         n = len(h["vars"]) * 12 * h["rows"] * h["cols"]
-        raw = np.frombuffer((OUT / cid / "climate.bin").read_bytes(), dtype=np.uint8)
+        raw = np.frombuffer(e.grid_file(cid, "bin").read_bytes(), dtype=np.uint8)
         self.layers = dict(zip(h["vars"], raw[:n].reshape(len(h["vars"]), 12, h["rows"], h["cols"]), strict=True))
         self.static = raw[n:]
 
@@ -276,7 +277,7 @@ def outputs() -> list[Path]:
 
 def inputs(app: tuple[int, int]) -> list[Path]:
     files = [year_file(y) for y in history_years(app)] + [ONI_FILE]
-    return files + [OUT / c["id"] / f for c in CONTINENTS for f in ("climate.bin", "climate.json")]
+    return files + [e.grid_file(c["id"], x) for c in CONTINENTS for x in ("bin", "json")]
 
 
 def build(app: tuple[int, int], fresh: bool = False) -> None:
