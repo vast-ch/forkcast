@@ -1,11 +1,13 @@
 """Climate variants: the other climates a rider can switch the app to.
 
 The app's climate is the average of 2011–2025 (cache/grids/climate.bin, the
-world). This step builds four more grids, each that grid plus a correction,
+world). This step builds five more grids, each that grid plus a correction,
 in the same format:
 
   last10, last5   the last 10 or 5 years of the period: the correction is the
                   window's average minus the period's
+  last1           the last year (2025) alone, each month as it was: the same,
+                  for a window of one year (rain may change by any factor)
   elnino, lanina  months in an El Niño or La Niña event: the correction is how
                   far those months departed from the warming trend, measured
                   over HISTORY (1981–2025, about 13 events of each)
@@ -60,13 +62,15 @@ SEASONS = ["DJF", "JFM", "FMA", "MAM", "AMJ", "MJJ", "JJA", "JAS", "ASO", "SON",
 FIELDS = e.LAYERS  # tmx tmn pre r1 r5 r10
 MONTH_DAYS = np.array([31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31], dtype=np.float32)
 
-VARIANTS = ["last10", "last5", "elnino", "lanina"]
+VARIANTS = ["last10", "last5", "last1", "elnino", "lanina"]
+YEAR = "last1"  # the variant that is a single year: the period's last
 ENSO = {"elnino": 1, "lanina": -1}
 RANDOM_SETS = 100
 SEED = 1
 MIN_YEARS = 2  # an ENSO month seen in fewer years gets no correction
 KEEP = (75, 90)  # percentiles of the random sets between which a correction fades in
-RATIO = (0.5, 2.0)  # limits of a rain correction
+RATIO = (0.5, 2.0)  # limits of a rain correction (averages of several years)
+YEAR_RATIO = (0.0, 10.0)  # and of a single year's, which can be any month's real rain
 MIN_RAIN = 1.0  # mm a month; drier cell-months keep their rain
 
 
@@ -80,7 +84,8 @@ def history_years(app: tuple[int, int]) -> range:
 
 
 def windows(app: tuple[int, int]) -> dict[str, list[int]]:
-    return {"last10": list(range(app[1] - 9, app[1] + 1)), "last5": list(range(app[1] - 4, app[1] + 1))}
+    w = {"last10": list(range(app[1] - 9, app[1] + 1)), "last5": list(range(app[1] - 4, app[1] + 1))}
+    return w | {YEAR: [app[1]]}
 
 
 def grid_file(variant: str, ext: str) -> Path:
@@ -224,13 +229,13 @@ def enso_correction(res: np.ndarray, sel: np.ndarray, rng: np.random.Generator, 
     return e._smooth(d * keep_weight(d, noise[k])).astype(np.float32)
 
 
-def apply(field: str, base: np.ndarray, d: np.ndarray, ref: np.ndarray, month: int) -> np.ndarray:
+def apply(field: str, base: np.ndarray, d: np.ndarray, ref: np.ndarray, month: int, limits=RATIO) -> np.ndarray:
     """One month of `base` with correction `d`; `ref` is the rain `d` was measured against."""
     if field in ("tmx", "tmn"):
         return base + d
     if field == "pre":
         with np.errstate(invalid="ignore", divide="ignore"):
-            ratio = np.where(ref >= MIN_RAIN, np.clip((ref + d) / ref, *RATIO), 1.0)
+            ratio = np.where(ref >= MIN_RAIN, np.clip((ref + d) / ref, *limits), 1.0)
         return base * ratio
     return np.clip(base + d, 0, MONTH_DAYS[month])
 
@@ -314,7 +319,7 @@ def build(app: tuple[int, int], fresh: bool = False) -> None:
                 else:
                     ref = raw[is_app].mean(axis=0)
                     d = raw[pick].mean(axis=0) - ref
-                out[v][m] = apply(field, ref_grid[m], d, ref, m)
+                out[v][m] = apply(field, ref_grid[m], d, ref, m, YEAR_RATIO if v == YEAR else RATIO)
                 for name, at in cut.items():
                     stats[(v, name, field, m)] = (float(np.nanmean(d[at])), _largest(d[at][usual[at]]))
                 for name, at in regions.items():
@@ -400,13 +405,17 @@ AREAS = {
     "Oceania": (110.0, -48.0, 180.0, 0.0),
 }
 # An area's mean change in highs per variant, °C: windows show the warming, phases average out.
-MEAN_TMX = {"last10": (-0.3, 0.8), "last5": (-0.5, 1.2), "elnino": (-0.4, 0.4), "lanina": (-0.4, 0.4)}
-MAX_TEMP = 6.0  # no cell's highs or lows may move further, °C (except in QUIRKS)
+MEAN_TMX = {"last10": (-0.3, 0.8), "last5": (-0.5, 1.2), "last1": (-0.5, 1.5), "elnino": (-0.4, 0.4), "lanina": (-0.4, 0.4)}
+MAX_TEMP_AVERAGE = 6.0  # no cell's highs or lows may move further, °C (except in QUIRKS)
+# A single year's month can be far off: 2025 had cells 13 °C off in Siberia and Canada.
+MAX_TEMP = {YEAR: 15.0}
 # Known flaws of the source data, with their own limit, °C. On the Tibetan
 # Plateau, ERA5-Land's winter highs and lows jump by up to 14 °C from 2021 on
 # (e.g. 31.5° N 100.75° E, January lows about −25 °C until 2020, −11 °C after),
-# most likely its snow cover; so the last 5 years warm it by up to ~7.5 °C.
+# most likely its snow cover; so the last 5 years warm it by up to ~7.5 °C,
+# and 2025 alone by up to ~14.6 °C.
 QUIRKS = {"Tibetan Plateau": ((84, 27, 104, 36), 10.0)}
+QUIRK_YEAR = 16.0  # the same limit for the single year
 
 
 def check(stats: dict) -> None:
@@ -422,12 +431,12 @@ def check(stats: dict) -> None:
             if not lo <= mean <= hi:
                 problems.append(f"{v} in {area}: mean change in highs {mean:+.2f} °C, outside {lo}…{hi}")
             worst = max(stats[(v, area, f, m)][1] for f in ("tmx", "tmn") for m in range(12))
-            if worst > MAX_TEMP:
+            if worst > MAX_TEMP.get(v, MAX_TEMP_AVERAGE):
                 problems.append(f"{v} in {area}: highs or lows move by up to {worst:.1f} °C")
     for name, (_, limit) in QUIRKS.items():
         for v in VARIANTS:
             worst = max(stats[(v, name, f, m)] for f in ("tmx", "tmn") for m in range(12))
-            if worst > limit:
+            if worst > (QUIRK_YEAR if v == YEAR else limit):
                 problems.append(f"{v} on the {name}: highs or lows move by up to {worst:.1f} °C")
     if problems:
         raise SystemExit("Climate variants failed their checks:\n  " + "\n  ".join(problems))

@@ -42,7 +42,7 @@ work after `data`).
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `cache/grids/climate.bin` + `climate.json`, the world from 84°N to 60°S, monthly (intermediate) |
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
-| `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
+| `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `last1`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
 | `pack` | `cache/grids/` | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land and `overview.bin` (the world at 1°), for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
 | `cyclenet` | `cache/cyclenet/icn/` | `out/cyclenet.json`: the ways of every route, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches it only when the rider draws with snapping on. |
 
@@ -265,9 +265,9 @@ with `--from` / `--to`.
 
 ## Climate variants
 
-Besides the 2011–2025 average, the app offers four other climates, one at a
-time: the last 10 years, the last 5, a year with El Niño and a year with La
-Niña (`forkcast_data/variants.py`; why these and not others, and the research
+Besides the 2011–2025 average, the app offers five other climates, one at a
+time: the last 10 years, the last 5, the year 2025 alone, a year with El Niño
+and a year with La Niña (`forkcast_data/variants.py`; why these and not others, and the research
 behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
 
 - **What a variant is:** the 2011–2025 grid plus a correction, written in the
@@ -283,6 +283,14 @@ behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
   re-running the climate build on fewer years, keeps the CRU calibration of
   the full period and skips another hour of building; the difference is the
   per-period calibration offset, a few hundredths of a degree.
+- **One year** (`last1`, the period's last: 2025): the same, for a window of one year: each month as it
+  was, so riders can try their trip in a real year rather than an average.
+  Its rain may change by any factor (0–10×, against 0.5–2× for the averages):
+  a single year really can have a month with none, or all of its rain in one
+  month (which is why pack's rain waves reach ±2.25× the mean). Its checks
+  allow more: an area's mean change in highs of −0.5…+1.5 °C (2025 came out
+  +0.1 to +0.7 °C, a hot year) and any cell's highs or lows moving by up to
+  15 °C (single winter months in Siberia and Canada came out 13 °C off).
 - **El Niño, La Niña:** 15 years hold only 3–4 events of each, too few to
   separate from weather (tested: mostly noise), so the correction is measured
   over 1981–2025. A month is El Niño (La Niña) when NOAA's Oceanic Niño Index
@@ -309,7 +317,7 @@ behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
   Known flaws of the source data get their own looser limit (`QUIRKS`): on
   the Tibetan Plateau ERA5-Land's winter temperatures jump by up to 14 °C from
   2021 on (likely its snow cover), so the last 5 years warm it by up to
-  7.5 °C there. The check found it on its first run. It is in `climate.bin`
+  7.5 °C there, and 2025 alone by up to 14.6 °C. The check found it on its first run. It is in `climate.bin`
   too (4 of its 15 years), uncorrected.
 - **Steps:** `download oni` (NOAA, small), `build years` (each year's monthly
   fields into `cache/variants/<year>.npz`, ~110 MB and ~15 s a year, one stamp
