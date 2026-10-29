@@ -91,7 +91,6 @@ export default class AtlasService extends Service {
   @tracked climateId: ClimateId = DEFAULTS.climate;
   @tracked error?: string;
   @tracked loadingRouteId?: string;
-  @tracked loadingContinentIds: string[] = [];
   tracks = new TrackedMap<string, Route>();
   /** Map details by "<kind>/<continent id>", once fetched. */
   details = new TrackedMap<string, DetailFiles[DetailKind]>();
@@ -182,11 +181,6 @@ export default class AtlasService extends Service {
     const wanted = ids
       .map((id) => this.continents.find((c) => c.id === id))
       .filter((c): c is Continent => c !== undefined);
-    this.loadingContinentIds = wanted
-      .filter(
-        (c) => climate !== this.climateId || !this.loadedIds.includes(c.id),
-      )
-      .map((c) => c.id);
     try {
       this.loaded = await Promise.all(
         wanted.map((c) => this.#fetchContinent(c, climate)),
@@ -194,8 +188,6 @@ export default class AtlasService extends Service {
       this.climateId = climate;
     } catch (e) {
       this.error = errorMessage(e);
-    } finally {
-      this.loadingContinentIds = [];
     }
     return this.loadedIds;
   }
