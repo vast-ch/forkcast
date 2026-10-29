@@ -1,12 +1,11 @@
 """Country borders: download Natural Earth, build the basemaps.
 
-- download: Natural Earth 1:50m countries (as world-atlas TopoJSON) and 1:110m
-  countries (GeoJSON, which tag each country with its continent) into
-  cache/borders/. Both are public domain.
-- build:
-  - out/<continent>/countries.json: 1:50m outlines per continent. The app
-    draws its own basemap from these, so it needs no tile server.
-  - out/world.json: one simplified SVG path per continent for the picker map.
+- download: Natural Earth 1:50m countries (as world-atlas TopoJSON) into
+  cache/borders/. Public domain.
+- build: out/countries.json, the world's 1:50m outlines as TopoJSON (each
+  border stored once, quantized: 236 kB gzipped, against 556 kB as GeoJSON).
+  The app draws its own basemap from them, so it needs no tile server; it
+  decodes them like `countries()` here (web/app/utils/topology.ts).
 
 Usage: uv run python -m forkcast_data download borders | build borders [--fresh]
 """
@@ -15,23 +14,13 @@ import json
 import sys
 from pathlib import Path
 
-from . import continents, pipeline
-from .continents import CONTINENTS
+from . import pipeline
 from .pipeline import CACHE, OUT, Stamp, code_hash, ensure, http_get, log
 
 DIR = CACHE / "borders"
 URL = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json"
-WORLD_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_110m_admin_0_countries.geojson"
-# Natural Earth continent names -> our continent ids (others, e.g. Antarctica, are drawn but not clickable)
-NE_CONTINENTS = {
-    "Europe": "europe",
-    "Africa": "africa",
-    "Asia": "asia",
-    "North America": "north-america",
-    "South America": "south-america",
-    "Oceania": "oceania",
-}
-PAD = 5.0  # degrees around each continent's box
+WORLD = (-180.0, -90.0, 180.0, 90.0)
+PAD = 5.0  # degrees around a box
 
 
 def decode_arcs(topo):
@@ -57,13 +46,14 @@ def ring(arcs, idxs):
     return pts
 
 
-def unwrap(r, bbox):
-    """Keep rings that cross the 180° meridian (Russia, Fiji, the Aleutians) on
-    the continent's side, so their fill isn't drawn the long way round."""
+def unwrap(r):
+    """Keep rings that cross the 180° meridian (Russia, Fiji, the Aleutians)
+    whole, on the side where most of their points are, so their fill isn't
+    drawn the long way round."""
     xs = [p[0] for p in r]
     if max(xs) - min(xs) <= 180:
         return r
-    east = (bbox[0] + bbox[2]) / 2 > 0
+    east = sum(x > 0 for x in xs) >= len(xs) / 2
     return [(x + 360 if east and x < 0 else x - 360 if not east and x > 0 else x, y) for x, y in r]
 
 
@@ -74,53 +64,28 @@ def in_bbox(r, bbox):
     return not (max(xs) < x0 or min(xs) > x1 or max(ys) < y0 or min(ys) > y1)
 
 
-def _countries(topo):
+def countries(topo) -> list:
+    """Every country as a list of polygons, each a list of rings of (lon, lat)."""
     arcs = decode_arcs(topo)
-    for c in CONTINENTS:
-        features = []
-        for g in topo["objects"]["countries"]["geometries"]:
-            polys = [g["arcs"]] if g["type"] == "Polygon" else g.get("arcs", []) if g["type"] == "MultiPolygon" else []
-            out = []
-            for poly in polys:
-                rings = [unwrap(ring(arcs, r), c["bbox"]) for r in poly]
-                if rings and in_bbox(rings[0], c["bbox"]):
-                    out.append([[[round(x, 3), round(y, 3)] for x, y in r] for r in rings])
-            if out:
-                features.append({
-                    "type": "Feature",
-                    "properties": {},
-                    "geometry": {"type": "MultiPolygon", "coordinates": out},
-                })
-        path = OUT / c["id"] / "countries.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":")))
-        print(f"  {c['id']:14} {len(features):3} countries, {path.stat().st_size / 1e6:.2f} MB")
+    out = []
+    for g in topo["objects"]["countries"]["geometries"]:
+        polys = [g["arcs"]] if g["type"] == "Polygon" else g.get("arcs", []) if g["type"] == "MultiPolygon" else []
+        if polys:
+            out.append([[unwrap(ring(arcs, r)) for r in poly] for poly in polys])
+    return out
 
 
-def _world(gj):
-    """One SVG path per continent, equirectangular: x = lon + 180, y = 90 - lat."""
-    paths = {}
-    for f in gj["features"]:
-        props = f["properties"]
-        # Natural Earth files Russia under Europe; our Asia box covers all of it.
-        cont = "Asia" if props.get("ISO_A3") == "RUS" or props.get("ADM0_A3") == "RUS" else props.get("CONTINENT")
-        cid = NE_CONTINENTS.get(cont, "other")
-        g = f["geometry"]
-        polys = [g["coordinates"]] if g["type"] == "Polygon" else g["coordinates"]
-        for poly in polys:
-            ring = poly[0]
-            d = "M" + "L".join(f"{lon + 180:.1f},{90 - lat:.1f}" for lon, lat in ring) + "Z"
-            paths.setdefault(cid, []).append(d)
-    out = {cid: "".join(ds) for cid, ds in paths.items()}
-    path = OUT / "world.json"
-    path.write_text(json.dumps(out, separators=(",", ":")))
-    print(f"  world          {len(out)} continents, {path.stat().st_size / 1e3:.0f} kB")
+def _countries(source: Path) -> None:
+    """Publish the TopoJSON with only what the app reads, without whitespace."""
+    topo = json.loads(source.read_text())
+    geometries = [{"type": g["type"], "arcs": g["arcs"]} for g in topo["objects"]["countries"]["geometries"] if "arcs" in g]
+    slim = {"type": "Topology", "transform": topo["transform"], "arcs": topo["arcs"], "objects": {"countries": {"type": "GeometryCollection", "geometries": geometries}}}
+    path = OUT / "countries.json"
+    path.write_text(json.dumps(slim, separators=(",", ":")))
+    print(f"  {len(geometries)} countries, {path.stat().st_size / 1e6:.2f} MB")
 
 
-SOURCES = {
-    "countries-50m.json": URL,
-    "ne_110m_admin_0_countries.geojson": WORLD_URL,
-}
+SOURCES = {"countries-50m.json": URL}
 
 
 def _validate_json(key: str):
@@ -134,22 +99,20 @@ def _validate_json(key: str):
 
 def download(fresh: bool = False) -> None:
     for name, url in SOURCES.items():
-        key = "objects" if name.endswith(".json") else "features"
-        log("  " + ensure(DIR / name, lambda to, url=url: http_get(url, to), _validate_json(key), fresh))
+        log("  " + ensure(DIR / name, lambda to, url=url: http_get(url, to), _validate_json("objects"), fresh))
 
 
 def outputs() -> list[Path]:
-    return [OUT / c["id"] / "countries.json" for c in CONTINENTS] + [OUT / "world.json"]
+    return [OUT / "countries.json"]
 
 
 def build(fresh: bool = False) -> None:
     inputs = [DIR / n for n in SOURCES]
-    stamp = Stamp("borders", inputs, outputs(), code_hash(sys.modules[__name__], continents, pipeline))
+    stamp = Stamp("borders", inputs, outputs(), code_hash(sys.modules[__name__], pipeline))
     if not fresh and stamp.up_to_date():
         log("  borders are up to date")
         return
     if stamp.missing_inputs():
         raise SystemExit("Missing border sources. Run: download borders")
-    _countries(json.loads(inputs[0].read_text()))
-    _world(json.loads(inputs[1].read_text()))
+    _countries(inputs[0])
     stamp.done()

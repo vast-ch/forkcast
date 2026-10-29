@@ -23,7 +23,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
-from . import anchors, continents, eurovelo, geocode, pipeline
+from . import anchors, eurovelo, geocode, pipeline
 from .anchors import ROUTES
 from .eurovelo import haversine_km
 from .pipeline import CACHE as CACHE_ROOT
@@ -141,7 +141,6 @@ def build_route(route, geo):
         "id": route["id"],
         "name": route["name"],
         "group": route.get("group", "Demo"),
-        "continent": route.get("continent", "europe"),
         "color": route["color"],
         "url": route["url"],
         "source": "Routed with BRouter (trekking profile) on OpenStreetMap data",
@@ -168,7 +167,6 @@ def write_overview(index) -> None:
         keep = simplify_indices(pts, OVERVIEW_M)
         routes.append({
             "id": r["id"],
-            "continent": r["continent"],
             "color": r["color"],
             "lat": [round(r["lat"][i], 3) for i in keep],
             "lon": [round(r["lon"][i], 3) for i in keep],
@@ -188,7 +186,7 @@ def build(fresh: bool = False) -> None:
     inputs = [GEOCODED, eurovelo.COUNTRIES]
     inputs += [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG]
     inputs += [leg_path(a, b) for a, b in legs(geo)]
-    code = code_hash(sys.modules[__name__], eurovelo, anchors, continents, pipeline)
+    code = code_hash(sys.modules[__name__], eurovelo, anchors, pipeline)
     stamp = Stamp("routes", inputs, outputs(), code)
     if not fresh and stamp.up_to_date():
         log("  routes are up to date")
@@ -201,7 +199,7 @@ def build(fresh: bool = False) -> None:
         log(route["name"])
         r = build_route(route, geo)
         (OUT_DIR / f"{r['id']}.json").write_text(json.dumps(r, separators=(",", ":"), ensure_ascii=False))
-        index.append({k: r[k] for k in ("id", "name", "group", "continent", "color", "url", "km")})
+        index.append({k: r[k] for k in ("id", "name", "group", "color", "url", "km")})
     log("EuroVelo (official GPX tracks)")
     index += eurovelo.build(simplify_indices, OUT_DIR)
     (OUT_DIR / "index.json").write_text(json.dumps({"routes": index}, separators=(",", ":"), ensure_ascii=False))
