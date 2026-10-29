@@ -20,6 +20,7 @@ import {
   css,
   fmtDate,
   fmtKm,
+  fmtRainyDays,
   fmtShortDate,
   fmtTemp,
 } from 'forkcast/utils/format';
@@ -146,7 +147,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
       ['Riding days', t.ridingDays],
       ['Rest days', t.restDays],
       ['Average high', fmtTemp(t.avgHigh)],
-      ['Rainy riding days', Math.round(t.rainyDays)],
+      ['Rainy riding days', fmtRainyDays(t.rainyDays, t.rainyDaysRange)],
       ['Coldest night', cold ? fmtTemp(cold.nightLow) : '–'],
       ['Coldest night on', cold ? fmtShortDate(cold.date) : '–'],
     ].map(([label, value]) => ({ label, value }));

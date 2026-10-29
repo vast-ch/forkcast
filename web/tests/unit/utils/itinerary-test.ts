@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { milestones, planTrip } from 'forkcast/utils/itinerary';
+import { milestones, planTrip, rainyDaysRange } from 'forkcast/utils/itinerary';
 import { withDistances } from 'forkcast/utils/route';
 import type { ClimateSource, DayClimate } from 'forkcast/utils/climate';
 import { closeTo } from 'forkcast/tests/helpers/close-to';
@@ -86,6 +86,29 @@ module('Unit | Utility | itinerary', function () {
 
   test('it adds up the rain chances into expected rainy days', function (assert) {
     closeTo(assert, trip.rainyDays, 5 * 0.25, 5);
+    const [low, high] = trip.rainyDaysRange;
+    assert.true(low <= 1, `from ${low}`);
+    assert.true(high >= 2, `to ${high}`);
+  });
+
+  test('the rainy-day range is wider than for independent days', function (assert) {
+    // 30 days at 30%: independent days give 6–12 in 8 trips out of 10.
+    const chances = Array<number>(30).fill(0.3);
+    const [low, high] = rainyDaysRange(chances, 1);
+    assert.true(low <= 5, `1 mm: from ${low}`);
+    assert.true(high >= 13, `1 mm: to ${high}`);
+    const [low10, high10] = rainyDaysRange(chances, 10);
+    assert.true(
+      high10 - low10 < high - low,
+      `heavy rain clusters less: ${low10}–${high10}`,
+    );
+  });
+
+  test('the rainy-day range is exact when there is no doubt', function (assert) {
+    assert.deepEqual(rainyDaysRange([], 1), [0, 0]);
+    assert.deepEqual(rainyDaysRange([0, 0, 0], 1), [0, 0]);
+    assert.deepEqual(rainyDaysRange([1, 1], 5), [2, 2]);
+    assert.deepEqual(rainyDaysRange([0.5], 1), [0, 1]);
   });
 
   test('it tags the 1st of each month, rest day or not', function (assert) {

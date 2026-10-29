@@ -54,3 +54,12 @@ export const fmtDayTitle = (d: { n: number; date: Date }): string =>
 
 /** Inline style from a value we computed ourselves (colours, sizes), marked safe for binding. */
 export const css = (...parts: (string | number)[]) => htmlSafe(parts.join(''));
+
+/** Expected rainy days with the range 8 trips out of 10 fall in, e.g. "9 (6–12)". */
+export const fmtRainyDays = (
+  expected: number,
+  [low, high]: [number, number],
+): string =>
+  low === high
+    ? String(Math.round(expected))
+    : `${Math.round(expected)} (${low}–${high})`;

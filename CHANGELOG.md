@@ -10,6 +10,7 @@
 
 ### Changed
 
+- Rainy riding days in the trip summary now come with a range, e.g. "9 (6–12)": how many 8 trips out of 10 get. Rain comes in spells, so some trips catch a lot more than the average and some a lot less.
 - Pop-up calendars now have a clear edge and shadow, so they stand out from the panel behind them.
 
 ## v0.13.0 - 2026-10-27
