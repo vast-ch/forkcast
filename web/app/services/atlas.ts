@@ -2,14 +2,20 @@ import Service from '@ember/service';
 import { cached, tracked } from '@glimmer/tracking';
 import { TrackedMap } from 'tracked-built-ins';
 import ClimateGrid, {
-  ClimateSet,
+  TiledClimate,
+  tileArea,
   type ClimateHeader,
   type ClimateId,
 } from 'forkcast/utils/climate';
-import { fetchBuffer, fetchJson, hasAsset } from 'forkcast/utils/assets';
+import { fetchBuffer, fetchJson } from 'forkcast/utils/assets';
 import type { CycleNetJson } from 'forkcast/utils/cyclenet';
 import { errorMessage } from 'forkcast/utils/helpers';
 import { DEFAULTS } from 'forkcast/utils/settings';
+import {
+  countriesFromTopology,
+  type CountriesJson,
+  type Topology,
+} from 'forkcast/utils/topology';
 import {
   routeFromJson,
   type Route,
@@ -17,124 +23,99 @@ import {
   type RouteMeta,
 } from 'forkcast/utils/route';
 
-export type CountriesJson = GeoJSON.FeatureCollection<GeoJSON.MultiPolygon>;
-
-export interface Continent {
-  id: string;
-  name: string;
-  /** lon_min, lat_min, lon_max, lat_max */
-  bbox: [number, number, number, number];
-  /** Size of its climate grid and borders, before compression */
-  bytes: number;
-  /** The same, gzipped: roughly what is downloaded */
-  gzipBytes: number;
-  routes: RouteMeta[];
-}
-
 export interface RouteOverview {
   id: string;
-  continent: string;
   color: string;
   lat: number[];
   lon: number[];
 }
 
-/** City names of a continent (data/forkcast_data/details.py). */
+/** Town names of the world (data/forkcast_data/details.py). */
 export interface PlacesJson {
   /** name, lon, lat, 1 for a capital, population, rank by size in its country (1 the biggest) */
   places: [string, number, number, number, number, number][];
 }
 
-/** Rivers (lines) and lakes (outer rings) of a continent, as [lon, lat] points. */
+/** Rivers (lines) and lakes (outer rings) of the world, as [lon, lat] points. */
 export interface WaterJson {
   rivers: [number, number][][];
   lakes: [number, number][][];
 }
 
-/** The optional per-continent files, fetched only when their layer is on. */
+/** The optional world files, fetched only when their layer is on. */
 export interface DetailFiles {
   places: PlacesJson;
   water: WaterJson;
-  /** The cycle network, for drawing routes that follow it (not every continent has one) */
+  /** The cycle network, for drawing routes that follow it */
   cyclenet: CycleNetJson;
 }
 export type DetailKind = keyof DetailFiles;
 
-export interface LoadedContinent {
-  continent: Continent;
-  climate: ClimateGrid;
-  countries: CountriesJson;
-}
-
-/** A continent's grid file of a climate, without its extension. */
-function gridFile(continentId: string, climate: ClimateId): string {
-  return climate === 'last15'
-    ? `${continentId}/climate`
-    : `${continentId}/climate-${climate}`;
+/** A climate's header and its world overview, which load before any tile. */
+interface LoadedClimate {
+  header: ClimateHeader;
+  overview: ClimateGrid;
 }
 
 /**
- * Loads the static data files built by the `data` container. The manifest is
- * small and loads first; a continent's climate grid and borders load when it
- * is opened, and a route's track when it is picked. Switching the climate
- * loads the other grids of the continents shown; borders are kept.
+ * Loads the static data files built by the `data` container. The route list,
+ * the country outlines and the climate's world overview load first; a climate
+ * tile (10° square) when the map shows it closely or a route crosses it, and
+ * a route's track when it is picked. Switching the climate loads its overview
+ * and the same tiles of it.
  */
 export default class AtlasService extends Service {
-  @tracked continents: Continent[] = [];
-  /** One SVG path per continent id (plus "other"), for the map's continent shapes */
-  @tracked world?: Record<string, string>;
+  /** The preset routes */
+  @tracked presets: RouteMeta[] = [];
   /** Every preset route simplified to ~1 km, for drawing them all on the map */
   @tracked overview: RouteOverview[] = [];
-  /** The continents whose data is shown, in the order they were added. */
-  @tracked loaded: LoadedContinent[] = [];
-  /** The climate of the grids in `loaded`. */
+  @tracked countries?: CountriesJson;
+  /** The climate shown, once its header and overview are in */
+  @tracked current?: LoadedClimate;
   @tracked climateId: ClimateId = DEFAULTS.climate;
+  /** The current climate's tiles loaded so far, by id */
+  tiles = new TrackedMap<string, ClimateGrid>();
   @tracked error?: string;
   @tracked loadingRouteId?: string;
   tracks = new TrackedMap<string, Route>();
-  /** Map details by "<kind>/<continent id>", once fetched. */
+  /** Map details by kind, once fetched. */
   details = new TrackedMap<string, DetailFiles[DetailKind]>();
 
-  #manifest?: Promise<void>;
-  /** By "<climate>/<continent id>" */
-  #gridLoads = new Map<string, Promise<ClimateGrid>>();
-  #countryLoads = new Map<string, Promise<CountriesJson>>();
+  #basics?: Promise<void>;
+  #climateLoads = new Map<string, Promise<LoadedClimate>>();
+  /** By "<climate>/<tile id>" */
+  #tileLoads = new Map<string, Promise<ClimateGrid>>();
   #routeLoads = new Map<string, Promise<Route>>();
   #detailLoads = new Map<string, Promise<void>>();
+  /** The tiles each purpose wants (the map's view, the route…), so a climate switch loads them again. */
+  #wanted = new Map<string, string[]>();
 
-  /** All loaded continents' climate as one (the first grid covering a point answers). */
+  /** The climate, from the finest data loaded at each point. */
   @cached
-  get climate(): ClimateSet | undefined {
-    return this.loaded.length
-      ? new ClimateSet(this.loaded.map((l) => l.climate))
+  get climate(): TiledClimate | undefined {
+    const c = this.current;
+    return c
+      ? new TiledClimate(c.header, c.overview, new Map(this.tiles))
       : undefined;
   }
 
-  get loadedIds(): string[] {
-    return this.loaded.map((l) => l.continent.id);
-  }
-
-  /** Preset routes of every loaded continent. */
-  get presets(): RouteMeta[] {
-    return this.loaded.flatMap((l) => l.continent.routes);
-  }
-
-  loadManifest(): Promise<void> {
-    this.#manifest ??= Promise.all([
-      fetchJson<{ continents: Continent[] }>('manifest.json'),
-      fetchJson<Record<string, string>>('world.json'),
+  /** The route list, the routes' outlines and the countries: needed before anything else. */
+  loadBasics(): Promise<void> {
+    this.#basics ??= Promise.all([
+      fetchJson<{ routes: RouteMeta[] }>('routes/index.json'),
       fetchJson<{ routes: RouteOverview[] }>('routes/overview.json'),
+      fetchJson<Topology>('countries.json'),
     ]).then(
-      ([m, world, overview]) => {
-        this.continents = m.continents;
-        this.world = world;
+      ([index, overview, topo]) => {
+        this.presets = index.routes;
         this.overview = overview.routes;
+        this.countries = countriesFromTopology(topo);
       },
       (e: unknown) => {
         this.error = errorMessage(e);
       },
     );
-    return this.#manifest;
+    return this.#basics;
   }
 
   /**
@@ -155,66 +136,87 @@ export default class AtlasService extends Service {
     return load;
   }
 
-  async #fetchContinent(
-    c: Continent,
-    climate: ClimateId,
-  ): Promise<LoadedContinent> {
-    const file = gridFile(c.id, climate);
-    const [grid, countries] = await Promise.all([
-      this.#once(this.#gridLoads, `${climate}/${c.id}`, () =>
-        Promise.all([
-          fetchJson<ClimateHeader>(`${file}.json`),
-          fetchBuffer(`${file}.bin`),
-        ]).then(([header, buffer]) => new ClimateGrid(header, buffer)),
-      ),
-      this.#once(this.#countryLoads, c.id, () =>
-        fetchJson<CountriesJson>(`${c.id}/countries.json`),
-      ),
-    ]);
-    return { continent: c, climate: grid, countries };
+  #loadClimate(climate: ClimateId): Promise<LoadedClimate> {
+    return this.#once(this.#climateLoads, climate, async () => {
+      const header = await fetchJson<ClimateHeader>(`climate/${climate}.json`);
+      const buffer = await fetchBuffer(`climate/${climate}/overview.bin`);
+      return {
+        header,
+        overview: new ClimateGrid(header, header.overview, buffer),
+      };
+    });
   }
 
   /**
-   * Show exactly these continents (in this order) in a climate (the one shown
-   * by default), loading what isn't loaded yet. Unknown ids are skipped;
-   * returns the ids actually shown.
+   * Show a climate: the basics, its header and overview, then the tiles the
+   * map and the route want, in it. Earlier tiles of another climate go.
    */
-  async show(ids: string[], climate = this.climateId): Promise<string[]> {
-    await this.loadManifest();
-    const wanted = ids
-      .map((id) => this.continents.find((c) => c.id === id))
-      .filter((c): c is Continent => c !== undefined);
+  async show(climate = this.climateId): Promise<void> {
     try {
-      this.loaded = await Promise.all(
-        wanted.map((c) => this.#fetchContinent(c, climate)),
-      );
-      this.climateId = climate;
+      const [, loaded] = await Promise.all([
+        this.loadBasics(),
+        this.#loadClimate(climate),
+      ]);
+      if (climate !== this.climateId || !this.current) {
+        this.climateId = climate;
+        this.current = loaded;
+        this.tiles.clear();
+      }
+      await this.#loadWanted();
     } catch (e) {
       this.error = errorMessage(e);
     }
-    return this.loadedIds;
-  }
-
-  /** A continent's map details, if fetched; undefined until then. */
-  detail<K extends DetailKind>(
-    kind: K,
-    continentId: string,
-  ): DetailFiles[K] | undefined {
-    return this.details.get(`${kind}/${continentId}`) as
-      DetailFiles[K] | undefined;
   }
 
   /**
-   * Fetch a continent's map details, once. Called only while their layer is
-   * on, so a rider who keeps Cities or Water off never downloads them.
+   * Load these tiles for `purpose` ("view": what the map shows closely;
+   * "route": what the route crosses…), replacing what it wanted before.
+   * Loaded tiles stay; ids without a tile (sea) are skipped.
    */
-  loadDetail(kind: DetailKind, continentId: string): Promise<void> {
-    const key = `${kind}/${continentId}`;
-    const path = `${continentId}/${kind}.json`;
-    if (!hasAsset(path)) return Promise.resolve(); // not every continent has every file
-    return this.#once(this.#detailLoads, key, () =>
-      fetchJson<DetailFiles[DetailKind]>(path).then((data) => {
-        this.details.set(key, data);
+  want(purpose: string, ids: string[]): Promise<void> {
+    this.#wanted.set(purpose, ids);
+    return this.#loadWanted();
+  }
+
+  async #loadWanted(): Promise<void> {
+    const c = this.current;
+    if (!c) return;
+    const climate = this.climateId;
+    const exists = new Set(c.header.tiles);
+    const ids = [...new Set([...this.#wanted.values()].flat())].filter(
+      (id) => exists.has(id) && !this.tiles.has(id),
+    );
+    try {
+      await Promise.all(
+        ids.map((id) =>
+          this.#once(this.#tileLoads, `${climate}/${id}`, () =>
+            fetchBuffer(`climate/${climate}/${id}.bin`).then((buffer) =>
+              tileGrid(c.header, id, buffer),
+            ),
+          ).then((grid) => {
+            // A tile that arrives after a switch to another climate is dropped.
+            if (this.climateId === climate) this.tiles.set(id, grid);
+          }),
+        ),
+      );
+    } catch (e) {
+      this.error = errorMessage(e);
+    }
+  }
+
+  /** A map detail, if fetched; undefined until then. */
+  detail<K extends DetailKind>(kind: K): DetailFiles[K] | undefined {
+    return this.details.get(kind) as DetailFiles[K] | undefined;
+  }
+
+  /**
+   * Fetch a map detail, once. Called only while its layer is on, so a rider
+   * who keeps Cities or Water off never downloads them.
+   */
+  loadDetail(kind: DetailKind): Promise<void> {
+    return this.#once(this.#detailLoads, kind, () =>
+      fetchJson<DetailFiles[DetailKind]>(`${kind}.json`).then((data) => {
+        this.details.set(kind, data);
       }),
     ).catch((e: unknown) => {
       this.error = errorMessage(e);
@@ -243,6 +245,28 @@ export default class AtlasService extends Service {
       if (this.loadingRouteId === id) this.loadingRouteId = undefined;
     }
   }
+}
+
+/** A tile's grid: `size` × `size` cells from its south-west corner up to and including its far edges. */
+function tileGrid(
+  header: ClimateHeader,
+  id: string,
+  buffer: ArrayBuffer,
+): ClimateGrid {
+  const area = tileArea(id, header.tile);
+  const [[, west], [north]] = area;
+  return new ClimateGrid(
+    header,
+    {
+      lon0: west,
+      lat0: north,
+      step: header.step,
+      rows: header.size,
+      cols: header.size,
+    },
+    buffer,
+    area,
+  );
 }
 
 declare module '@ember/service' {

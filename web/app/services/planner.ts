@@ -9,6 +9,7 @@ import type IndexController from 'forkcast/controllers/index';
 import {
   CLIMATES,
   climateOn,
+  tilesAlong,
   type ClimateId,
   type DayClimate,
   type RainThreshold,
@@ -164,7 +165,6 @@ export default class PlannerService extends Service {
   @tracked draftName = '';
 
   // Settings (in the URL; see `setting`)
-  @setting declare continents: string;
   /** Which climate's grids are loaded */
   @setting declare climate: ClimateId;
   /** Quarter-month shown on the map, 0–47 */
@@ -193,12 +193,6 @@ export default class PlannerService extends Service {
   @setting declare highlightedDay: number;
   /** The selected route as the link has it ('' for the default); see `selectedRouteId` */
   @setting declare routeId: string;
-
-  /** Show another continent as well (loads its data). */
-  addContinent(id: string): void {
-    const ids = this.continents.split(',').filter(Boolean);
-    if (!ids.includes(id)) this.continents = [...ids, id].join(',');
-  }
 
   /** The map's quarter-month, with its dates and position in the year. */
   get weekSlot(): WeekSlot {
@@ -320,7 +314,7 @@ export default class PlannerService extends Service {
     });
   }
 
-  /** Everything the route picker offers on the loaded continents. */
+  /** Everything the route picker offers. */
   @cached
   get choices(): RouteChoice[] {
     // A route being drawn further shows as it is now.
@@ -330,8 +324,7 @@ export default class PlannerService extends Service {
   }
 
   /**
-   * The selected route id, falling back to the first preset of the loaded
-   * continents. A link to one of your routes keeps its id even where the
+   * The selected route id, falling back to the first preset. A link to one of your routes keeps its id even where the
    * route isn't saved (see `isMissingRoute`).
    */
   get selectedRouteId(): string {
@@ -387,6 +380,9 @@ export default class PlannerService extends Service {
     const route = this.route;
     const climate = this.atlas.climate;
     if (!route || !climate || route.points.length < 2) return undefined;
+    // The tiles along the route, for the finest data; until they are in, the
+    // overview answers, and the trip is planned again as each arrives.
+    void this.atlas.want('route', tilesAlong(route, climate.header.tile));
     return planTrip(route, climate, {
       start: this.start,
       kmPerDay: this.kmPerDay,
@@ -490,21 +486,16 @@ export default class PlannerService extends Service {
     return net && sketch.length ? net.match(sketch, CLICK_SNAP_KM) : sketch;
   }
 
-  /** The cycle network of the shown continents, once fetched. */
+  /** The cycle network, once fetched. */
   @cached
   get cycleNet(): CycleNet | undefined {
-    const files = this.atlas.loaded.flatMap((l) => {
-      const data = this.atlas.detail('cyclenet', l.continent.id);
-      return data ? [data] : [];
-    });
-    return files.length ? new CycleNet(files) : undefined;
+    const data = this.atlas.detail('cyclenet');
+    return data ? new CycleNet([data]) : undefined;
   }
 
   /** Fetch the cycle network (only when drawing with snapping on). */
   loadCycleNet(): void {
-    if (!this.snapToRoutes) return;
-    for (const id of this.atlas.loadedIds)
-      void this.atlas.loadDetail('cyclenet', id);
+    if (this.snapToRoutes) void this.atlas.loadDetail('cyclenet');
   }
 
   toggleSnap(): void {

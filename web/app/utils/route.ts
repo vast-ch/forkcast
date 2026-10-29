@@ -31,7 +31,6 @@ export interface RouteMeta {
   id: string;
   name: string;
   group: string;
-  continent: string;
   color: string;
   url: string;
   km: number;
