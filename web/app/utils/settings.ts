@@ -3,6 +3,7 @@ import { RAIN_THRESHOLDS, type RainThreshold } from './climate';
 import type { Milestones } from './itinerary';
 import type {
   CityLimit,
+  ClimateId,
   RainMetric,
   TempMetric,
 } from 'forkcast/services/planner';
@@ -19,6 +20,8 @@ export function isoDate(date = new Date()): string {
 export const DEFAULTS = {
   /** Continents whose climate is shown, comma-separated; Europe by default */
   continents: 'europe',
+  /** Which climate: the average of the last 15, 10 or 5 years, or an El Niño or La Niña year */
+  climate: 'last15' as ClimateId,
   /** Quarter-month shown on the map, 0–47 (see utils/weeks.ts); the current one by default */
   week: weekOfDate(new Date()),
   /** Temperature shown: day high or night low */
@@ -103,6 +106,7 @@ const inRange =
 
 export const PARSE: { [K in SettingKey]: Parse<(typeof DEFAULTS)[K]> } = {
   continents: isText,
+  climate: oneOf(['last15', 'last10', 'last5', 'elnino', 'lanina'] as const),
   week: isWholeIn(0, LAST_WEEK),
   tempMetric: oneOf(['high', 'low'] as const),
   showTemp: isBoolean,

@@ -1,5 +1,5 @@
 // Climate normals on a regular lat/lon grid, one file per continent (built by
-// data/forkcast_data/era5land.py).
+// data/forkcast_data/era5land.py; the other climates by variants.py).
 
 import { isMissing } from './helpers';
 
@@ -8,10 +8,20 @@ export type Encoding =
   | { kind: 'linear'; scale: number; offset: number }
   | { kind: 'sqrt'; scale: number };
 
-/** Header of a continent's climate grid (data/out/<continent>/climate.json). */
+/**
+ * Header of a continent's climate grid (data/out/<continent>/climate.json, or
+ * climate-<variant>.json for the other climates).
+ */
 export interface ClimateHeader {
   source: string;
+  /** The period averaged; for a variant, the period it is a correction of */
   years: [number, number];
+  /** A variant's id (data/forkcast_data/variants.py) */
+  variant?: string;
+  /** The last 10 or 5 years: the years averaged */
+  window?: [number, number];
+  /** El Niño or La Niña: the years its correction was measured over, and how many event months they hold */
+  enso?: { years: [number, number]; months: number };
   lon0: number; // centre of the first column
   lat0: number; // centre of the first (northernmost) row
   step: number;

@@ -471,27 +471,33 @@ class LeafletModifier extends Modifier<LeafletSignature> {
 
     if (loaded.length) {
       const grids = loaded.map((l) => l.climate);
-      this.layer('temp', [s.week, s.tempMetric, s.showTemp, ids], (group) => {
-        if (!s.showTemp) return;
-        // One image per continent; cells an earlier one covers are left out.
-        grids.forEach((g, k) => {
-          const r = temperatureRaster(
-            g,
-            s.phase,
-            s.tempMetric,
-            grids.slice(0, k),
-          );
-          L.imageOverlay(r.url, r.bounds, {
-            pane: 'climate',
-            interactive: false,
-          }).addTo(group);
-        });
-      });
+      // Relief and borders are the same in every climate; these aren't.
+      const climate = `${ids}/${atlas.climateId}`;
+      this.layer(
+        'temp',
+        [s.week, s.tempMetric, s.showTemp, climate],
+        (group) => {
+          if (!s.showTemp) return;
+          // One image per continent; cells an earlier one covers are left out.
+          grids.forEach((g, k) => {
+            const r = temperatureRaster(
+              g,
+              s.phase,
+              s.tempMetric,
+              grids.slice(0, k),
+            );
+            L.imageOverlay(r.url, r.bounds, {
+              pane: 'climate',
+              interactive: false,
+            }).addTo(group);
+          });
+        },
+      );
       const isEmoji = s.rainMetric === 'days';
       const block = this.rainBlock(grids[0]!.step, isEmoji ? 30 : 9);
       this.layer(
         'rain',
-        [ids, s.week, s.rainMetric, s.rainThreshold, s.showRain, block],
+        [climate, s.week, s.rainMetric, s.rainThreshold, s.showRain, block],
         (group) => {
           if (!s.showRain) return;
           if (isEmoji) {

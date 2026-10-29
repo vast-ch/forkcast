@@ -49,6 +49,28 @@ export const DATE_CHOICES: { value: Milestones; label: string }[] = [
   { value: 'months', label: 'Months' },
   { value: 'weeks', label: 'Weeks' },
 ];
+/** Which climate the map and the trip use (the grid files in data/forkcast_data/variants.py). */
+export type ClimateId = 'last15' | 'last10' | 'last5' | 'elnino' | 'lanina';
+export const CLIMATE_CHOICES: {
+  value: ClimateId;
+  label: string;
+  title: string;
+}[] = [
+  { value: 'last15', label: '15 yrs', title: 'The average of 2011–2025' },
+  { value: 'last10', label: '10 yrs', title: 'The average of 2016–2025' },
+  { value: 'last5', label: '5 yrs', title: 'The average of 2021–2025' },
+  {
+    value: 'elnino',
+    label: 'El Niño',
+    title: 'A year with El Niño: how El Niño months differed, 1981–2025',
+  },
+  {
+    value: 'lanina',
+    label: 'La Niña',
+    title: 'A year with La Niña: how La Niña months differed, 1981–2025',
+  },
+];
+
 /** Which city names the map shows. */
 export type CityLimit = 'top10' | 'big' | 'off';
 export const CITY_CHOICES: {
@@ -144,6 +166,8 @@ export default class PlannerService extends Service {
 
   // Settings (in the URL; see `setting`)
   @setting declare continents: string;
+  /** Which climate's grids are loaded */
+  @setting declare climate: ClimateId;
   /** Quarter-month shown on the map, 0–47 */
   @setting declare week: number;
   @setting declare tempMetric: TempMetric;

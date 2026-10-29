@@ -37,6 +37,34 @@ module('Acceptance | planner', function (hooks) {
     assert.strictEqual(summary('Rest days'), '0');
   });
 
+  test('the climate switches the grids the map and the trip use', async function (assert) {
+    const atlas = this.owner.lookup('service:atlas');
+    // Madrid, mid-July: last 5 years are warmer than the 15-year average.
+    const july = () => atlas.climate!.at(0.54, 40.4, -3.7, 5).high;
+    const colours = () =>
+      findAll('.leaflet-climate-pane img').map((i) => i.getAttribute('src'));
+    await visit('/');
+    const usual = { july: july(), colours: colours() };
+    assert.strictEqual(usual.colours.length, 1, "Europe's temperature image");
+    await click(button('5 yrs'));
+    assert.strictEqual(currentURL(), '/?climate=last5');
+    assert.strictEqual(atlas.climateId, 'last5');
+    assert.notStrictEqual(july(), usual.july, 'another grid');
+    assert.notDeepEqual(colours(), usual.colours, 'the map is redrawn');
+    await click(button('15 yrs'));
+    assert.strictEqual(currentURL(), '/');
+    assert.strictEqual(july(), usual.july, 'back to the usual one');
+    assert.deepEqual(colours(), usual.colours);
+  });
+
+  test('a climate in the URL is loaded, an unknown one reads as the usual', async function (assert) {
+    const atlas = this.owner.lookup('service:atlas');
+    await visit('/?climate=elnino');
+    assert.strictEqual(atlas.climateId, 'elnino');
+    await visit('/?climate=nino');
+    assert.strictEqual(atlas.climateId, 'last15');
+  });
+
   test('map details switch their layers on and off', async function (assert) {
     await visit('/');
     assert.dom('.leaflet-relief-pane img').exists();

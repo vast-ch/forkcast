@@ -103,6 +103,9 @@ export default class Help extends Component {
               week over
               {{this.years}}, not a forecast. Use it to see which part of the
               year suits a region, and how the weather changes along the way.
+              “Climate” switches to the last 10 or 5 years, or to a year with El
+              Niño or La Niña; see
+              <LinkTo @route="help.section" @model="climates">Climates</LinkTo>.
             </p>
 
             <h3>Time of year</h3>
@@ -402,9 +405,8 @@ export default class Help extends Component {
             <h2>Where the numbers come from</h2>
             <p>
               Forkcast combines two well-established climate datasets, each for
-              what it does best, both over
-              {{this.years}}: 15 years, long enough that one odd year doesn't
-              dominate, recent enough to include most of the warming so far.
+              what it does best, both from
+              {{this.years}}.
             </p>
             <dl class="wt-help-defs">
               <div><dt>ERA5-Land</dt><dd>From the European Copernicus Climate
@@ -427,9 +429,11 @@ export default class Help extends Component {
             <h3>How they're turned into the numbers</h3>
             <dl class="wt-help-defs">
               <div><dt>Rain</dt><dd>From ERA5-Land's daily rain totals. Every
-                  day of the 15 years is checked against 1, 5 and 10 mm, so
-                  rainy days are counted, not estimated. A day's chance of being
-                  rainy is the share of such days at that time of year.</dd></div>
+                  day from
+                  {{this.years}}
+                  is checked against 1, 5 and 10 mm, so rainy days are counted,
+                  not estimated. A day's chance of being rainy is the share of
+                  such days at that time of year.</dd></div>
               <div><dt>Highs and lows</dt><dd>ERA5-Land gives the temperature
                   for each hour of a typical day. Its warmest hour is a little
                   cooler than the average daily high, because real days peak at
@@ -453,10 +457,63 @@ export default class Help extends Component {
               height, so on your route the high and low are corrected for the
               difference, using seasonal rates measured across the Alps: smaller
               in winter, when cold air settles in valleys. Pointing at the route
-              shows the correction when it's half a degree or more; the map
-              colours themselves are the cell averages. Try it:
+              shows the correction when it's 0.5 °C or more; the map colours
+              themselves are the cell averages. Try it:
             </p>
             <AltitudeDemo />
+          </section>
+        {{/if}}
+
+        {{#if (this.shows "climates")}}
+          <section id="climates">
+            <h2>Climates</h2>
+            <p>
+              Forkcast doesn't forecast the weather. It shows what the weather
+              is usually like: the average of past years. “Climate”, in the Map
+              settings, picks which years.
+            </p>
+
+            <h3>15 yrs</h3>
+            <p>
+              Made from
+              {{this.years}}. Enough years that one unusually hot, cold or wet
+              year doesn't throw things off, and recent enough to show today's
+              warmer climate. Of the choices, it's the one that would have
+              predicted past years best, so it's what Forkcast starts with.
+            </p>
+
+            <h3>10 yrs, 5 yrs</h3>
+            <p>
+              Made from only the most recent years. They come out a little
+              warmer, by about 0.2–0.5 °C, because the climate keeps warming.
+              But the fewer the years, the more a single odd year shows,
+              especially in the rain. Good for seeing how things are changing;
+              for planning, 15 yrs is the safer choice.
+            </p>
+
+            <h3>El Niño and La Niña</h3>
+            <p>
+              Every few years the tropical Pacific runs warmer than usual (El
+              Niño) or cooler (La Niña), and that shifts the weather in many
+              parts of the world. Weather services announce them months ahead
+              (look for an “ENSO outlook”). If one is expected during your trip,
+              pick it to see what it usually changes.
+            </p>
+            <ul>
+              <li><strong>Where it matters:</strong>
+                Australia, northern South America, southern Africa and parts of
+                North America. El Niño, for example, brings a drier spring to
+                eastern Australia and a milder winter to western Canada; La Niña
+                mostly the opposite.</li>
+              <li><strong>Europe:</strong>
+                hardly at all. The map barely changes there.</li>
+              <li><strong>How it's done:</strong>
+                we looked at how the weather differed during the El Niños and La
+                Niñas since 1981, and added that difference to 15 yrs. Where the
+                difference could just be chance, nothing changes.</li>
+              <li><strong>A tendency, not a promise:</strong>
+                one El Niño year can still turn out quite unlike another.</li>
+            </ul>
           </section>
         {{/if}}
 
@@ -465,7 +522,8 @@ export default class Help extends Component {
             <h2>How far to trust it</h2>
             <p>
               The biggest uncertainty isn't in the maths but in the weather
-              itself. From the station records for the same 15 years:
+              itself. From the station records for
+              {{this.years}}:
             </p>
             <ul>
               <li><strong>Year to year,</strong>
@@ -491,6 +549,10 @@ export default class Help extends Component {
                 in the Alps still come out 2–3 °C too mild, nights more: cold
                 air pooling and fog are too local for the data. Expect colder
                 winter mornings in valleys.</li>
+              <li><strong>Tibetan Plateau winters</strong>
+                jump about 10 °C warmer in the data from 2021 on, most likely a
+                flaw in how it tracks snow there. Winters on the Plateau come
+                out too mild, most of all in the 5-year climate.</li>
               <li><strong>Few stations</strong>
                 in deserts, high mountains and parts of Africa, Asia and South
                 America make the highs and lows less certain there.</li>
@@ -499,9 +561,10 @@ export default class Help extends Component {
                 months, so a rainy season that starts within two weeks is shown
                 starting more gently, over a month or so.</li>
               <li><strong>Warming.</strong>
-                The 15 years are centred on 2018; in Europe temperatures rise by
+                The data is from
+                {{this.years}}, centred on 2018; in Europe temperatures rise by
                 about 0.5 °C per decade, so this year is likely a few tenths
-                warmer than shown.</li>
+                warmer than shown. The 5-year climate is closer.</li>
               <li><strong>Climbing</strong>
                 comes out somewhat low, because tracks are simplified a little.</li>
             </ul>
@@ -516,13 +579,13 @@ export default class Help extends Component {
           <section id="sharing">
             <h2>Sharing and privacy</h2>
             <p>
-              Your plan lives in the page address: continents, week, map layers,
-              route, start date, distances, speed, rest pattern and the picked
-              day. Bookmark it or send the link, and the same plan opens again.
-              Settings left at their defaults are left out, so links stay short.
-              Your own routes are the exception: they're kept in this browser,
-              and a link only names one, so someone else opening it is told to
-              ask you for its GPX file.
+              Your plan lives in the page address: continents, climate, week,
+              map layers, route, start date, distances, speed, rest pattern and
+              the picked day. Bookmark it or send the link, and the same plan
+              opens again. Settings left at their defaults are left out, so
+              links stay short. Your own routes are the exception: they're kept
+              in this browser, and a link only names one, so someone else
+              opening it is told to ask you for its GPX file.
             </p>
             <p>
               This browser also remembers where you left off: your last plan and

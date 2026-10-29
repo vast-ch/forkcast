@@ -8,6 +8,8 @@ import ClimateGrid, {
 import { fetchBuffer, fetchJson, hasAsset } from 'forkcast/utils/assets';
 import type { CycleNetJson } from 'forkcast/utils/cyclenet';
 import { errorMessage } from 'forkcast/utils/helpers';
+import { DEFAULTS } from 'forkcast/utils/settings';
+import type { ClimateId } from 'forkcast/services/planner';
 import {
   routeFromJson,
   type Route,
@@ -29,11 +31,6 @@ export interface Continent {
   routes: RouteMeta[];
 }
 
-/**
- * Loads the static data files built by the `data` container. The manifest is
- * small and loads first; a continent's climate grid and borders load when it
- * is opened, and a route's track when it is picked.
- */
 export interface RouteOverview {
   id: string;
   continent: string;
@@ -69,6 +66,19 @@ export interface LoadedContinent {
   countries: CountriesJson;
 }
 
+/** A continent's grid file of a climate, without its extension. */
+function gridFile(continentId: string, climate: ClimateId): string {
+  return climate === 'last15'
+    ? `${continentId}/climate`
+    : `${continentId}/climate-${climate}`;
+}
+
+/**
+ * Loads the static data files built by the `data` container. The manifest is
+ * small and loads first; a continent's climate grid and borders load when it
+ * is opened, and a route's track when it is picked. Switching the climate
+ * loads the other grids of the continents shown; borders are kept.
+ */
 export default class AtlasService extends Service {
   @tracked continents: Continent[] = [];
   /** One SVG path per continent id (plus "other"), for the map's continent shapes */
@@ -77,6 +87,8 @@ export default class AtlasService extends Service {
   @tracked overview: RouteOverview[] = [];
   /** The continents whose data is shown, in the order they were added. */
   @tracked loaded: LoadedContinent[] = [];
+  /** The climate of the grids in `loaded`. */
+  @tracked climateId: ClimateId = DEFAULTS.climate;
   @tracked error?: string;
   @tracked loadingRouteId?: string;
   @tracked loadingContinentIds: string[] = [];
@@ -85,7 +97,9 @@ export default class AtlasService extends Service {
   details = new TrackedMap<string, DetailFiles[DetailKind]>();
 
   #manifest?: Promise<void>;
-  #continentLoads = new Map<string, Promise<LoadedContinent>>();
+  /** By "<climate>/<continent id>" */
+  #gridLoads = new Map<string, Promise<ClimateGrid>>();
+  #countryLoads = new Map<string, Promise<CountriesJson>>();
   #routeLoads = new Map<string, Promise<Route | undefined>>();
   #detailLoads = new Map<string, Promise<void>>();
 
@@ -124,40 +138,60 @@ export default class AtlasService extends Service {
     return this.#manifest;
   }
 
-  #fetchContinent(c: Continent): Promise<LoadedContinent> {
-    let load = this.#continentLoads.get(c.id);
+  /** A promise from `cache` under `key`, made by `make` once; forgotten if it fails, so it can be retried. */
+  #once<T>(
+    cache: Map<string, Promise<T>>,
+    key: string,
+    make: () => Promise<T>,
+  ) {
+    let load = cache.get(key);
     if (!load) {
-      load = Promise.all([
-        fetchJson<ClimateHeader>(`${c.id}/climate.json`),
-        fetchBuffer(`${c.id}/climate.bin`),
-        fetchJson<CountriesJson>(`${c.id}/countries.json`),
-      ]).then(([header, buffer, countries]) => ({
-        continent: c,
-        climate: new ClimateGrid(header, buffer),
-        countries,
-      }));
-      load.catch(() => this.#continentLoads.delete(c.id));
-      this.#continentLoads.set(c.id, load);
+      load = make();
+      load.catch(() => cache.delete(key));
+      cache.set(key, load);
     }
     return load;
   }
 
+  async #fetchContinent(
+    c: Continent,
+    climate: ClimateId,
+  ): Promise<LoadedContinent> {
+    const file = gridFile(c.id, climate);
+    const [grid, countries] = await Promise.all([
+      this.#once(this.#gridLoads, `${climate}/${c.id}`, () =>
+        Promise.all([
+          fetchJson<ClimateHeader>(`${file}.json`),
+          fetchBuffer(`${file}.bin`),
+        ]).then(([header, buffer]) => new ClimateGrid(header, buffer)),
+      ),
+      this.#once(this.#countryLoads, c.id, () =>
+        fetchJson<CountriesJson>(`${c.id}/countries.json`),
+      ),
+    ]);
+    return { continent: c, climate: grid, countries };
+  }
+
   /**
-   * Show exactly these continents (in this order), loading any not loaded yet.
-   * Unknown ids are skipped; returns the ids actually shown.
+   * Show exactly these continents (in this order) in a climate (the one shown
+   * by default), loading what isn't loaded yet. Unknown ids are skipped;
+   * returns the ids actually shown.
    */
-  async show(ids: string[]): Promise<string[]> {
+  async show(ids: string[], climate = this.climateId): Promise<string[]> {
     await this.loadManifest();
     const wanted = ids
       .map((id) => this.continents.find((c) => c.id === id))
       .filter((c): c is Continent => c !== undefined);
     this.loadingContinentIds = wanted
-      .filter((c) => !this.loadedIds.includes(c.id))
+      .filter(
+        (c) => climate !== this.climateId || !this.loadedIds.includes(c.id),
+      )
       .map((c) => c.id);
     try {
       this.loaded = await Promise.all(
-        wanted.map((c) => this.#fetchContinent(c)),
+        wanted.map((c) => this.#fetchContinent(c, climate)),
       );
+      this.climateId = climate;
     } catch (e) {
       this.error = errorMessage(e);
     } finally {
