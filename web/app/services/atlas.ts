@@ -4,12 +4,12 @@ import { TrackedMap } from 'tracked-built-ins';
 import ClimateGrid, {
   ClimateSet,
   type ClimateHeader,
+  type ClimateId,
 } from 'forkcast/utils/climate';
 import { fetchBuffer, fetchJson, hasAsset } from 'forkcast/utils/assets';
 import type { CycleNetJson } from 'forkcast/utils/cyclenet';
 import { errorMessage } from 'forkcast/utils/helpers';
 import { DEFAULTS } from 'forkcast/utils/settings';
-import type { ClimateId } from 'forkcast/services/planner';
 import {
   routeFromJson,
   type Route,

@@ -68,6 +68,16 @@ export interface DayClimate {
   altitudeShift: number;
 }
 
+/** The climates a rider can pick: the 2011–2025 grid, and the variants data/forkcast_data/variants.py builds. */
+export const CLIMATES = [
+  'last15',
+  'last10',
+  'last5',
+  'elnino',
+  'lanina',
+] as const;
+export type ClimateId = (typeof CLIMATES)[number];
+
 /** Rain thresholds offered for counting a day as rainy, mm. */
 export const RAIN_THRESHOLDS = [1, 5, 10] as const;
 export type RainThreshold = (typeof RAIN_THRESHOLDS)[number];

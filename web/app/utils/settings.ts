@@ -1,9 +1,13 @@
 import { LAST_WEEK, weekOfDate } from './weeks';
-import { RAIN_THRESHOLDS, type RainThreshold } from './climate';
+import {
+  CLIMATES,
+  RAIN_THRESHOLDS,
+  type ClimateId,
+  type RainThreshold,
+} from './climate';
 import type { Milestones } from './itinerary';
 import type {
   CityLimit,
-  ClimateId,
   RainMetric,
   TempMetric,
 } from 'forkcast/services/planner';
@@ -106,7 +110,7 @@ const inRange =
 
 export const PARSE: { [K in SettingKey]: Parse<(typeof DEFAULTS)[K]> } = {
   continents: isText,
-  climate: oneOf(['last15', 'last10', 'last5', 'elnino', 'lanina'] as const),
+  climate: oneOf(CLIMATES),
   week: isWholeIn(0, LAST_WEEK),
   tempMetric: oneOf(['high', 'low'] as const),
   showTemp: isBoolean,
