@@ -36,26 +36,27 @@ work after `data`).
 
 | Step | Reads | Writes |
 |---|---|---|
-| `borders` | `cache/borders/` | `out/<continent>/countries.json`, `out/world.json` |
-| `details` | `cache/details/` | `out/<continent>/places.json` (towns of 50,000 or more and capitals, each with its population and its rank by size in its country, for the map's city setting; Europe 18 kB gzipped) and `out/<continent>/water.json` (rivers and lakes to 0.01°; Europe 29 kB gzipped). The app fetches each only while its layer is on. |
-| `routes` | `eurovelo/`, `cache/brouter/`, `out/europe/countries.json` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
+| `borders` | `cache/borders/` | `out/countries.json`: the world's country outlines as TopoJSON (each border once, quantized; 231 kB gzipped) |
+| `details` | `cache/details/` | `out/places.json` (the world's towns of 50,000 or more and capitals, each with its population and its rank by size in its country, for the map's city setting; 76 kB gzipped) and `out/water.json` (rivers and lakes to 0.01°; 190 kB gzipped). The app fetches each only while its layer is on. |
+| `routes` | `eurovelo/`, `cache/brouter/`, `cache/borders/` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
-| `climate` | ERA5-Land rain and temperature, CRU climatology | `cache/grids/<continent>/climate.bin` + `climate.json`, monthly (intermediate) |
+| `climate` | ERA5-Land rain and temperature, CRU climatology | `cache/grids/climate.bin` + `climate.json`, the world from 84°N to 60°S, monthly (intermediate) |
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
-| `variants` | `cache/variants/`, `cache/grids/<continent>/climate.*` | `cache/grids/<continent>/climate-<variant>.bin` + `.json` for `last10`, `last5`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
-| `pack` | `cache/grids/` | `out/<continent>/climate.bin` + `.json` and `climate-<variant>.*`: each climate as the app's seasonal curves (see "Seasonal curves, packed at build") |
-| `manifest` | everything above | `out/manifest.json` |
-| `cyclenet` | `cache/cyclenet/icn/` | `out/<continent>/cyclenet.json`: the ways of every route whose box touches the continent, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches a continent's file only when it is shown and the rider draws with snapping on. |
+| `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
+| `pack` | `cache/grids/` | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land and `overview.bin` (the world at 1°), for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
+| `cyclenet` | `cache/cyclenet/icn/` | `out/cyclenet.json`: the ways of every route, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches it only when the rider draws with snapping on. |
 
 `all` runs every download, then every build, in the order of these tables.
 
 ### Cycle network
 
-The files in `out/` for Europe, Africa and Asia were built from an earlier
-area-based fetch, while every public Overpass server was overloaded; North
-America, South America and Oceania have none yet (drawing there gives
-straight lines). `download cyclenet` then `build cyclenet` replaces them all
-when a server is available.
+The committed `out/cyclenet.json` is still the earlier area-based fetch
+(Europe, Africa and Asia, merged from the old per-continent files), made
+while every public Overpass server was overloaded; the Americas and Oceania
+have none yet (drawing there gives straight lines). `download cyclenet` then
+`build cyclenet` replaces it once a server lets the download finish: routes
+missing from the cache are left out of a build and reported, so a build from
+a half-finished download would ship less than the file has now.
 
 Why by route and not by area: on a busy public Overpass server, what times out
 is a query that has to scan a large region (a 20° tile, or a whole continent),
@@ -63,15 +64,15 @@ and most of those regions are empty. Asking for routes by id never scans an
 area, so each query is quick and its size is set by the routes, not the map.
 
 For drawing routes that follow cycle routes, offline: international routes
-only (`icn`), for every continent. Why not more, measured on Switzerland:
+only (`icn`), for the whole world. Why not more, measured on Switzerland:
 
 - International routes touching Switzerland: about 2,500 km in 10,161 short
   OSM ways, 107,191 points; 75–85 kB gzipped before joining the ways.
 - With regional routes (`rcn`) one 5° tile (45–50°N, 5–10°E) was 206,610 ways
   and about 2 million points, still 415,000 after simplifying to 300 m: far too
-  much to ship for a continent.
+  much to ship.
 - National routes (`ncn`) would roughly triple Europe; the cache keeps tiles per
-  choice of networks (`cache/cyclenet/<continent>/<networks>/`), so trying them
+  choice of networks (`cache/cyclenet/<networks>/`), so trying them
   later doesn't mix with these.
 
 Builds never use the network; a build whose inputs are missing stops and says
@@ -133,8 +134,8 @@ kept, so stopping and restarting loses at most the file in progress.
 
 ## How the climate grids are made, and why
 
-The `climate` build (`forkcast_data/era5land.py`) produces, per continent, a
-0.25° grid with twelve months of: mean daily high and low, monthly rain, days
+The `climate` build (`forkcast_data/era5land.py`) produces a world
+0.25° grid (84°N to 60°S) with twelve months of: mean daily high and low, monthly rain, days
 with at least 1, 5 and 10 mm of rain, plus each cell's mean terrain height.
 
 ### Sources
@@ -203,7 +204,7 @@ app's first version used it alone; now it calibrates ERA5-Land.
 ### Size and format
 
 - **Why 0.25° and not ERA5-Land's native 0.1°:** six times fewer cells, so a
-  continent stays a download of a few MB. 0.25° (≈ 25 km) still separates
+  10° tile stays about 30 kB. 0.25° (≈ 25 km) still separates
   coasts and valleys far better than CRU's 0.5°; the altitude correction does
   the rest for route points. The CDS regrids to 0.25° on its side, which also
   cuts the downloads.
@@ -211,8 +212,17 @@ app's first version used it alone; now it calibrates ERA5-Land.
   scale (fine steps for dry months, up to about 1,000 mm), rainy days in eighths
   of a day, height in 40 m steps. Each step is well below the real uncertainty
   of the numbers, and it halves the size compared with 16-bit values.
-- **Why per continent:** users download only the part of the world they plan
-  in. The files get content-hashed names in the app build and are cached by
+- **Why 10° tiles:** users download only the squares they look at closely
+  and ride through, not a continent, and never pick one first. A tile is
+  41 × 41 cells: its edge cells are also in its neighbours, so a point is
+  interpolated from one tile, without seams (5% more bytes). Only tiles with
+  land are written: 317 per climate, 25–35 kB gzipped each, 6.7 MB for the
+  whole world. Tile `<lat>_<lon>` is named by its south-west corner.
+- **Why a 1° overview:** zoomed out to a continent the map needs everything
+  in view but not its detail; each overview cell averages the land cells of a
+  4 × 4 block, 0.5 MB gzipped for the world. The app answers from it until a
+  point's tile is in.
+- The files get content-hashed names in the app build and are cached by
   browsers for a year.
 
 ### Seasonal curves, packed at build
@@ -225,8 +235,8 @@ quarter-months and every trip day gets its own value. The `pack` step
 (`forkcast_data/pack.py`) fits those curves and publishes their 7 numbers per
 layer instead of the 12 months, so the app reads the curves directly:
 
-- **Size:** 42% fewer bytes, about half gzipped (all continents and climates:
-  59.5 → 31.5 MB gzipped; Europe's grid 1.1 → 0.6 MB per climate).
+- **Size:** 42% fewer bytes, about half gzipped (the 6 continents' grids, all
+  climates, before tiling: 59.5 → 31.5 MB gzipped).
 - **Encoding**, one byte per number, each term its own scale
   (`pack.ENCODING`): mean highs and lows in 0.25 °C steps (each from its own
   lowest value), the yearly wave in 0.2 °C steps, the shorter waves in
@@ -260,13 +270,13 @@ Niña (`forkcast_data/variants.py`; why these and not others, and the research
 behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
 
 - **What a variant is:** the 2011–2025 grid plus a correction, written in the
-  same format as `cache/grids/<continent>/climate-<variant>.bin` / `.json`
+  same format as `cache/grids/climate-<variant>.bin` / `.json`
   next to `climate.bin`, then packed like it.
   Highs and lows get °C added, rain is multiplied by a ratio (0.5–2, so a dry
   month can't go negative), rainy days get days added (kept within the month,
   r10 ≤ r5 ≤ r1). Where the correction is zero the bytes equal `climate.bin`'s.
-  Each variant adds what `climate.bin` weighs: about 26 MB for the world
-  (6 MB gzipped), committed; the app loads only the one picked, for the continents shown.
+  Each packed variant weighs what the 2011–2025 climate does (25 MB, 6.7 MB
+  gzipped), committed; the app loads only the one picked, and only its tiles in use.
 - **Windows** (`last10`, `last5`): the window's average minus 2011–2025's,
   from the same yearly fields. Building them as corrections, rather than
   re-running the climate build on fewer years, keeps the CRU calibration of
@@ -291,8 +301,8 @@ behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
   well-known ENSO effect comes out with the wrong sign (El Niño: drier eastern
   Australian spring, drier northern South America and southern Africa in
   December–February, milder western Canadian winter, wetter US Gulf winter;
-  La Niña: the opposite where it's as well established), if a continent's
-  mean change in highs leaves a plausible range (windows: around the warming,
+  La Niña: the opposite where it's as well established), if a large area's
+  (`variants.AREAS`) mean change in highs leaves a plausible range (windows: around the warming,
   phases: near zero), or if any cell's highs or lows move by more than 6 °C.
   A mix-up of months, signs, regions or units trips at least one of them.
   Known flaws of the source data get their own looser limit (`QUIRKS`): on
@@ -306,7 +316,7 @@ behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
   downloads for 1981–2025.
 
 Research (not a build step, not part of `all`): `variants_research`
-compares each variant with the random-year noise floor, per continent, into
+compares each variant with the random-year noise floor, per area (`variants.AREAS`), into
 `cache/variants/report.md`; its `checks` tests leaving out volcanic years and
 Indian Ocean Dipole months (downloading NOAA's Dipole Mode Index first) into
 `cache/variants/checks-1981-2025.md`. A few minutes each:

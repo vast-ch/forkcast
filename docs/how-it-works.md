@@ -17,7 +17,7 @@ image). All the work happens in the browser:
 **Why:** there is nothing to run, scale or secure, hosting can be any static
 host or CDN, and the app keeps working offline once loaded. The price is that
 everything a user might look at has to be downloaded, which is why the data is
-split by continent and kept compact.
+split into 10° tiles and kept compact.
 
 ## No third parties
 
@@ -44,10 +44,12 @@ anyone the rider didn't send it to.
 
 ## What gets downloaded, and when
 
-1. **On start:** the code, `manifest.json` (the continents and their preset routes, a few kB), `world.json` (one outline per continent, ~120 kB) and Europe's climate grid and borders (1.2 MB gzipped). The app opens straight on the planner; there is no separate start page.
-2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.4 to 2.7 MB gzipped, added to what is already shown. Picking another climate (last 10 or 5 years, El Niño, La Niña) loads that climate's grid (`climate-<variant>.bin`, same format and size) for each continent shown; borders stay. Continents not shown yet are drawn from `world.json` as light, clickable shapes.
+1. **On start:** the code, `routes/index.json` (the preset routes, under 1 kB gzipped), `routes/overview.json` (every preset route simplified to ~1 km, 64 kB), `countries.json` (the world's borders as TopoJSON, 231 kB) and the climate's header and world overview (`climate/<climate>.json` and `climate/<climate>/overview.bin`: the whole world at 1°, 530 kB). The app opens straight on the planner, on Europe; there is no separate start page.
+2. **As the map is zoomed in, and along the route:** from zoom 5 on (a country or two in view) the map draws from the 0.25° tiles in view (`climate/<climate>/<lat>_<lon>.bin`, 10° squares, 25–35 kB gzipped each, only where there is land), fetching each as it comes into view; zoomed out it draws from the overview. The trip always uses the tiles its route crosses: they load with the route, and until they're in, the overview answers. Picking another climate (last 10 or 5 years, El Niño, La Niña) loads its overview and the same tiles of it.
 
-Continents add up rather than replace each other, because a trip can cross from one to another (Europe into Asia, say). They are all cut from the same worldwide grid, so where two overlap their values are identical: `ClimateSet` in `web/app/utils/climate.ts` answers each point from the first loaded continent that covers it, and the map draws overlapping cells only once (rain emoji and dots are grouped on the worldwide grid so the patterns line up).
+A tile holds 41 × 41 cells: its edges' cells are also in its neighbours, so any point in it is interpolated from that tile alone, without seams. `TiledClimate` in `web/app/utils/climate.ts` answers each point from its tile if loaded, else from the overview; the map draws each tile's own square, and rain emoji and dots are grouped on the worldwide grid so the patterns line up across tiles.
+
+**Why tiles, not continents:** a rider downloads what they look at and ride through, not a whole continent, and nothing has to be picked first. Asking for tiles does tell the static host which 10° squares were looked at; the help's privacy section says so.
 3. **When a route is picked:** that route's full track (`routes/<id>.json`). Every other preset route is drawn dashed from `routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped, loaded at start), so the map shows what is available without downloading each track; clicking a dashed route selects it.
 
 Every data file is imported through `web/app/utils/assets.ts`, so the
@@ -55,13 +57,13 @@ production build gives it a content-hashed name (`climate-BRovctLk.bin`). nginx
 serves everything under `/assets/` with `Cache-Control: max-age=31536000,
 immutable` and `index.html` with `no-cache`.
 
-**Why:** a changed file gets a new name, so browsers can keep files for a year without ever showing stale data, and a new release is picked up as soon as the page itself reloads. Only the continent you use is downloaded. Europe is preloaded because the preset routes are there; anyone else is one click away from their own continent.
+**Why:** a changed file gets a new name, so browsers can keep files for a year without ever showing stale data, and a new release is picked up as soon as the page itself reloads. The list of every hashed name is part of the code: about 1,600 files, 19 kB gzipped.
 
 ## Settings live in the URL
 
-Every setting (continent, month, layers, rainy-day threshold, route, start date, km per day, average speed, ride/rest pattern, direction, highlighted day) is a query parameter of the app's single planner route (`/`), with one name everywhere: the URL parameter, the controller field and the planner property are the same (`kmPerDay`, `cities`, `highlightedDay`…), and so are their values. `web/app/controllers/index.ts` declares them with
+Every setting (climate, month, layers, rainy-day threshold, route, start date, km per day, average speed, ride/rest pattern, direction, highlighted day) is a query parameter of the app's single planner route (`/`), with one name everywhere: the URL parameter, the controller field and the planner property are the same (`kmPerDay`, `cities`, `highlightedDay`…), and so are their values. `web/app/controllers/index.ts` declares them with
 their defaults (`web/app/utils/settings.ts`); Ember writes a parameter to the
-URL only while it differs from its default. Your own drawn or imported routes are not in the URL: they're kept whole in the browser's localStorage (`web/app/services/my-routes.ts`; everything stored is a `@stored` property, `web/app/utils/stored.ts`, polyline-encoded with elevation, plus a drawn route's clicks so it can be drawn further), and `routeId` holds one's random UUID. A link to a UUID this browser doesn't have shows a warning instead (`PlannerService.isMissingRoute`). Where you left off is kept in localStorage too (`web/app/services/last-visit.ts`): the whole query string after every settings change (so a new setting needs nothing extra), and the map's centre and zoom after every move. Opening the planner with no query parameters at all restores the saved query string (`IndexRoute.redirect`) and the map takes the saved view instead of fitting the route (`isResuming`); a link with any setting in it is taken as it is, fits its route, and becomes the new last visit. The view stays out of the URL: it would rewrite the address on every drag, and a view chosen on one screen doesn't suit another. The shown continents are a query parameter rather than a path (`/?continents=europe,asia`, left out when it is just Europe): changing it re-runs the route's model hook, which loads what is missing. The map's time of year is a quarter-month (`week`, 0–47, see `web/app/utils/weeks.ts`), defaulting to the current one, and the trip starts today unless the link says otherwise (a link without a start date plans from the day it is opened); the start date's calendar colours each day by the temperature at the route's first point on that date (`PlannerService.startTempOn`, the map's high or low), through `TempCalendar`, Frontile's `Calendar` with a `<:day>` block, which the help's demo shares; quarter-months keep the familiar month grid and line up with the monthly data. In the sidebar it is a range slider with 48 steps (Frontile's `Input` with `@type="range"`, so it gets the same label and accessibility wiring as the other fields; its text-field classes are overridden and the track and thumb are styled in `app.css`). The chosen week is named above the thumb, a tick marks the start of each month and the months are labelled under the track; the arrow keys step a week. Moving it also moves the day chart: the selected day stays if it is in that week, otherwise the trip's first day in it is picked (`PlannerService.selectWeek`). A week the trip does not reach parks in a Before or After column at the ends of the day chart, by whichever end of the trip is nearer in the year (`PlannerService.offTrip`). The other way round, picking a day shows its week.
+URL only while it differs from its default. Your own drawn or imported routes are not in the URL: they're kept whole in the browser's localStorage (`web/app/services/my-routes.ts`; everything stored is a `@stored` property, `web/app/utils/stored.ts`, polyline-encoded with elevation, plus a drawn route's clicks so it can be drawn further), and `routeId` holds one's random UUID. A link to a UUID this browser doesn't have shows a warning instead (`PlannerService.isMissingRoute`). Where you left off is kept in localStorage too (`web/app/services/last-visit.ts`): the whole query string after every settings change (so a new setting needs nothing extra), and the map's centre and zoom after every move. Opening the planner with no query parameters at all restores the saved query string (`IndexRoute.redirect`) and the map takes the saved view instead of fitting the route (`isResuming`); a link with any setting in it is taken as it is, fits its route, and becomes the new last visit. The view stays out of the URL: it would rewrite the address on every drag, and a view chosen on one screen doesn't suit another. The map's time of year is a quarter-month (`week`, 0–47, see `web/app/utils/weeks.ts`), defaulting to the current one, and the trip starts today unless the link says otherwise (a link without a start date plans from the day it is opened); the start date's calendar colours each day by the temperature at the route's first point on that date (`PlannerService.startTempOn`, the map's high or low), through `TempCalendar`, Frontile's `Calendar` with a `<:day>` block, which the help's demo shares; quarter-months keep the familiar month grid and line up with the monthly data. In the sidebar it is a range slider with 48 steps (Frontile's `Input` with `@type="range"`, so it gets the same label and accessibility wiring as the other fields; its text-field classes are overridden and the track and thumb are styled in `app.css`). The chosen week is named above the thumb, a tick marks the start of each month and the months are labelled under the track; the arrow keys step a week. Moving it also moves the day chart: the selected day stays if it is in that week, otherwise the trip's first day in it is picked (`PlannerService.selectWeek`). A week the trip does not reach parks in a Before or After column at the ends of the day chart, by whichever end of the trip is nearer in the year (`PlannerService.offTrip`). The other way round, picking a day shows its week.
 
 **Why:** a bookmark or a shared link reopens exactly the same plan, reloads
 lose nothing, and there is no account or storage to manage. Defaults are left
@@ -74,9 +76,9 @@ long as it stays on the device.
 ## Phones
 
 Below 900 px wide (`web/app/services/media.ts`) the planner switches layout
-instead of squeezing the sidebar: a slim bar (logo, continent, help, Settings),
+instead of squeezing the sidebar: a slim bar (logo, help, Settings),
 the map, then the trip (day chart, then summary). All settings (route,
-trip, map) live in a Frontile Drawer opened from the bar; it is the same `SidePanel` component rendering only its settings part, which also says which continent is loaded. Tapping the route
+trip, map) live in a Frontile Drawer opened from the bar; it is the same `SidePanel` component rendering only its settings part. Tapping the route
 selects a day: touch screens have no hover, so the map works out what is under
 the tap before handling it. Drawing a route closes the drawer and shows a
 floating toolbar on the map (points, Undo, Save, Cancel).
@@ -126,11 +128,10 @@ Under the map, one column per day: the day number on top, a bar from the night l
   turning into a striped pattern.
 - **City names** are a choice rather than a toggle (URL setting `cities`:
   `top10`, the default, `big` or `off`): the 10 biggest towns per country, or every town over 500,000. A
-  continent-wide top 10 would leave most countries blank, and a fixed size
+  region-wide top 10 would leave most countries blank, and a fixed size
   limit alone either floods the map or empties small countries, so both are
   offered. `places.json` carries each town's population and its rank in its
-  country, ranked over the whole world so a country split between continents
-  (Russia, Turkey) ranks the same in both. Zoom has one breakpoint, the same
+  country, ranked over the whole world. Zoom has one breakpoint, the same
   for every setting: below zoom 6 (a few countries or more in view) only capitals keep
   their names; closer in, the chosen set shows (`isPlaceShown` in
   `web/app/utils/layers.ts`). Capitals show with every setting but off, even
@@ -143,8 +144,8 @@ Under the map, one column per day: the day number on top, a bar from the night l
     selected one (already loaded at start, from `routes/overview.json`).
   - **Borders** only shows or hides the country outlines; the country file
     always loads, because it also draws the land.
-  - **Water** (rivers, lakes), like the city names, comes in a small per-continent file (`water.json`, `places.json`, Europe
-    29 and 18 kB gzipped) that `AtlasService.loadDetail` fetches the first
+  - **Water** (rivers, lakes), like the city names, comes in a world file (`water.json`, `places.json`,
+    190 and 76 kB gzipped) that `AtlasService.loadDetail` fetches the first
     time the layer is on, never while it's off.
   - **Relief** needs no file: hillshading from the terrain height already in
     the climate grid (`reliefRaster` in `web/app/utils/layers.ts`), lit from the
@@ -173,9 +174,8 @@ Under the map, one column per day: the day number on top, a bar from the night l
 - **Which climate:** the `climate` setting (in the URL like every other)
   picks the grids: the 2011–2025 average, the last 10 or 5 years, El Niño or
   La Niña. They share one format, so everything below works the same on each.
-  `app/services/atlas.ts` loads a grid per climate and continent once and
-  keeps it, so switching back is instant; the map shows the old grids until
-  the new ones have arrived. How they're made: `data/README.md`, "Climate
+  `app/services/atlas.ts` loads each tile of each climate once and keeps it,
+  so switching back is instant. How they're made: `data/README.md`, "Climate
   variants".
 - **Between grid cells:** bilinear interpolation of the four surrounding cell
   centres. A point near the coast uses only land cells; just off the coast it
@@ -261,17 +261,17 @@ Under the map, one column per day: the day number on top, a bar from the night l
   a join that isn't connected or would be a detour (over 3× the straight
   distance) is straight. Off, the clicks are joined with straight lines. The map
   shows the sketch dashed under the result; Undo removes the last click. The
-  network is `out/<continent>/cyclenet.json` (OpenStreetMap international
-  bicycle routes, every continent, see data/README.md), fetched only when drawing with
-  snapping on and shown faintly meanwhile; continents without a network file
-  just get straight lines.
+  network is `out/cyclenet.json` (OpenStreetMap international bicycle routes,
+  the whole world, see data/README.md), fetched only when drawing with
+  snapping on and shown faintly meanwhile; where there is no network, the
+  clicks get straight lines.
 
 ## Where things are
 
 | Path | What |
 |---|---|
 | `web/app/routes/`, `web/app/templates/` | `index` (the planner, at `/`), `help`, `changelog` (CHANGELOG.md rendered with `marked`, which loads only on that page) |
-| `web/app/services/atlas.ts` | loads the manifest, continents and route tracks |
+| `web/app/services/atlas.ts` | loads the route list, borders, climate tiles and route tracks |
 | `web/app/services/planner.ts` | all planner state, read from and written to the URL |
 | `web/app/components/wheel-map.gts` | the Leaflet map |
 | `web/app/utils/` | climate sampling, trip planning, route geometry, map layers |

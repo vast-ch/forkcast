@@ -13,7 +13,7 @@ A bikepacking weather planner built on climate records rather than forecasts, so
 
 **Live at [forkcast.vast.earth](https://forkcast.vast.earth).** What changed in each release: [CHANGELOG.md](CHANGELOG.md), also shown in the app at [/changelog](https://forkcast.vast.earth/changelog).
 
-- **The map:** 15 years of climate records for any week of the year: average day highs or night lows as colour, rain on top: rainy days a week (over 1, 5 or 10mm) as emoji, or mm as dots. It opens on Europe; click another continent to add it.
+- **The map:** 15 years of climate records for any week of the year: average day highs or night lows as colour, rain on top: rainy days a week (over 1, 5 or 10mm) as emoji, or mm as dots. It opens on Europe and covers the whole world: zoom in anywhere.
 - **Routes:** all 17 EuroVelo routes and a demo route, Interlaken – Málaga, are built in. You can also draw your own or import a GPX, and export any route as GPX.
 - **The trip:** set a start date, km per day, average speed and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat).
 - **Each day:** the expected high, night low and chance of rain where you'll be on that date, plus climbing, riding time and hours of daylight. A 🔦 marks days with more riding than daylight.
@@ -72,7 +72,7 @@ docker compose --profile tools run --rm data status # see data/README.md for the
 docker compose exec ui pnpm build                   # writes web/dist
 ```
 
-`web/dist` is the whole site, data included (about 57 MB; a visitor only downloads the continents they show, 0.4–2.7 MB gzipped each): upload it to any static host.
+`web/dist` is the whole site, data included (about 134 MB; a visitor downloads the world at a glance, about 1 MB gzipped, then only the 10° squares they zoom into or ride through, about 30 kB each): upload it to any static host.
 
 - **Serve it from the domain root.** Asset URLs are absolute (`/assets/…`); a sub-path such as `example.com/forkcast/` needs `rootURL` in `web/config/environment.js` and Vite's `base` changed to match.
 - **Deep links work without rewrite rules:** the build writes `help/index.html`, one `help/<section>/index.html` per help tab (`web/app/help-sections.json`) and a `404.html` fallback, all copies of `index.html`. Settings live in the query string, so the planner's links are all `/`.
@@ -85,7 +85,7 @@ docker compose exec ui pnpm build                   # writes web/dist
 |---|---|
 | `web/` | The app: Ember 7.3 (`.gts`, TypeScript), Vite + Embroider, Leaflet, Tailwind 4, Frontile. pnpm. |
 | `data/` | Python (uv) builders for the data files the app loads. |
-| `data/out/` | Built data, committed: `manifest.json` (continents and their routes), `world.json` (picker map), `<continent>/climate.bin` + `climate.json` (the seasonal curves as a byte grid, and its header) and `climate-<variant>.bin` + `.json` for the other climates (last 10 and 5 years, El Niño, La Niña), `<continent>/countries.json`, and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
+| `data/out/` | Built data, committed: `climate/<climate>.json` (a climate's header) and `climate/<climate>/` (its seasonal curves as byte grids: one file per 10° tile with land, and a 1° world overview), for the 2011–2025 climate (`last15`) and the others (last 10 and 5 years, El Niño, La Niña); the world's `countries.json` (TopoJSON), `places.json`, `water.json` and `cyclenet.json`; `routes/index.json` and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
 | `data/eurovelo/` | The official EuroVelo GPX tracks (gzipped, ODbL), with their licence. |
 | `data/cache/` | Downloads and BRouter responses (git-ignored). |
 | `compose.yaml` | `ui` (dev), `web` (prod, profile `prod`), `data` (builder, profile `tools`). |
@@ -97,7 +97,7 @@ How the data is downloaded and built, and how the pipeline decides what to redo,
 - **Climate:** [ERA5-Land](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) (Copernicus Climate Change Service), 2011–2025, on a 0.25° grid (about 25 km): rain from the daily totals (rainy days over 1, 5 and 10 mm are counted), highs and lows from the average day's temperature curve calibrated against [CRU TS 4.10](https://crudata.uea.ac.uk/cru/data/hrg/) station-based daily extremes. The El Niño and La Niña climates add how those events shifted the weather over 1981–2025, from ERA5-Land and NOAA's [Oceanic Niño Index](https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php).
 - **EuroVelo routes:** the official GPX tracks from [EuroVelo.com](https://www.eurovelo.com) (ODbL, see `data/eurovelo/README.md`). Variants and spurs are resolved by taking the shortest path through the stages; holes between stages over the sea count as ferries.
 - **Demo route:** Interlaken → Rhône valley → Spain's east coast → Málaga, routed town to town with [BRouter](https://brouter.de) (trekking profile).
-- **Cycle routes for drawing:** international bicycle routes from © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, fetched with the Overpass API; the derived per-continent files are under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
+- **Cycle routes for drawing:** international bicycle routes from © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, fetched with the Overpass API; the derived file is under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
 - **Borders, cities, rivers and lakes:** Natural Earth (public domain). The relief shading is drawn from the climate data's terrain height.
 - **Daylight:** calculated from the sun's position for each day's start and end; no data needed.
 
