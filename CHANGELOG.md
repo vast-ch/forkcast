@@ -11,6 +11,7 @@
 ### Changed
 
 - A day of your trip, and a spot on the map, now say how much rain a day brings when it rains, instead of an average over all days. An average of 1 mm a day can be a drizzle every day or a downpour once a fortnight; now you can tell which.
+- The trip summary's coldest night is now called the coldest *average* night, which is what it always was. Single nights vary a few degrees around their average, so the help now says to expect some nights colder than that.
 - Rainy riding days in the trip summary now come with a range, e.g. "9 (6–12)": how many 8 trips out of 10 get. Rain comes in spells, so some trips catch a lot more than the average and some a lot less.
 - Pop-up calendars now have a clear edge and shadow, so they stand out from the panel behind them.
 
