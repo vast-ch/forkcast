@@ -45,6 +45,9 @@ export default class IndexRoute extends Route {
     // Looking it up starts it remembering every change.
     const lastVisit = this.lastVisit;
     if (Object.keys(transition.to?.queryParams ?? {}).length > 0) return;
+    // A setting changed back to its default re-runs this too (continents
+    // refresh the model); that's not opening Forkcast.
+    if (transition.from?.name === 'index') return;
     lastVisit.isResuming = true;
     const url = lastVisit.url;
     if (url) void this.router.replaceWith(url);
