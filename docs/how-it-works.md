@@ -45,7 +45,7 @@ anyone the rider didn't send it to.
 ## What gets downloaded, and when
 
 1. **On start:** the code, `routes/index.json` (the preset routes, under 1 kB gzipped), `routes/overview.json` (every preset route simplified to ~1 km, 64 kB), `countries.json` (the world's borders as TopoJSON, 231 kB) and the climate's header and world overview (`climate/<climate>.json` and `climate/<climate>/overview.bin`: the whole world at 1°, 530 kB). The app opens straight on the planner, on Europe; there is no separate start page.
-2. **As the map is zoomed in, and along the route:** from zoom 5 on (a country or two in view) the map draws from the 0.25° tiles in view (`climate/<climate>/<lat>_<lon>.bin`, 10° squares, 25–35 kB gzipped each, only where there is land), fetching each as it comes into view; zoomed out it draws from the overview. The trip always uses the tiles its route crosses: they load with the route, and until they're in, the overview answers. Picking another climate (last 10 or 5 years, El Niño, La Niña) loads its overview and the same tiles of it.
+2. **As the map is zoomed in, and along the route:** from zoom 5 on (a country or two in view) the map draws from the 0.25° tiles in view (`climate/<climate>/<lat>_<lon>.bin`, 10° squares, 25–35 kB gzipped each, only where there is land), fetching each as it comes into view; zoomed out it draws from the overview. The trip always uses the tiles its route crosses: they load with the route, and until they're in, the overview answers. Picking another climate (last 10 or 5 years, 2025, El Niño, La Niña) loads its overview and the same tiles of it.
 
 A tile holds 41 × 41 cells: its edges' cells are also in its neighbours, so any point in it is interpolated from that tile alone, without seams. `TiledClimate` in `web/app/utils/climate.ts` answers each point from its tile if loaded, else from the overview; the map draws each tile's own square, and rain emoji and dots are grouped on the worldwide grid so the patterns line up across tiles.
 
@@ -172,8 +172,8 @@ Under the map, one column per day: the day number on top, a bar from the night l
 `web/app/utils/climate.ts`:
 
 - **Which climate:** the `climate` setting (in the URL like every other)
-  picks the grids: the 2011–2025 average, the last 10 or 5 years, El Niño or
-  La Niña. They share one format, so everything below works the same on each.
+  picks the grids: the 2011–2025 average, the last 10 or 5 years, 2025 alone,
+  El Niño or La Niña. They share one format, so everything below works the same on each.
   `app/services/atlas.ts` loads each tile of each climate once and keeps it,
   so switching back is instant. How they're made: `data/README.md`, "Climate
   variants".
