@@ -81,8 +81,8 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                 <dd><TempPill @t={{this.route.weather.high}} /></dd>
                 <dt>Rainy day chance</dt>
                 <dd>{{fmtPct this.route.weather.rainChance}}</dd>
-                <dt>Rain, average</dt>
-                <dd>{{fmtMm this.route.weather.rainMm}} / day</dd>
+                <dt>When it rains</dt>
+                <dd>{{fmtMm this.route.weather.wetDayMm}} a day</dd>
                 <dt>Riding time</dt>
                 <dd>{{fmtHours this.route.day.ridingHours}}{{#if
                     this.route.day.needsLights
@@ -113,6 +113,8 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <dd>{{this.weekRain}}</dd>
             <dt>Rainy days (≥{{this.planner.rainThreshold}}mm)</dt>
             <dd>{{this.weekRainyDays}}</dd>
+            <dt>When it rains</dt>
+            <dd>{{fmtMm this.hover.climate.wetDayMm}} a day</dd>
           </dl>
         {{else}}
           <p class="wt-eyebrow">{{this.coords}}</p>

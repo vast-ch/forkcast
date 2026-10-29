@@ -64,6 +64,11 @@ export interface DayClimate {
   rainMm: number;
   /** Chance of a rainy day (at least the chosen threshold of rain), 0..1 */
   rainChance: number;
+  /**
+   * Mean rain on a day with at least 1 mm, mm: what a day brings when it
+   * rains. NaN where rain is too rare to say.
+   */
+  wetDayMm: number;
   /** °C added to high and low for the point's height versus its grid cell (0 if unknown) */
   altitudeShift: number;
 }
@@ -105,6 +110,12 @@ function clamp01(x: number): number {
 }
 
 const DAYS_IN_MONTH = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/**
+ * Below this share of days with rain (about one in 50), rain per wet day is
+ * left out: it would rest on a handful of days.
+ */
+const MIN_WET_SHARE = 0.02;
 
 /** The stored rainy-day count for a threshold (1, 5 or 10 mm). */
 function countVar(threshold: number): SeasonVar {
@@ -390,11 +401,16 @@ export default class ClimateGrid implements ClimateSource {
     const shift = this.altitudeShiftAt(lat, lon, ele, phase);
     const rain = Math.max(0, this.sampleAt('pre', phase, lat, lon));
     const chance = clamp01(this.sampleAt(countVar(threshold), phase, lat, lon));
+    // The month's rain over its days with rain: the average spread over dry
+    // days too would say little about what a wet day is like.
+    const wet =
+      threshold <= 1 ? chance : clamp01(this.sampleAt('r1', phase, lat, lon));
     return {
       high: this.sampleAt('tmx', phase, lat, lon) + shift,
       low: this.sampleAt('tmn', phase, lat, lon) + shift,
       rainMm: rain,
       rainChance: chance,
+      wetDayMm: wet >= MIN_WET_SHARE ? rain / wet : Number.NaN,
       altitudeShift: shift,
     };
   }
@@ -494,6 +510,7 @@ const NO_DATA: DayClimate = {
   low: Number.NaN,
   rainMm: Number.NaN,
   rainChance: Number.NaN,
+  wetDayMm: Number.NaN,
   altitudeShift: 0,
 };
 

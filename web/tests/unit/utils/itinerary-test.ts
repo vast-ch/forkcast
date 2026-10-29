@@ -13,6 +13,7 @@ const climate: ClimateSource = {
     low: 10,
     rainMm: 1,
     rainChance: 0.25,
+    wetDayMm: 4,
     altitudeShift: 0,
   }),
 };
