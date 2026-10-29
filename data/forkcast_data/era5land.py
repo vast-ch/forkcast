@@ -27,7 +27,8 @@ coast) the offset is taken from the nearest cells that have one.
 Altitude: each cell's mean height (from ERA5-Land's own terrain, averaged
 from 0.1° to the 0.25° cells) is stored too. The app shifts temperatures by a seasonal lapse rate (4.4–6.8 °C per 1,000 m) between a route point and its cell, so a valley town or a pass gets its own temperature, not the cell's.
 
-Output per continent: out/<continent>/climate.bin and climate.json. The grid is
+Output per continent: cache/grids/<continent>/climate.bin and climate.json,
+which the pack step publishes to out/ as seasonal curves (pack.py). The grid is
 0.25°. Values are one byte each (uint8, 255 = no data), laid out
 [layer][month][row][col], followed by the static layers [row][col]:
   tmx, tmn   value = byte / 2 - 64            (0.5 °C steps, -64 … +63 °C)
@@ -50,7 +51,7 @@ import numpy as np
 
 from . import continents, cru, era5land_download as dl, pipeline
 from .continents import CONTINENTS
-from .pipeline import OUT, Stamp, code_hash, log
+from .pipeline import CACHE, Stamp, code_hash, log
 
 NODATA = 255
 LAYERS = ["tmx", "tmn", "pre", "r1", "r5", "r10"]
@@ -238,8 +239,15 @@ def encode(name: str, v: np.ndarray) -> np.ndarray:
     return np.where(np.isnan(v), NODATA, b).astype(np.uint8)
 
 
+GRIDS = CACHE / "grids"
+
+
+def grid_file(cid: str, ext: str) -> Path:
+    return GRIDS / cid / f"climate.{ext}"
+
+
 def outputs() -> list[Path]:
-    return [OUT / c["id"] / f for c in CONTINENTS for f in ("climate.bin", "climate.json")]
+    return [grid_file(c["id"], x) for c in CONTINENTS for x in ("bin", "json")]
 
 
 def inputs(y0: int, y1: int) -> list[Path]:
@@ -275,9 +283,8 @@ def build(y0: int, y1: int, fresh: bool = False) -> None:
         cols = np.where((lons >= x0) & (lons <= x1))[0]
         data = np.stack([encode(k, clim[k][:, rows][:, :, cols]) for k in LAYERS])
         static = np.stack([encode("elev", np.where(land, elev, np.nan)[rows][:, cols])])
-        d = OUT / c["id"]
-        d.mkdir(parents=True, exist_ok=True)
-        (d / "climate.bin").write_bytes(data.tobytes() + static.tobytes())
+        grid_file(c["id"], "bin").parent.mkdir(parents=True, exist_ok=True)
+        grid_file(c["id"], "bin").write_bytes(data.tobytes() + static.tobytes())
         header = {
             "source": SOURCE,
             "years": [y0, y1],
@@ -292,6 +299,6 @@ def build(y0: int, y1: int, fresh: bool = False) -> None:
             "encoding": ENCODING,
             "nodata": NODATA,
         }
-        (d / "climate.json").write_text(json.dumps(header, separators=(",", ":")))
+        grid_file(c["id"], "json").write_text(json.dumps(header, separators=(",", ":")))
         log(f"  {c['id']:14} {len(cols)}x{len(rows)} cells, {(data.nbytes + static.nbytes) / 1e6:.1f} MB")
     stamp.done()

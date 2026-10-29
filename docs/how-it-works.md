@@ -45,7 +45,7 @@ anyone the rider didn't send it to.
 ## What gets downloaded, and when
 
 1. **On start:** the code, `manifest.json` (the continents and their preset routes, a few kB), `world.json` (one outline per continent, ~120 kB) and Europe's climate grid and borders (1.2 MB gzipped). The app opens straight on the planner; there is no separate start page.
-2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.7 to 4.8 MB gzipped, added to what is already shown. Picking another climate (last 10 or 5 years, El Niño, La Niña) loads that climate's grid (`climate-<variant>.bin`, same format and size) for each continent shown; borders stay. Continents not shown yet are drawn from `world.json` as light, clickable shapes.
+2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.4 to 2.7 MB gzipped, added to what is already shown. Picking another climate (last 10 or 5 years, El Niño, La Niña) loads that climate's grid (`climate-<variant>.bin`, same format and size) for each continent shown; borders stay. Continents not shown yet are drawn from `world.json` as light, clickable shapes.
 
 Continents add up rather than replace each other, because a trip can cross from one to another (Europe into Asia, say). They are all cut from the same worldwide grid, so where two overlap their values are identical: `ClimateSet` in `web/app/utils/climate.ts` answers each point from the first loaded continent that covers it, and the map draws overlapping cells only once (rain emoji and dots are grouped on the worldwide grid so the patterns line up).
 3. **When a route is picked:** that route's full track (`routes/<id>.json`). Every other preset route is drawn dashed from `routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped, loaded at start), so the map shows what is available without downloading each track; clicking a dashed route selects it.
@@ -180,10 +180,11 @@ Under the map, one column per day: the day number on top, a bar from the night l
 - **Between grid cells:** bilinear interpolation of the four surrounding cell
   centres. A point near the coast uses only land cells; just off the coast it
   falls back to the nearest land cell.
-- **Through the year:** when a continent loads, every cell's twelve
-  monthly values are turned into a smooth seasonal curve: the yearly mean plus
-  three harmonics (12-, 6- and 4-month waves), 7 numbers per value instead of
-  12. Rain is fitted as mm per day and rainy days as the share of days, so
+- **Through the year:** every cell's twelve monthly values are turned into a
+  smooth seasonal curve: the yearly mean plus three harmonics (12-, 6- and
+  4-month waves), 7 numbers per value instead of 12. The data build does the
+  fit and publishes the 7 numbers (`data/forkcast_data/pack.py`; precision
+  and size in data/README.md), so the app only evaluates the curves. Rain is fitted as mm per day and rainy days as the share of days, so
   months of different lengths compare fairly; results are clamped to
   0 … 1 / ≥ 0. A monthly average flattens each wave a little compared with
   its value at mid-month (by sin(πk/12)/(πk/12) for the k-th wave), so the
@@ -198,10 +199,10 @@ Under the map, one column per day: the day number on top, a bar from the night l
   continuous.
 - **The trade-off:** the curve cannot change faster than its shortest wave
   (4 months), so sharp seasonal edges are softened; a monsoon that starts
-  within two weeks appears to start over about a month. The better fix for
-  rain is weekly totals and rainy-day counts computed from the daily ERA5-Land
-  data at build time (the daily rain is already downloaded), smoothed lightly
-  and fitted with more harmonics. That is not done yet.
+  within two weeks appears to start over about a month. Curves fitted to the
+  daily ERA5-Land rain with more harmonics look sharper, but measured on
+  years left out of the fit they predict worse, not better (data/README.md,
+  "Seasonal curves, packed at build").
 - **Altitude:** when a point's height is known, high and low are shifted by the month's lapse rate (4.4–6.8 °C per 1,000 m, smaller in winter) for the difference between the point and the cell's mean height. A constant 6.5 °C/km over-warmed winter valleys; see data/README.md for the measured comparison.
 - **Rainy days:** read from the counted layers (≥ 1, 5, 10 mm). The chance
   that a day is rainy is the month's rainy days divided by its length.

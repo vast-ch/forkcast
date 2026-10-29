@@ -17,15 +17,10 @@ const toLat = (y: number) =>
   (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * (180 / Math.PI);
 
 /** Does `g` have its own land cell at this point? */
-function hasCell(
-  g: ClimateGrid,
-  v: 'tmx' | 'tmn' | 'pre',
-  lat: number,
-  lon: number,
-): boolean {
+function hasCell(g: ClimateGrid, lat: number, lon: number): boolean {
   const row = Math.round((g.lat0 - lat) / g.step);
   const col = Math.round((lon - g.lon0) / g.step);
-  return !Number.isNaN(g.cell(v, 0, row, col));
+  return g.isLand(row, col);
 }
 
 export interface Raster {
@@ -70,11 +65,9 @@ function rasterize(
     for (let px = 0; px < f.width; px++) {
       const lon = f.west + ((px + 0.5) / f.width) * (f.east - f.west);
       const fx = (lon - grid.lon0) / grid.step;
-      // Inside a land cell only (no coastal extrapolation); the land mask is
-      // the same in every month and every variable.
-      if (Number.isNaN(grid.cell('tmx', 0, Math.round(fy), Math.round(fx))))
-        continue;
-      if (earlier.some((g) => hasCell(g, 'tmx', lat, lon))) continue;
+      // Inside a land cell only (no coastal extrapolation).
+      if (!grid.isLand(Math.round(fy), Math.round(fx))) continue;
+      if (earlier.some((g) => hasCell(g, lat, lon))) continue;
       const rgba = pixel(lat, lon, fy, fx);
       if (!rgba) continue;
       img.data.set(rgba, (py * f.width + px) * 4);
@@ -125,7 +118,7 @@ function cellShades(grid: ClimateGrid): Float32Array {
   let out = shades.get(grid);
   if (out) return out;
   out = new Float32Array(grid.rows * grid.cols).fill(Number.NaN);
-  const e = (r: number, c: number) => grid.cell('elev', 0, r, c);
+  const e = (r: number, c: number) => grid.elevation(r, c);
   for (let r = 0; r < grid.rows; r++) {
     const lat = grid.lat0 - r * grid.step;
     const dx = grid.step * 111320 * Math.cos((lat * Math.PI) / 180) * 2;
@@ -345,7 +338,7 @@ function blocks(
       if (val <= 0) continue;
       const lat = grid.lat0 - (r0 + (block - 1) / 2) * grid.step;
       const lonC = grid.lon0 + (c0 + (block - 1) / 2) * grid.step;
-      if (earlier.some((g) => hasCell(g, 'pre', lat, lonC))) continue;
+      if (earlier.some((g) => hasCell(g, lat, lonC))) continue;
       out.push({ lat, lon: lonC, val });
     }
   }

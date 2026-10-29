@@ -1,9 +1,22 @@
 import { module, test } from 'qunit';
-import ClimateGrid, { type ClimateHeader } from 'forkcast/utils/climate';
+import ClimateGrid, {
+  type ClimateHeader,
+  type Encoding,
+} from 'forkcast/utils/climate';
 import { closeTo } from 'forkcast/tests/helpers/close-to';
 
-/** A one-cell grid with the same bytes every month: rain `pre` mm and `r1` days with rain. */
+/** No seasonal waves: every term after the mean decodes to 0. */
+const FLAT: Encoding = { kind: 'linear', scale: 1, offset: 0 };
+
+/**
+ * A one-cell grid with the same weather all year: `pre` mm of rain a day and
+ * a share `r1` of days with rain.
+ */
 function grid(pre: number, r1: number): ClimateGrid {
+  const curve = (mean: Encoding): Encoding[] => [
+    mean,
+    ...Array<Encoding>(6).fill(FLAT),
+  ];
   const header: ClimateHeader = {
     source: 'test',
     years: [2011, 2025],
@@ -14,31 +27,32 @@ function grid(pre: number, r1: number): ClimateGrid {
     rows: 1,
     dtype: 'u8',
     vars: ['tmx', 'tmn', 'pre', 'r1', 'r5', 'r10'],
+    terms: 7,
     encoding: {
-      tmx: { kind: 'linear', scale: 2, offset: -64 },
-      tmn: { kind: 'linear', scale: 2, offset: -64 },
-      pre: { kind: 'sqrt', scale: 8 },
-      r1: { kind: 'linear', scale: 8, offset: 0 },
-      r5: { kind: 'linear', scale: 8, offset: 0 },
-      r10: { kind: 'linear', scale: 8, offset: 0 },
+      tmx: curve({ kind: 'linear', scale: 2, offset: -64 }),
+      tmn: curve({ kind: 'linear', scale: 2, offset: -64 }),
+      pre: curve({ kind: 'sqrt', scale: 40 }),
+      r1: curve({ kind: 'linear', scale: 200, offset: 0 }),
+      r5: curve({ kind: 'linear', scale: 200, offset: 0 }),
+      r10: curve({ kind: 'linear', scale: 200, offset: 0 }),
     },
     nodata: 255,
   };
-  const bytes = [168, 148, Math.sqrt(pre) * 8, r1 * 8, 0, 0];
-  const data = new Uint8Array(bytes.flatMap((b) => Array<number>(12).fill(b)));
+  const means = [168, 148, Math.sqrt(pre) * 40, r1 * 200, 0, 0];
+  const data = new Uint8Array(means.flatMap((m) => [m, 0, 0, 0, 0, 0, 0]));
   return new ClimateGrid(header, data.buffer);
 }
 
 module('Unit | Utility | climate', function () {
-  test('a wet day brings the month’s rain over its days with rain', function (assert) {
-    // 100 mm over 10 days with rain: 10 mm each, whatever the threshold.
-    const g = grid(100, 10);
+  test('a wet day brings the rain over its days with rain', function (assert) {
+    // 2.25 mm a day, rain on a quarter of the days: 9 mm each, whatever the threshold.
+    const g = grid(2.25, 0.25);
     for (const threshold of [1, 5, 10]) {
       const w = g.at(0.5, 47, 8, threshold);
-      closeTo(assert, w.wetDayMm, 10, 2, `at ${threshold} mm`);
+      closeTo(assert, w.wetDayMm, 9, 0.1, `at ${threshold} mm`);
     }
     const w = g.at(0.5, 47, 8, 1);
-    closeTo(assert, w.wetDayMm * w.rainChance, w.rainMm, 6);
+    closeTo(assert, w.wetDayMm * w.rainChance, w.rainMm, 0.01);
   });
 
   test('where it hardly ever rains, there is no rain per wet day', function (assert) {
