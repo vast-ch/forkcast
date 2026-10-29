@@ -1,5 +1,10 @@
 import { LAST_WEEK, weekOfDate } from './weeks';
-import { RAIN_THRESHOLDS, type RainThreshold } from './climate';
+import {
+  CLIMATES,
+  RAIN_THRESHOLDS,
+  type ClimateId,
+  type RainThreshold,
+} from './climate';
 import type { Milestones } from './itinerary';
 import type {
   CityLimit,
@@ -19,6 +24,8 @@ export function isoDate(date = new Date()): string {
 export const DEFAULTS = {
   /** Continents whose climate is shown, comma-separated; Europe by default */
   continents: 'europe',
+  /** Which climate: the average of the last 15, 10 or 5 years, or an El Niño or La Niña year */
+  climate: 'last15' as ClimateId,
   /** Quarter-month shown on the map, 0–47 (see utils/weeks.ts); the current one by default */
   week: weekOfDate(new Date()),
   /** Temperature shown: day high or night low */
@@ -103,6 +110,7 @@ const inRange =
 
 export const PARSE: { [K in SettingKey]: Parse<(typeof DEFAULTS)[K]> } = {
   continents: isText,
+  climate: oneOf(CLIMATES),
   week: isWholeIn(0, LAST_WEEK),
   tempMetric: oneOf(['high', 'low'] as const),
   showTemp: isBoolean,

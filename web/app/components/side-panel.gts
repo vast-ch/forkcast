@@ -10,6 +10,7 @@ import { DatePicker, Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
 import {
   CITY_CHOICES,
+  CLIMATE_CHOICES,
   MAP_DETAILS,
   DATE_CHOICES,
 } from 'forkcast/services/planner';
@@ -34,6 +35,7 @@ import TempCalendar from 'forkcast/components/temp-calendar';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 
 type MapSetting =
+  | 'climate'
   | 'showTemp'
   | 'showRain'
   | 'tempMetric'
@@ -83,6 +85,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
   rainThresholds = RAIN_THRESHOLDS;
   dateChoices = DATE_CHOICES;
   cityChoices = CITY_CHOICES;
+  climateChoices = CLIMATE_CHOICES;
 
   get weekValue() {
     return String(this.planner.week);
@@ -423,6 +426,23 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
         <section aria-labelledby="h-map" class="wt-sec-map flex flex-col gap-3">
           <h2 id="h-map" class="wt-h2">Map</h2>
+          <div class="flex flex-col gap-1.5">
+            <span class="text-sm">Climate</span>
+            <SegmentedControl
+              @value={{this.planner.climate}}
+              @onChange={{fn this.setMap "climate"}}
+              @size="sm"
+              aria-label="Climate"
+              as |Ctl|
+            >
+              {{#each this.climateChoices as |c|}}
+                <Ctl.Item
+                  @value={{c.value}}
+                  title={{c.title}}
+                >{{c.label}}</Ctl.Item>
+              {{/each}}
+            </SegmentedControl>
+          </div>
           <div class="wt-range-wrap">
             <div class="wt-range-scale is-top" aria-hidden="true">
               <span

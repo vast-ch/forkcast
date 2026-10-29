@@ -6,16 +6,17 @@ import type LastVisitService from 'forkcast/services/last-visit';
 import type RouterService from '@ember/routing/router-service';
 import type PlannerService from 'forkcast/services/planner';
 import type IndexController from 'forkcast/controllers/index';
-import { DEFAULTS, SETTING_KEYS } from 'forkcast/utils/settings';
+import { DEFAULTS, PARSE, SETTING_KEYS } from 'forkcast/utils/settings';
 
 /**
  * Settings change the URL in place, without piling up browser history.
- * Changing the continents loads their data, so it re-runs the model hook.
+ * Changing the continents or the climate loads data, so it re-runs the model hook.
  */
+const LOADS_DATA = ['continents', 'climate'];
 const QUERY_PARAMS = Object.fromEntries(
   SETTING_KEYS.map((k) => [
     k,
-    k === 'continents'
+    LOADS_DATA.includes(k)
       ? { replace: true, refreshModel: true }
       : { replace: true },
   ]),
@@ -29,11 +30,13 @@ export default class IndexRoute extends Route {
 
   queryParams = QUERY_PARAMS;
 
-  async model(params: { continents?: string }) {
+  async model(params: { continents?: string; climate?: string }) {
     const ids = (params.continents || DEFAULTS.continents).split(',');
-    const shown = await this.atlas.show(ids);
+    const climate = PARSE.climate(params.climate) ?? DEFAULTS.climate;
+    const shown = await this.atlas.show(ids, climate);
     // A link with only unknown continents falls back to Europe.
-    if (shown.length === 0) await this.atlas.show([DEFAULTS.continents]);
+    if (shown.length === 0)
+      await this.atlas.show([DEFAULTS.continents], climate);
     return this.atlas.loadedIds;
   }
 
@@ -45,6 +48,9 @@ export default class IndexRoute extends Route {
     // Looking it up starts it remembering every change.
     const lastVisit = this.lastVisit;
     if (Object.keys(transition.to?.queryParams ?? {}).length > 0) return;
+    // A setting changed back to its default re-runs this too (continents and
+    // climate refresh the model); that's not opening Forkcast.
+    if (transition.from?.name === 'index') return;
     lastVisit.isResuming = true;
     const url = lastVisit.url;
     if (url) void this.router.replaceWith(url);

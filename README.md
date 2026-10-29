@@ -59,7 +59,9 @@ Everything runs in Docker (OrbStack domains in this setup).
 docker compose up ui                                # dev server, hot reload: https://ui.forkcast.orb.local
 docker compose --profile prod up --build web        # production nginx image: https://web.forkcast.orb.local
 docker compose --profile tools run --rm data        # data pipeline: download what's missing, build what's stale
-docker compose --profile tools run --rm data status # see data/README.md for steps and --fresh
+docker compose --profile tools run --rm data build --fresh  # rebuild every output from the downloads
+docker compose --profile tools run --rm data all --fresh    # download everything again too (ERA5-Land: hours, CDS key needed)
+docker compose --profile tools run --rm data status # see data/README.md for the steps
 ./check.sh                                          # lint and test web and data (--fix to auto-fix first)
 # web tests live in the browser while developing: https://ui.forkcast.orb.local/tests
 ```
@@ -83,7 +85,7 @@ docker compose exec ui pnpm build                   # writes web/dist
 |---|---|
 | `web/` | The app: Ember 7.3 (`.gts`, TypeScript), Vite + Embroider, Leaflet, Tailwind 4, Frontile. pnpm. |
 | `data/` | Python (uv) builders for the data files the app loads. |
-| `data/out/` | Built data, committed: `manifest.json` (continents and their routes), `world.json` (picker map), `<continent>/climate.bin` + `climate.json` (byte grid + header), `<continent>/countries.json`, and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
+| `data/out/` | Built data, committed: `manifest.json` (continents and their routes), `world.json` (picker map), `<continent>/climate.bin` + `climate.json` (byte grid + header) and `climate-<variant>.bin` + `.json` for the other climates (last 10 and 5 years, El Niño, La Niña), `<continent>/countries.json`, and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
 | `data/eurovelo/` | The official EuroVelo GPX tracks (gzipped, ODbL), with their licence. |
 | `data/cache/` | Downloads and BRouter responses (git-ignored). |
 | `compose.yaml` | `ui` (dev), `web` (prod, profile `prod`), `data` (builder, profile `tools`). |
@@ -92,7 +94,7 @@ docker compose exec ui pnpm build                   # writes web/dist
 
 How the data is downloaded and built, and how the pipeline decides what to redo, is in [data/README.md](data/README.md).
 
-- **Climate:** [ERA5-Land](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) (Copernicus Climate Change Service), 2011–2025, on a 0.25° grid (about 25 km): rain from the daily totals (rainy days over 1, 5 and 10 mm are counted), highs and lows from the average day's temperature curve calibrated against [CRU TS 4.10](https://crudata.uea.ac.uk/cru/data/hrg/) station-based daily extremes.
+- **Climate:** [ERA5-Land](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) (Copernicus Climate Change Service), 2011–2025, on a 0.25° grid (about 25 km): rain from the daily totals (rainy days over 1, 5 and 10 mm are counted), highs and lows from the average day's temperature curve calibrated against [CRU TS 4.10](https://crudata.uea.ac.uk/cru/data/hrg/) station-based daily extremes. The El Niño and La Niña climates add how those events shifted the weather over 1981–2025, from ERA5-Land and NOAA's [Oceanic Niño Index](https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php).
 - **EuroVelo routes:** the official GPX tracks from [EuroVelo.com](https://www.eurovelo.com) (ODbL, see `data/eurovelo/README.md`). Variants and spurs are resolved by taking the shortest path through the stages; holes between stages over the sea count as ferries.
 - **Demo route:** Interlaken → Rhône valley → Spain's east coast → Málaga, routed town to town with [BRouter](https://brouter.de) (trekking profile).
 - **Cycle routes for drawing:** international bicycle routes from © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, fetched with the Overpass API; the derived per-continent files are under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).

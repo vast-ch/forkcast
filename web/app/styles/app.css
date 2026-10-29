@@ -350,8 +350,10 @@ body {
 /* Map details: the Map section's toggles, quieter than Frontile's default
    (black when on): white when off, a soft teal when on. */
 .wt-detail-toggles {
+  /* One equal column per toggle, filling the panel's width. */
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 .wt-detail-toggles button {
   justify-content: center;

@@ -45,7 +45,7 @@ anyone the rider didn't send it to.
 ## What gets downloaded, and when
 
 1. **On start:** the code, `manifest.json` (the continents and their preset routes, a few kB), `world.json` (one outline per continent, ~120 kB) and Europe's climate grid and borders (1.2 MB gzipped). The app opens straight on the planner; there is no separate start page.
-2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.7 to 4.8 MB gzipped, added to what is already shown. Continents not shown yet are drawn from `world.json` as light, clickable shapes.
+2. **When another continent is clicked on the map:** its climate grid (`climate.bin` + `climate.json`) and borders (`countries.json`), 0.7 to 4.8 MB gzipped, added to what is already shown. Picking another climate (last 10 or 5 years, El Niño, La Niña) loads that climate's grid (`climate-<variant>.bin`, same format and size) for each continent shown; borders stay. Continents not shown yet are drawn from `world.json` as light, clickable shapes.
 
 Continents add up rather than replace each other, because a trip can cross from one to another (Europe into Asia, say). They are all cut from the same worldwide grid, so where two overlap their values are identical: `ClimateSet` in `web/app/utils/climate.ts` answers each point from the first loaded continent that covers it, and the map draws overlapping cells only once (rain emoji and dots are grouped on the worldwide grid so the patterns line up).
 3. **When a route is picked:** that route's full track (`routes/<id>.json`). Every other preset route is drawn dashed from `routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped, loaded at start), so the map shows what is available without downloading each track; clicking a dashed route selects it.
@@ -170,6 +170,13 @@ Under the map, one column per day: the day number on top, a bar from the night l
 
 `web/app/utils/climate.ts`:
 
+- **Which climate:** the `climate` setting (in the URL like every other)
+  picks the grids: the 2011–2025 average, the last 10 or 5 years, El Niño or
+  La Niña. They share one format, so everything below works the same on each.
+  `app/services/atlas.ts` loads a grid per climate and continent once and
+  keeps it, so switching back is instant; the map shows the old grids until
+  the new ones have arrived. How they're made: `data/README.md`, "Climate
+  variants".
 - **Between grid cells:** bilinear interpolation of the four surrounding cell
   centres. A point near the coast uses only land cells; just off the coast it
   falls back to the nearest land cell.

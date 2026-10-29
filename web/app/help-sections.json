@@ -3,6 +3,7 @@
   { "id": "trip", "label": "Trip" },
   { "id": "routes", "label": "Routes" },
   { "id": "data", "label": "Data" },
+  { "id": "climates", "label": "Climates" },
   { "id": "accuracy", "label": "Accuracy" },
   { "id": "sharing", "label": "Sharing & privacy" },
   { "id": "sources", "label": "Sources" },

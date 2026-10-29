@@ -1,5 +1,5 @@
 // Climate normals on a regular lat/lon grid, one file per continent (built by
-// data/forkcast_data/era5land.py).
+// data/forkcast_data/era5land.py; the other climates by variants.py).
 
 import { isMissing } from './helpers';
 
@@ -8,10 +8,20 @@ export type Encoding =
   | { kind: 'linear'; scale: number; offset: number }
   | { kind: 'sqrt'; scale: number };
 
-/** Header of a continent's climate grid (data/out/<continent>/climate.json). */
+/**
+ * Header of a continent's climate grid (data/out/<continent>/climate.json, or
+ * climate-<variant>.json for the other climates).
+ */
 export interface ClimateHeader {
   source: string;
+  /** The period averaged; for a variant, the period it is a correction of */
   years: [number, number];
+  /** A variant's id (data/forkcast_data/variants.py) */
+  variant?: string;
+  /** The last 10 or 5 years: the years averaged */
+  window?: [number, number];
+  /** El Niño or La Niña: the years its correction was measured over, and how many event months they hold */
+  enso?: { years: [number, number]; months: number };
   lon0: number; // centre of the first column
   lat0: number; // centre of the first (northernmost) row
   step: number;
@@ -57,6 +67,16 @@ export interface DayClimate {
   /** °C added to high and low for the point's height versus its grid cell (0 if unknown) */
   altitudeShift: number;
 }
+
+/** The climates a rider can pick: the 2011–2025 grid, and the variants data/forkcast_data/variants.py builds. */
+export const CLIMATES = [
+  'last15',
+  'last10',
+  'last5',
+  'elnino',
+  'lanina',
+] as const;
+export type ClimateId = (typeof CLIMATES)[number];
 
 /** Rain thresholds offered for counting a day as rainy, mm. */
 export const RAIN_THRESHOLDS = [1, 5, 10] as const;

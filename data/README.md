@@ -23,12 +23,13 @@ work after `data`).
 | Step | What | Size | Notes |
 |---|---|---|---|
 | `cru` | CRU TS 4.10 monthly grids: tmx, tmn, pre, wet for 2011–2025 | 215 MB | University of East Anglia. Used to calibrate highs and lows. |
-| `era5land-rain` | ERA5-Land daily rain totals, one file per year, 0.25°, world without Antarctica | ~3.4 GB | Copernicus CDS key needed (see below). |
-| `era5land-temperature` | ERA5-Land monthly mean 2 m temperature for each hour of the day, one file per year, 0.25° | ~4.5 GB | CDS key needed. |
+| `era5land-rain` | ERA5-Land daily rain totals, one file per year, 1981–2025, 0.25°, world without Antarctica | ~10 GB | Copernicus CDS key needed (see below). 2011–2025 make the climate; the earlier years only the El Niño / La Niña variants. |
+| `era5land-temperature` | ERA5-Land monthly mean 2 m temperature for each hour of the day, one file per year, 1981–2025, 0.25° | ~6.7 GB | CDS key needed. The 30 extra years took about 3.5 hours from the CDS. |
 | `eurovelo` | Official EuroVelo GPX tracks, one per route, gzipped | 11 MB | ODbL, see `eurovelo/README.md`. |
 | `brouter` | Geocodes the hand-made routes' stops (`forkcast_data/geocoded.json`, committed) and routes each leg with BRouter | small | Public servers: Nominatim (1 request/s) and brouter.de. |
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
 | `details` | Natural Earth populated places (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
+| `oni` | NOAA's Oceanic Niño Index, monthly since 1950 | 10 kB | Decides which months were El Niño or La Niña. |
 | `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API: first an index of every route (id, version, box), then each route's ways by id, 10 routes per query, cached per route and version in `cache/cyclenet/icn/` | a few hundred routes | ODbL, © OpenStreetMap contributors. Rotates through public Overpass servers, waits when asked (429), backs off; a route that keeps failing is skipped and listed, and the next run fetches just those. `--fresh` refreshes the index; changed routes are refetched by version. |
 
 ### Builds (into `out/`, committed)
@@ -40,6 +41,8 @@ work after `data`).
 | `routes` | `eurovelo/`, `cache/brouter/`, `out/europe/countries.json` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `out/<continent>/climate.bin` + `climate.json` |
+| `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
+| `variants` | `cache/variants/`, `out/<continent>/climate.*` | `out/<continent>/climate-<variant>.bin` + `.json` for `last10`, `last5`, `elnino`, `lanina` (see "Climate variants") |
 | `manifest` | everything above | `out/manifest.json` |
 | `cyclenet` | `cache/cyclenet/icn/` | `out/<continent>/cyclenet.json`: the ways of every route whose box touches the continent, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches a continent's file only when it is shown and the rider draws with snapping on. |
 
@@ -227,6 +230,69 @@ store those (or their seasonal-curve coefficients) instead of monthly rain.
 enough to include most of the warming so far. A full 30-year climate normal
 would be steadier but about 0.3 °C too cold for today in Europe. Change it
 with `--from` / `--to`.
+
+## Climate variants
+
+Besides the 2011–2025 average, the app offers four other climates, one at a
+time: the last 10 years, the last 5, a year with El Niño and a year with La
+Niña (`forkcast_data/variants.py`; why these and not others, and the research
+behind them, in [docs/climate-variants.md](../docs/climate-variants.md)).
+
+- **What a variant is:** the 2011–2025 grid plus a correction, written in the
+  same format as `climate-<variant>.bin` / `.json` next to `climate.bin`.
+  Highs and lows get °C added, rain is multiplied by a ratio (0.5–2, so a dry
+  month can't go negative), rainy days get days added (kept within the month,
+  r10 ≤ r5 ≤ r1). Where the correction is zero the bytes equal `climate.bin`'s.
+  Each variant adds what `climate.bin` weighs: about 42 MB for the world,
+  committed; the app loads only the one picked, for the continents shown.
+- **Windows** (`last10`, `last5`): the window's average minus 2011–2025's,
+  from the same yearly fields. Building them as corrections, rather than
+  re-running the climate build on fewer years, keeps the CRU calibration of
+  the full period and skips another hour of building; the difference is the
+  per-period calibration offset, a few hundredths of a degree.
+- **El Niño, La Niña:** 15 years hold only 3–4 events of each, too few to
+  separate from weather (tested: mostly noise), so the correction is measured
+  over 1981–2025. A month is El Niño (La Niña) when NOAA's Oceanic Niño Index
+  puts it in an event: at least 5 overlapping seasons in a row at ≥ +0.5 °C
+  (≤ −0.5 °C). Per cell and month: remove the linear trend over 1981–2025 (or
+  the warming would make El Niño look like "recent"), average the event
+  months' departures, and keep that only where it beats 100 random sets of as
+  many years: fully beyond their 90th percentile, fading out at the 75th. Then
+  smooth over 3 × 3 cells. Months with fewer than 2 event years get no
+  correction.
+- **Not filtered by other phenomena:** El Niño months include whatever Indian
+  Ocean Dipole or volcanic eruption came with them. Leaving out the volcanic
+  years (El Chichón, Pinatubo) changed the El Niño average by little and made it no clearer;
+  leaving out the IOD+ months weakened it, since the IOD often comes with El
+  Niño and is part of what an El Niño year is (docs/climate-variants.md).
+- **Checks** (`variants.check`): the build stops, writing nothing, if a
+  well-known ENSO effect comes out with the wrong sign (El Niño: drier eastern
+  Australian spring, drier northern South America and southern Africa in
+  December–February, milder western Canadian winter, wetter US Gulf winter;
+  La Niña: the opposite where it's as well established), if a continent's
+  mean change in highs leaves a plausible range (windows: around the warming,
+  phases: near zero), or if any cell's highs or lows move by more than 6 °C.
+  A mix-up of months, signs, regions or units trips at least one of them.
+  Known flaws of the source data get their own looser limit (`QUIRKS`): on
+  the Tibetan Plateau ERA5-Land's winter temperatures jump by up to 14 °C from
+  2021 on (likely its snow cover), so the last 5 years warm it by up to
+  7.5 °C there. The check found it on its first run. It is in `climate.bin`
+  too (4 of its 15 years), uncorrected.
+- **Steps:** `download oni` (NOAA, small), `build years` (each year's monthly
+  fields into `cache/variants/<year>.npz`, ~110 MB and ~15 s a year, one stamp
+  per year), `build variants` (a few minutes). Both need the ERA5-Land
+  downloads for 1981–2025.
+
+Research (not a build step, not part of `all`): `variants_research`
+compares each variant with the random-year noise floor, per continent, into
+`cache/variants/report.md`; its `checks` tests leaving out volcanic years and
+Indian Ocean Dipole months (downloading NOAA's Dipole Mode Index first) into
+`cache/variants/checks-1981-2025.md`. A few minutes each:
+
+```sh
+docker compose --profile tools run --rm --entrypoint uv data run python -m forkcast_data.variants_research          # analyse
+docker compose --profile tools run --rm --entrypoint uv data run python -m forkcast_data.variants_research checks
+```
 
 ## Licences and attribution
 

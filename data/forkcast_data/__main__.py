@@ -8,14 +8,15 @@
 
 Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     cru                   CRU TS 4.10 monthly grids (calibrates highs and lows)
-    era5land-rain         ERA5-Land daily rain totals (Copernicus CDS key needed)
-    era5land-temperature  ERA5-Land monthly temperature by hour of day (CDS key needed)
+    era5land-rain         ERA5-Land daily rain totals, 1981–2025 (Copernicus CDS key needed)
+    era5land-temperature  ERA5-Land monthly temperature by hour of day, 1981–2025 (CDS key needed)
     orography             ERA5-Land terrain height (for the altitude correction)
     eurovelo              official EuroVelo GPX tracks
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
     details               Natural Earth places, rivers and lakes
     cyclenet              OpenStreetMap international cycle routes via Overpass
+    oni                   NOAA's Oceanic Niño Index (which months were El Niño or La Niña)
 
 Builds (into out/, except the CRU climatology which is an intermediate in cache/):
     borders    per-continent outlines and the picker's world map
@@ -24,6 +25,8 @@ Builds (into out/, except the CRU climatology which is an intermediate in cache/
     routes     every preset route plus the route index
     cru        CRU climatology for the years (intermediate)
     climate    per-continent climate grids (ERA5-Land, calibrated with CRU)
+    years      each year's monthly fields, 1981–2025 (intermediate)
+    variants   per-continent grids of the other climates: last 10 and 5 years, El Niño, La Niña
     manifest   the list of continents the app loads first
 
 See data/README.md for how skipping, checking and --fresh work.
@@ -35,7 +38,7 @@ import argparse
 import sys
 import time
 
-from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, manifest, routes
+from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, manifest, routes, variants
 from .pipeline import STAMPS, is_verified, log
 
 YEARS = (2011, 2025)
@@ -45,16 +48,22 @@ def _years(a) -> range:
     return range(a.y0, a.y1 + 1)
 
 
+def _history(a) -> range:
+    """The climate period and the years the El Niño / La Niña variants are measured over."""
+    return variants.history_years((a.y0, a.y1))
+
+
 DOWNLOADS = {
     "cru": lambda a: cru.download(a.fresh),
-    "era5land-rain": lambda a: era5land_download.rain(_years(a), a.fresh),
-    "era5land-temperature": lambda a: era5land_download.temperature(_years(a), a.fresh),
+    "era5land-rain": lambda a: era5land_download.rain(_history(a), a.fresh),
+    "era5land-temperature": lambda a: era5land_download.temperature(_history(a), a.fresh),
     "orography": lambda a: era5land_download.orography(a.fresh),
     "eurovelo": lambda a: eurovelo.download(a.fresh),
     "brouter": lambda a: routes.download(a.fresh),
     "borders": lambda a: basemap.download(a.fresh),
     "details": lambda a: details.download(a.fresh),
     "cyclenet": lambda a: cyclenet.download(a.fresh),
+    "oni": lambda a: variants.download(a.fresh),
 }
 
 # In dependency order: routes need Europe's borders; the manifest needs everything.
@@ -64,6 +73,8 @@ BUILDS = {
     "routes": lambda a: routes.build(a.fresh),
     "cru": lambda a: cru.build(a.y0, a.y1, a.fresh),
     "climate": lambda a: era5land.build(a.y0, a.y1, a.fresh),
+    "years": lambda a: variants.extract(_history(a), a.fresh),
+    "variants": lambda a: variants.build((a.y0, a.y1), a.fresh),
     "manifest": lambda a: manifest.build(a.fresh),
     "cyclenet": lambda a: cyclenet.build(a.fresh),
 }
@@ -76,8 +87,11 @@ def _run(kind: str, name: str, fn, a) -> None:
     log(f"  done in {time.time() - t0:.0f} s")
 
 
+STAMP_GLOBS = {"cru": "cru-climatology-*", "years": "variants-*"}  # builds with one stamp per period or year
+
+
 def status(a) -> None:
-    y = _years(a)
+    y = _history(a)
     groups = {
         "cru": cru.files(),
         "era5land-rain": [era5land_download.rain_file(i) for i in y] + [era5land_download.rain_last_day(y[-1] + 1)],
@@ -87,6 +101,7 @@ def status(a) -> None:
         "borders": [basemap.DIR / n for n in basemap.SOURCES],
         "details": [details.DIR / n for n in details.SOURCES],
         "cyclenet": cyclenet.files(),
+        "oni": [variants.ONI_FILE],
     }
     log("downloads (verified / present / expected)")
     for name, files in groups.items():
@@ -95,7 +110,7 @@ def status(a) -> None:
         log(f"  {name:22} {ok:3} / {have:3} / {len(files):3}")
     log("builds (stamp in cache/.stamps)")
     for name in BUILDS:
-        stamp_files = sorted(STAMPS.glob(f"{'cru-climatology' if name == 'cru' else name}*.json"))
+        stamp_files = sorted(STAMPS.glob(f"{STAMP_GLOBS.get(name, name)}.json"), key=lambda p: p.stat().st_mtime)
         log(f"  {name:22} {'built ' + time.strftime('%Y-%m-%d %H:%M', time.localtime(stamp_files[-1].stat().st_mtime)) if stamp_files else 'not built'}")
 
 
