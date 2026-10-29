@@ -56,9 +56,7 @@ export default class Help extends Component {
   }
 
   get routeCount() {
-    return this.atlas.continents
-      .flatMap((c) => c.routes)
-      .filter((r) => r.group === 'EuroVelo').length;
+    return this.atlas.presets.filter((r) => r.group === 'EuroVelo').length;
   }
 
   <template>
@@ -206,12 +204,15 @@ export default class Help extends Component {
               City names and water are downloaded only once you switch them on.
             </p>
 
-            <h3>Continents</h3>
+            <h3>The whole world</h3>
             <p>
-              Forkcast opens on Europe. Other continents are drawn as light
-              shapes: click one to add its climate, a one-off download of under
-              3 MB. You can show several at once, for a trip that crosses from
-              one into another.
+              Forkcast opens on Europe, but the climate covers every continent
+              but Antarctica. Zoomed out, the map is drawn from a coarser
+              version of the data (cells of about 100 km), so you can browse the
+              world at once. Zoom in to a country or two and it switches to the
+              full detail (about 25 km), fetching each 10° square as it comes
+              into view, a few dozen kB each. Your route's weather always uses
+              the full detail along the whole route.
             </p>
 
             <h3>Pointing at the map</h3>
@@ -428,9 +429,9 @@ export default class Help extends Component {
                   Forkcast uses it to set their level.</dd></div>
             </dl>
             <p>
-              Both are prepared in advance on a grid of 0.25° (about 25 km) and
-              split by continent, so opening a continent downloads a few
-              megabytes once.
+              Both are prepared in advance on a grid of 0.25° (about 25 km),
+              split into 10° squares that load as you need them, plus a 1°
+              version of the whole world for the map zoomed out.
             </p>
 
             <h3>How they're turned into the numbers</h3>
@@ -586,13 +587,13 @@ export default class Help extends Component {
           <section id="sharing">
             <h2>Sharing and privacy</h2>
             <p>
-              Your plan lives in the page address: continents, climate, week,
-              map layers, route, start date, distances, speed, rest pattern and
-              the picked day. Bookmark it or send the link, and the same plan
-              opens again. Settings left at their defaults are left out, so
-              links stay short. Your own routes are the exception: they're kept
-              in this browser, and a link only names one, so someone else
-              opening it is told to ask you for its GPX file.
+              Your plan lives in the page address: climate, week, map layers,
+              route, start date, distances, speed, rest pattern and the picked
+              day. Bookmark it or send the link, and the same plan opens again.
+              Settings left at their defaults are left out, so links stay short.
+              Your own routes are the exception: they're kept in this browser,
+              and a link only names one, so someone else opening it is told to
+              ask you for its GPX file.
             </p>
             <p>
               This browser also remembers where you left off: your last plan and
@@ -608,6 +609,13 @@ export default class Help extends Component {
               data all come from the site itself, and your browser is told to
               refuse anything from elsewhere. Following a link out of the app
               doesn't pass your plan on.
+            </p>
+            <p>
+              One thing does show: the climate data comes in 10° squares, and
+              your browser fetches the ones the map shows closely and the ones
+              your route crosses. The site's host could see which squares of the
+              world were looked at, though not your route, dates or anything
+              else in your plan.
             </p>
           </section>
         {{/if}}

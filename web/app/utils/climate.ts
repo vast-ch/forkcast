@@ -1,6 +1,6 @@
-// Climate normals on a regular lat/lon grid, one file per continent, as smooth
-// seasonal curves (built by data/forkcast_data/era5land.py and variants.py,
-// packed into curves by pack.py).
+// Climate normals on a regular lat/lon grid, as smooth seasonal curves, in 10°
+// tiles and a coarse world overview (built by data/forkcast_data/era5land.py
+// and variants.py, packed into curves and tiles by pack.py).
 
 import { isMissing } from './helpers';
 
@@ -9,9 +9,18 @@ export type Encoding =
   | { kind: 'linear'; scale: number; offset: number; relative?: boolean }
   | { kind: 'sqrt'; scale: number };
 
+/** Where a grid's cells are. */
+export interface GridGeometry {
+  lon0: number; // centre of the first column
+  lat0: number; // centre of the first (northernmost) row
+  step: number;
+  cols: number;
+  rows: number;
+}
+
 /**
- * Header of a continent's climate grid (data/out/<continent>/climate.json, or
- * climate-<variant>.json for the other climates).
+ * Header of a climate (data/out/climate/<climate>.json): what its tiles and
+ * overview hold and how their bytes are read.
  */
 export interface ClimateHeader {
   source: string;
@@ -23,11 +32,16 @@ export interface ClimateHeader {
   window?: [number, number];
   /** El Niño or La Niña: the years its correction was measured over, and how many event months they hold */
   enso?: { years: [number, number]; months: number };
-  lon0: number; // centre of the first column
-  lat0: number; // centre of the first (northernmost) row
+  /** Cell size of the tiles, degrees */
   step: number;
-  cols: number;
-  rows: number;
+  /** Tile size, degrees; tiles start at multiples of it */
+  tile: number;
+  /** Cells along a tile's side: its edges' cells are in both neighbours */
+  size: number;
+  /** The tiles there are (where there is land), by id (see tileId) */
+  tiles: string[];
+  /** The coarse grid of the whole world, for the map zoomed out */
+  overview: GridGeometry;
   /** One byte per value, decoded with `encoding` */
   dtype: 'u8';
   /** Layers stored as seasonal curves, `terms` values each (see SEASON_TERMS) */
@@ -172,28 +186,38 @@ export default class ClimateGrid implements ClimateSource {
   readonly lon0: number;
   readonly lat0: number;
   readonly step: number;
+  /** The area this grid answers for, [[south, west], [north, east]]: a tile's own square (its edge cells are shared with its neighbours) */
+  readonly area: [[number, number], [number, number]];
   /** Seasonal-curve coefficients per variable: TERMS values per cell, NaN at sea. */
   private season: Partial<Record<SeasonVar, Float32Array>> = {};
   /** Each cell's mean height, m (NaN at sea), if the grid has it */
   private elev?: Float32Array;
 
   /**
-   * @param header grid geometry and how values are stored
+   * @param header how values are stored
+   * @param geometry where the cells are
    * @param buffer one byte per value, laid out [variable][term][row][col],
    *   then the static layers [variable][row][col]
+   * @param area what the grid answers for, if not all of it
    */
-  constructor(header: ClimateHeader, buffer: ArrayBuffer) {
+  constructor(
+    header: ClimateHeader,
+    geometry: GridGeometry,
+    buffer: ArrayBuffer,
+    area?: [[number, number], [number, number]],
+  ) {
     this.source = header.source;
     this.years = header.years;
-    this.cols = header.cols;
-    this.rows = header.rows;
-    this.lon0 = header.lon0;
-    this.lat0 = header.lat0;
-    this.step = header.step;
+    this.cols = geometry.cols;
+    this.rows = geometry.rows;
+    this.lon0 = geometry.lon0;
+    this.lat0 = geometry.lat0;
+    this.step = geometry.step;
+    this.area = area ?? this.bounds;
     if (header.terms !== TERMS)
       throw new Error(`Climate grid has ${header.terms} terms, not ${TERMS}`);
     const raw = new Uint8Array(buffer);
-    const cells = header.rows * header.cols;
+    const cells = this.rows * this.cols;
     header.vars.forEach((v, vi) => {
       const encodings = header.encoding[v] ?? [];
       const c = new Float32Array(cells * TERMS);
@@ -235,6 +259,12 @@ export default class ClimateGrid implements ClimateSource {
     return row < 0 || col < 0 || row >= this.rows || col >= this.cols
       ? -1
       : row * this.cols + col;
+  }
+
+  /** Is the point in the grid's own area (south and west edges included)? */
+  owns(lat: number, lon: number): boolean {
+    const [[s, w], [n, e]] = this.area;
+    return lat >= s && lat < n && lon >= w && lon < e;
   }
 
   /** Does this cell have data (land)? */
@@ -460,33 +490,69 @@ export function climateOn(
   return climate.at(phaseOfDate(date), p.lat, p.lon, threshold, p.ele);
 }
 
-const NO_DATA: DayClimate = {
-  high: Number.NaN,
-  low: Number.NaN,
-  rainMm: Number.NaN,
-  rainChance: Number.NaN,
-  wetDayMm: Number.NaN,
-  altitudeShift: 0,
-};
+/** The tile a point is in, by its south-west corner: "40_10" for 40–50° N, 10–20° E. */
+export function tileId(lat: number, lon: number, tile = 10): string {
+  const x = ((((lon + 180) % 360) + 360) % 360) - 180;
+  return `${Math.floor(lat / tile) * tile}_${Math.floor(x / tile) * tile}`;
+}
+
+/** The ids of every tile overlapping a box (they may not all exist). */
+export function tilesIn(
+  [[south, west], [north, east]]: [[number, number], [number, number]],
+  tile = 10,
+): string[] {
+  const ids: string[] = [];
+  const s = Math.max(-90, Math.floor(south / tile) * tile);
+  const n = Math.min(90, north);
+  const w = Math.floor(west / tile) * tile;
+  const e = Math.min(east, w + 360);
+  for (let lat = s; lat < n; lat += tile)
+    for (let lon = w; lon < e; lon += tile) ids.push(tileId(lat, lon, tile));
+  return [...new Set(ids)];
+}
+
+/** The tiles a line of points passes through. */
+export function tilesAlong(
+  line: { points: readonly { lat: number; lon: number }[] },
+  tile = 10,
+): string[] {
+  return [...new Set(line.points.map((p) => tileId(p.lat, p.lon, tile)))];
+}
+
+/** A tile's own square, [[south, west], [north, east]]. */
+export function tileArea(
+  id: string,
+  tile = 10,
+): [[number, number], [number, number]] {
+  const [lat, lon] = id.split('_').map(Number) as [number, number];
+  return [
+    [lat, lon],
+    [lat + tile, lon + tile],
+  ];
+}
 
 /**
- * Several loaded continents as one climate. Every continent is cut from the
- * same worldwide grid, so where two overlap their values are identical: a
- * point is answered by the first grid that has data there.
+ * One climate as the trip and the map read it: the tiles loaded so far, and
+ * the coarse world overview wherever there is no tile yet.
  */
-export class ClimateSet implements ClimateSource {
-  constructor(readonly grids: ClimateGrid[]) {}
+export class TiledClimate implements ClimateSource {
+  constructor(
+    readonly header: ClimateHeader,
+    readonly overview: ClimateGrid,
+    readonly tiles: ReadonlyMap<string, ClimateGrid>,
+  ) {}
 
   get years(): [number, number] {
-    return this.grids[0]?.years ?? [2011, 2025];
+    return this.header.years;
   }
 
-  private gridAt(lat: number, lon: number): ClimateGrid | undefined {
-    return this.grids.find((g) => g.covers(lat, lon));
+  /** The finest grid loaded for a point. */
+  gridAt(lat: number, lon: number): ClimateGrid {
+    return this.tiles.get(tileId(lat, lon, this.header.tile)) ?? this.overview;
   }
 
   covers(lat: number, lon: number): boolean {
-    return this.gridAt(lat, lon) !== undefined;
+    return this.gridAt(lat, lon).covers(lat, lon);
   }
 
   at(
@@ -496,8 +562,6 @@ export class ClimateSet implements ClimateSource {
     threshold: number,
     ele?: number | null,
   ): DayClimate {
-    return (
-      this.gridAt(lat, lon)?.at(phase, lat, lon, threshold, ele) ?? NO_DATA
-    );
+    return this.gridAt(lat, lon).at(phase, lat, lon, threshold, ele);
   }
 }

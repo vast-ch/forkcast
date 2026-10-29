@@ -2,7 +2,7 @@
 
 Not a build step: it writes only cache/variants/report.md. It compares the
 variants built by variants.py (and the strong El Niño / La Niña ones, which
-aren't built) with the app's period, per continent, from the per-year fields
+aren't built) with the app's period, per large area, from the per-year fields
 of `build years`. The question, method and findings are in
 docs/climate-variants.md.
 
@@ -40,9 +40,8 @@ import numpy as np
 
 from . import pipeline
 from .__main__ import YEARS as APP_PERIOD
-from .continents import CONTINENTS
 from .pipeline import ensure, http_get, log
-from .variants import DIR, HISTORY, MIN_YEARS, ONI_FILE, RANDOM_SETS, SEED, boxes, enso_months, parse_oni, residuals, year_file
+from .variants import AREAS, DIR, HISTORY, MIN_YEARS, ONI_FILE, RANDOM_SETS, SEED, areas, enso_months, parse_oni, residuals, year_file
 
 REPORT = DIR / "report.md"
 DMI_URL = "https://psl.noaa.gov/gcos_wgsp/Timeseries/Data/dmi.had.long.data"
@@ -92,7 +91,7 @@ def analyse(years: list[int]) -> None:
     phases = [v for v in masks if v not in WINDOWS]
     app = np.array([y in APP_YEARS for y in years])
     z = np.load(year_file(years[0]))
-    cut = boxes(z["lat"], z["lon"])
+    cut = areas(z["lat"], z["lon"])
     table: dict = {}
     for field in FIELDS:
         a16 = np.stack([np.load(year_file(y))[field] for y in years])  # (year, month, lat, lon), float16
@@ -103,7 +102,7 @@ def analyse(years: list[int]) -> None:
             rnd = {v: np.zeros(RANDOM_SETS) for v in phases}
             mean = {v: [0.0, 0] for v in masks}
             for m in range(12):
-                rng = np.random.default_rng([SEED, m])  # the same random sets for every field and continent
+                rng = np.random.default_rng([SEED, m])  # the same random sets for every field and area
                 raw = a16[:, m, rs, cs].astype(np.float32)
                 base = raw[app].mean(axis=0)
                 res = residuals(raw, years)
@@ -163,7 +162,7 @@ def report(table: dict, masks: dict[str, np.ndarray], years: list[int]) -> str:
         "pre": "monthly rain changes by ≥ 20 % and ≥ 10 mm",
         "r1": "rainy days (≥ 1 mm) change by ≥ 1 a month",
     }
-    conts = [c["id"] for c in CONTINENTS]
+    conts = list(AREAS)
     lines = [
         f"# Climate variants, {years[0]}–{years[-1]}",
         "",
@@ -273,14 +272,14 @@ def checks(years: list[int]) -> None:
     pairs = [("elnino −volc", "elnino"), ("elnino −volc −iod+", "elnino −volc"), ("lanina −volc", "lanina"), ("lanina −volc −iod−", "lanina −volc")]
     app = np.array([y in APP_YEARS for y in years])
     z = np.load(year_file(years[0]))
-    cut = boxes(z["lat"], z["lon"])
+    cut = areas(z["lat"], z["lon"])
     conts = list(cut)
     out = [f"# ENSO checks, {years[0]}–{years[-1]}", "", "Event months per variant (summed over the years):", ""]
     out += [f"- {n}: {int(mk.sum())} months in {int(mk.any(axis=1).sum())} years" for n, (mk, _) in variants.items()]
     for field in FIELDS:
         a16 = np.stack([np.load(year_file(y))[field] for y in years])
-        stats = {}  # (variant, continent) -> [cells, noticeable, real, both, random noticeable per set]
-        cmp = {}  # (pair, continent) -> [cells, noticeably different, Σx, Σy, Σx², Σy², Σxy]
+        stats = {}  # (variant, area) -> [cells, noticeable, real, both, random noticeable per set]
+        cmp = {}  # (pair, area) -> [cells, noticeably different, Σx, Σy, Σx², Σy², Σxy]
         for cid, (rs, cs) in cut.items():
             for m in range(12):
                 rng = np.random.default_rng([SEED, m])

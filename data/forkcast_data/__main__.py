@@ -19,16 +19,15 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     oni                   NOAA's Oceanic Niño Index (which months were El Niño or La Niña)
 
 Builds (into out/, except the CRU climatology which is an intermediate in cache/):
-    borders    per-continent outlines and the picker's world map
-    details    per-continent city and range names, rivers and lakes
-    cyclenet   per-continent cycle network (for drawing along routes)
+    borders    the world's country outlines
+    details    the world's town names, rivers and lakes
+    cyclenet   the world's cycle network (for drawing along routes)
     routes     every preset route plus the route index
     cru        CRU climatology for the years (intermediate)
-    climate    per-continent climate grids (ERA5-Land, calibrated with CRU)
+    climate    the world's climate grid (ERA5-Land, calibrated with CRU; intermediate)
     years      each year's monthly fields, 1981–2025 (intermediate)
-    variants   per-continent grids of the other climates: last 10 and 5 years, El Niño, La Niña
-    pack       the climates as the app's seasonal curves, published to out/
-    manifest   the list of continents the app loads first
+    variants   grids of the other climates: last 10 and 5 years, El Niño, La Niña (intermediate)
+    pack       every climate as the app's seasonal curves, in 10° tiles and a 1° overview
 
 See data/README.md for how skipping, checking and --fresh work.
 """
@@ -39,7 +38,7 @@ import argparse
 import sys
 import time
 
-from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, manifest, pack, routes, variants
+from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, pack, routes, variants
 from .pipeline import STAMPS, is_verified, log
 
 YEARS = (2011, 2025)
@@ -67,7 +66,7 @@ DOWNLOADS = {
     "oni": lambda a: variants.download(a.fresh),
 }
 
-# In dependency order: routes need Europe's borders; the manifest needs everything.
+# In dependency order: routes need the borders.
 BUILDS = {
     "borders": lambda a: basemap.build(a.fresh),
     "details": lambda a: details.build(a.fresh),
@@ -77,7 +76,6 @@ BUILDS = {
     "years": lambda a: variants.extract(_history(a), a.fresh),
     "variants": lambda a: variants.build((a.y0, a.y1), a.fresh),
     "pack": lambda a: pack.build(a.fresh),
-    "manifest": lambda a: manifest.build(a.fresh),
     "cyclenet": lambda a: cyclenet.build(a.fresh),
 }
 

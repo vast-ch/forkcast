@@ -17,12 +17,11 @@ scan a large region (those are what time out on a busy server):
   only after all tries; a batch that keeps failing is retried route by route.
   Routes that still fail are listed and skipped, never stopping the run: the
   next run fetches just those.
-- build: out/<continent>/cyclenet.json, {"lines": [[[lon, lat], …], …]}: the
-  ways of every route whose box touches the continent, each way once, joined
+- build: out/cyclenet.json, {"lines": [[[lon, lat], …], …]}: the ways of
+  every route, each way once, joined
   end to end into long lines where exactly two meet, simplified to about 300 m
   and rounded to 0.001° (about 100 m). Missing routes are reported, not fatal.
-  The app fetches a continent's file only when that continent is shown and the
-  rider draws with snapping on.
+  The app fetches it only when the rider draws with snapping on.
 
 Data © OpenStreetMap contributors, ODbL: credited on the map and the help page.
 
@@ -40,8 +39,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from . import continents, pipeline
-from .continents import CONTINENTS
+from . import pipeline
 from .pipeline import CACHE, OUT, UA, Stamp, code_hash, is_verified, log, mark_verified
 
 NETWORKS = ("icn",)
@@ -170,11 +168,6 @@ def download(fresh: bool = False) -> None:
         log(f"  {len(failed)} routes not fetched ({', '.join(map(str, failed[:10]))}{'…' if len(failed) > 10 else ''}); run again to retry them")
 
 
-def _touches(box, bbox) -> bool:
-    w, s, e, n = box
-    return not (e < bbox[0] or w > bbox[2] or n < bbox[1] or s > bbox[3])
-
-
 def files() -> list[Path]:
     """What the download should leave: the index and every route's file."""
     if not INDEX.exists():
@@ -183,7 +176,7 @@ def files() -> list[Path]:
 
 
 def outputs() -> list[Path]:
-    return [OUT / c["id"] / "cyclenet.json" for c in CONTINENTS]
+    return [OUT / "cyclenet.json"]
 
 
 def _simplify(line: list, tol: float) -> list:
@@ -304,29 +297,26 @@ def build(fresh: bool = False) -> None:
         raise SystemExit("Missing the cycle-route index. Run: download cyclenet")
     routes = _read(INDEX)["routes"]
     present = [r for r in routes if route_file(r).exists()]
-    stamp = Stamp("cyclenet", [INDEX] + [route_file(r) for r in present], outputs(), code_hash(sys.modules[__name__], continents, pipeline))
+    stamp = Stamp("cyclenet", [INDEX] + [route_file(r) for r in present], outputs(), code_hash(sys.modules[__name__], pipeline))
     if not fresh and stamp.up_to_date():
         log("  cycle network is up to date")
         return
     if len(present) < len(routes):
         log(f"  {len(routes) - len(present)} of {len(routes)} routes are not downloaded yet; building without them")
-    for c in CONTINENTS:
-        ways: dict[str, list] = {}
-        for r in present:
-            if _touches(r["bbox"], c["bbox"]):
-                ways.update(_read(route_file(r))["ways"])
-        lines = []
-        points = 0
-        for coords in _join(_split_at_junctions(list(ways.values()))):
-            line = [[round(x, 3), round(y, 3)] for x, y in _simplify(coords, SIMPLIFY)]
-            line = [p for i, p in enumerate(line) if i == 0 or p != line[i - 1]]
-            if len(line) > 1:
-                lines.append(line)
-                points += len(line)
-        lines = _close_gaps(lines)
-        path = OUT / c["id"] / "cyclenet.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"lines": lines}, separators=(",", ":")))
-        gz = len(gzip.compress(path.read_bytes(), 9))
-        log(f"  {c['id']:14} {len(ways):6} ways -> {len(lines)} lines, {points} points, {path.stat().st_size / 1e6:.2f} MB ({gz / 1e6:.2f} MB gzipped)")
+    ways: dict[str, list] = {}
+    for r in present:
+        ways.update(_read(route_file(r))["ways"])
+    lines = []
+    points = 0
+    for coords in _join(_split_at_junctions(list(ways.values()))):
+        line = [[round(x, 3), round(y, 3)] for x, y in _simplify(coords, SIMPLIFY)]
+        line = [p for i, p in enumerate(line) if i == 0 or p != line[i - 1]]
+        if len(line) > 1:
+            lines.append(line)
+            points += len(line)
+    lines = _close_gaps(lines)
+    path = OUT / "cyclenet.json"
+    path.write_text(json.dumps({"lines": lines}, separators=(",", ":")))
+    gz = len(gzip.compress(path.read_bytes(), 9))
+    log(f"  {len(ways)} ways -> {len(lines)} lines, {points} points, {path.stat().st_size / 1e6:.2f} MB ({gz / 1e6:.2f} MB gzipped)")
     stamp.done()

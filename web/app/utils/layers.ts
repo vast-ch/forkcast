@@ -16,20 +16,15 @@ const toY = (lat: number) =>
 const toLat = (y: number) =>
   (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * (180 / Math.PI);
 
-/** Does `g` have its own land cell at this point? */
-function hasCell(g: ClimateGrid, lat: number, lon: number): boolean {
-  const row = Math.round((g.lat0 - lat) / g.step);
-  const col = Math.round((lon - g.lon0) / g.step);
-  return g.isLand(row, col);
-}
-
 export interface Raster {
   url: string;
   bounds: [[number, number], [number, number]];
 }
 
-function frame(grid: ClimateGrid, pxPerDeg: number) {
-  const [[south, west], [north, east]] = grid.bounds;
+/** The Web-Mercator canvas over a grid's own area, at about 3 pixels per cell (at most 12 per degree). */
+function frame(grid: ClimateGrid) {
+  const pxPerDeg = Math.min(12, 3 / grid.step);
+  const [[south, west], [north, east]] = grid.area;
   const width = Math.round((east - west) * pxPerDeg);
   const yN = toY(north);
   const yS = toY(south);
@@ -38,14 +33,12 @@ function frame(grid: ClimateGrid, pxPerDeg: number) {
 }
 
 /**
- * Draw one value per map pixel over a grid's land cells, in Web-Mercator rows.
- * `pixel` gets the point and the grid's fractional row and column, and returns
- * an RGBA colour or null to leave the pixel clear. Cells that `earlier` grids
- * cover are left to them.
+ * Draw one value per map pixel over the land cells of a grid's own area, in
+ * Web-Mercator rows. `pixel` gets the point and the grid's fractional row and
+ * column, and returns an RGBA colour or null to leave the pixel clear.
  */
 function rasterize(
   grid: ClimateGrid,
-  earlier: ClimateGrid[],
   pixel: (
     lat: number,
     lon: number,
@@ -53,7 +46,7 @@ function rasterize(
     fx: number,
   ) => [number, number, number, number] | null,
 ): Raster {
-  const f = frame(grid, 12);
+  const f = frame(grid);
   const canvas = document.createElement('canvas');
   canvas.width = f.width;
   canvas.height = f.height;
@@ -67,7 +60,6 @@ function rasterize(
       const fx = (lon - grid.lon0) / grid.step;
       // Inside a land cell only (no coastal extrapolation).
       if (!grid.isLand(Math.round(fy), Math.round(fx))) continue;
-      if (earlier.some((g) => hasCell(g, lat, lon))) continue;
       const rgba = pixel(lat, lon, fy, fx);
       if (!rgba) continue;
       img.data.set(rgba, (py * f.width + px) * 4);
@@ -89,11 +81,9 @@ export function temperatureRaster(
   /** Position in the year, 0 … 1 */
   phase: number,
   metric: TempMetric,
-  /** Grids drawn before this one: cells they cover are left to them. */
-  earlier: ClimateGrid[] = [],
 ): Raster {
   const v = metric === 'high' ? 'tmx' : 'tmn';
-  return rasterize(grid, earlier, (lat, lon) => {
+  return rasterize(grid, (lat, lon) => {
     const [r, g, b] = tempRgb(grid.sampleAt(v, phase, lat, lon));
     return [r, g, b, 215];
   });
@@ -144,17 +134,13 @@ function cellShades(grid: ClimateGrid): Float32Array {
  * Relief shading, drawn in greys that only darken (the map pane multiplies it
  * onto the colours below), bilinear between cells, transparent over the sea.
  */
-export function reliefRaster(
-  grid: ClimateGrid,
-  /** Grids drawn before this one: cells they cover are left to them. */
-  earlier: ClimateGrid[] = [],
-): Raster {
+export function reliefRaster(grid: ClimateGrid): Raster {
   const shade = cellShades(grid);
   const at = (r: number, c: number) =>
     r < 0 || c < 0 || r >= grid.rows || c >= grid.cols
       ? Number.NaN
       : shade[r * grid.cols + c]!;
-  return rasterize(grid, earlier, (_lat, _lon, fy, fx) => {
+  return rasterize(grid, (_lat, _lon, fy, fx) => {
     const r0 = Math.floor(fy);
     const c0 = Math.floor(fx);
     let sum = 0;
@@ -200,8 +186,6 @@ export function rainDots(
   threshold: number,
   /** Merge block × block cells into one dot (their average), for zoomed-out views */
   block = 1,
-  /** Grids drawn before this one: their area is left to them. */
-  earlier: ClimateGrid[] = [],
 ): RainDot[] {
   const full = DOT_FULL[metric];
   const cellM = (grid.step * Math.PI * 6371000) / 180;
@@ -210,7 +194,7 @@ export function rainDots(
     (metric === 'mm'
       ? Math.max(0, grid.cellAt('pre', phase, row, col))
       : grid.cellRainChanceAt(phase, row, col, threshold)) * DAYS_PER_MONTH;
-  return blocks(grid, block, earlier, value).map(({ lat, lon, val }) => {
+  return blocks(grid, block, value).map(({ lat, lon, val }) => {
     const half =
       (cellM * block * Math.min(1, Math.cos((lat * Math.PI) / 180))) / 2;
     return {
@@ -290,26 +274,24 @@ export function rainMarks(
   phase: number,
   threshold: number,
   block = 1,
-  /** Grids drawn before this one: their area is left to them. */
-  earlier: ClimateGrid[] = [],
 ): RainMark[] {
   const value = (row: number, col: number) =>
     grid.cellRainChanceAt(phase, row, col, threshold) * 7;
-  return blocks(grid, block, earlier, value).flatMap(({ lat, lon, val }) => {
+  return blocks(grid, block, value).flatMap(({ lat, lon, val }) => {
     const tier = rainEmojiTier(val, threshold);
     return tier ? [{ lat, lon, tier }] : [];
   });
 }
 
 /**
- * The average of `value` over block × block cells, at each block's centre.
- * Blocks are aligned to the worldwide grid, not to this continent's corner,
- * so neighbouring continents merge cells into the same pattern.
+ * The average of `value` over block × block cells, at the centre of each
+ * block in the grid's own area. Blocks are aligned to the worldwide grid, not
+ * to this tile's corner, so neighbouring tiles merge cells into the same
+ * pattern.
  */
 function blocks(
   grid: ClimateGrid,
   block: number,
-  earlier: ClimateGrid[],
   value: (row: number, col: number) => number,
 ): { lat: number; lon: number; val: number }[] {
   const out: { lat: number; lon: number; val: number }[] = [];
@@ -338,7 +320,7 @@ function blocks(
       if (val <= 0) continue;
       const lat = grid.lat0 - (r0 + (block - 1) / 2) * grid.step;
       const lonC = grid.lon0 + (c0 + (block - 1) / 2) * grid.step;
-      if (earlier.some((g) => hasCell(g, lat, lonC))) continue;
+      if (!grid.owns(lat, lonC)) continue;
       out.push({ lat, lon: lonC, val });
     }
   }

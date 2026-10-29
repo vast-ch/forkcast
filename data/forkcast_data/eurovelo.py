@@ -18,9 +18,11 @@ import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from . import basemap
+
 ROOT = Path(__file__).resolve().parent.parent
 GPX_DIR = ROOT / "eurovelo"
-COUNTRIES = ROOT / "out" / "europe" / "countries.json"
+COUNTRIES = basemap.DIR / "countries-50m.json"  # the land test's outlines
 NS = {"g": "http://www.topografix.com/GPX/1/1"}
 JOIN_KM = 1.0  # stages closer than this are simply joined
 
@@ -60,10 +62,9 @@ _land = None
 
 
 def _load_land():
-    gj = json.loads(COUNTRIES.read_text())
     polys = []
-    for f in gj["features"]:
-        for poly in f["geometry"]["coordinates"]:
+    for country in basemap.countries(json.loads(COUNTRIES.read_text())):
+        for poly in country:
             ring = poly[0]
             xs = [p[0] for p in ring]
             ys = [p[1] for p in ring]
@@ -282,7 +283,6 @@ def build(simplify, out_dir):
             "id": f"ev{number}",
             "name": f"EuroVelo {number} – {name}",
             "group": "EuroVelo",
-            "continent": "europe",
             "color": color,
             "url": f"https://en.eurovelo.com/ev{number}",
             "source": "EuroVelo GPX tracks (www.EuroVelo.com, downloaded 2026-10-23), ODbL",
@@ -302,7 +302,7 @@ def build(simplify, out_dir):
             f"{ferries} ferries  {len(unm)} land gaps ({sum(g['km'] for g in unm):.0f} km)",
             flush=True,
         )
-        index.append({k: route[k] for k in ("id", "name", "group", "continent", "color", "url", "km")})
+        index.append({k: route[k] for k in ("id", "name", "group", "color", "url", "km")})
     return index
 
 

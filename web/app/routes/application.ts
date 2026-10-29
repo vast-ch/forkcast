@@ -6,6 +6,6 @@ export default class ApplicationRoute extends Route {
   @service declare atlas: AtlasService;
 
   async beforeModel() {
-    await this.atlas.loadManifest();
+    await this.atlas.loadBasics();
   }
 }

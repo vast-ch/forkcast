@@ -44,6 +44,21 @@ module('Acceptance | planner', function (hooks) {
     assert.strictEqual(summary('Rest days'), '0');
   });
 
+  test('the trip uses the full-detail tiles along its route', async function (assert) {
+    const atlas = this.owner.lookup('service:atlas');
+    await visit('/');
+    // Interlaken – Málaga crosses 40–50° N, 0–10° E and 30–40° N, 10–0° W.
+    assert.true(atlas.tiles.has('40_0'), 'the Alps and eastern Spain');
+    assert.true(atlas.tiles.has('30_-10'), 'Andalusia');
+    const climate = atlas.climate!;
+    assert.notStrictEqual(
+      climate.gridAt(46.69, 7.86),
+      climate.overview,
+      'Interlaken is read from its tile',
+    );
+    assert.strictEqual(climate.gridAt(46.69, 7.86).step, 0.25);
+  });
+
   test('the climate switches the grids the map and the trip use', async function (assert) {
     const atlas = this.owner.lookup('service:atlas');
     // Madrid, mid-July: last 5 years are warmer than the 15-year average.
@@ -52,7 +67,7 @@ module('Acceptance | planner', function (hooks) {
       findAll('.leaflet-climate-pane img').map((i) => i.getAttribute('src'));
     await visit('/');
     const usual = { july: july(), colours: colours() };
-    assert.strictEqual(usual.colours.length, 1, "Europe's temperature image");
+    assert.true(usual.colours.length > 0, 'temperature images');
     await click(button('5 yrs'));
     assert.strictEqual(currentURL(), '/?climate=last5');
     assert.strictEqual(atlas.climateId, 'last5');

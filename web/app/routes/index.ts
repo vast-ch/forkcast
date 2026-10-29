@@ -10,9 +10,9 @@ import { DEFAULTS, PARSE, SETTING_KEYS } from 'forkcast/utils/settings';
 
 /**
  * Settings change the URL in place, without piling up browser history.
- * Changing the continents or the climate loads data, so it re-runs the model hook.
+ * Changing the climate loads data, so it re-runs the model hook.
  */
-const LOADS_DATA = ['continents', 'climate'];
+const LOADS_DATA = ['climate'];
 const QUERY_PARAMS = Object.fromEntries(
   SETTING_KEYS.map((k) => [
     k,
@@ -30,14 +30,9 @@ export default class IndexRoute extends Route {
 
   queryParams = QUERY_PARAMS;
 
-  async model(params: { continents?: string; climate?: string }) {
-    const ids = (params.continents || DEFAULTS.continents).split(',');
-    const climate = PARSE.climate(params.climate) ?? DEFAULTS.climate;
-    const shown = await this.atlas.show(ids, climate);
-    // A link with only unknown continents falls back to Europe.
-    if (shown.length === 0)
-      await this.atlas.show([DEFAULTS.continents], climate);
-    return this.atlas.loadedIds;
+  async model(params: { climate?: string }) {
+    await this.atlas.show(PARSE.climate(params.climate) ?? DEFAULTS.climate);
+    return this.atlas.climateId;
   }
 
   /**
@@ -48,8 +43,8 @@ export default class IndexRoute extends Route {
     // Looking it up starts it remembering every change.
     const lastVisit = this.lastVisit;
     if (Object.keys(transition.to?.queryParams ?? {}).length > 0) return;
-    // A setting changed back to its default re-runs this too (continents and
-    // climate refresh the model); that's not opening Forkcast.
+    // A setting changed back to its default re-runs this too (the climate
+    // refreshes the model); that's not opening Forkcast.
     if (transition.from?.name === 'index') return;
     lastVisit.isResuming = true;
     const url = lastVisit.url;

@@ -22,8 +22,6 @@ export function isoDate(date = new Date()): string {
 }
 
 export const DEFAULTS = {
-  /** Continents whose climate is shown, comma-separated; Europe by default */
-  continents: 'europe',
   /** Which climate: the average of the last 15, 10 or 5 years, or an El Niño or La Niña year */
   climate: 'last15' as ClimateId,
   /** Quarter-month shown on the map, 0–47 (see utils/weeks.ts); the current one by default */
@@ -47,7 +45,7 @@ export const DEFAULTS = {
   rainMetric: 'days' as RainMetric,
   /** mm of rain from which a day counts as rainy */
   rainThreshold: 5 as RainThreshold,
-  /** Selected route: a preset's id, or one of your routes' UUID; '' means the continents' default */
+  /** Selected route: a preset's id, or one of your routes' UUID; '' means the default (the first preset) */
   routeId: '',
   /** First day of the trip; today by default */
   start: isoDate(),
@@ -109,7 +107,6 @@ const inRange =
     typeof v === 'number' && inLimits(key, v) ? v : undefined;
 
 export const PARSE: { [K in SettingKey]: Parse<(typeof DEFAULTS)[K]> } = {
-  continents: isText,
   climate: oneOf(CLIMATES),
   week: isWholeIn(0, LAST_WEEK),
   tempMetric: oneOf(['high', 'low'] as const),

@@ -14,6 +14,7 @@
 - The trip summary's coldest night is now called the coldest *average* night, which is what it always was. Single nights vary a few degrees around their average, so the help now says to expect some nights colder than that.
 - Rainy riding days in the trip summary now come with a range, e.g. "9 (6–12)": how many 8 trips out of 10 get. Rain comes in spells, so some trips catch a lot more than the average and some a lot less.
 - The map's climate data is half the size, so it downloads about twice as fast, with the same temperatures and rain, give or take a few tenths of a degree.
+- The whole world is on the map from the start: no more clicking a continent to add it. Zoomed out you see a lighter overview; as you zoom in, or wherever your route goes, the full detail loads for just that area, so you download only the parts of the world you look at. The help's privacy section explains what this means for what our host can see.
 - Pop-up calendars now have a clear edge and shadow, so they stand out from the panel behind them.
 
 ## v0.13.0 - 2026-10-27

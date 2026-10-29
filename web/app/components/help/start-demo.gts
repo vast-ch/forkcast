@@ -5,7 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { waitForPromise } from '@ember/test-waiters';
 import { SegmentedControl } from 'frontile/buttons';
 import type AtlasService from 'forkcast/services/atlas';
-import { climateOn, type DayClimate } from 'forkcast/utils/climate';
+import { climateOn, tileId, type DayClimate } from 'forkcast/utils/climate';
 import { fmtDate } from 'forkcast/utils/format';
 import { DEFAULTS } from 'forkcast/utils/settings';
 import TempCalendar from 'forkcast/components/temp-calendar';
@@ -33,10 +33,12 @@ export default class StartDemo extends Component {
 
   constructor(owner: Owner, args: object) {
     super(owner, args);
-    // Straight to the help page, nothing is loaded yet: add Europe's climate,
-    // keeping any continents the planner has open.
-    if (!this.atlas.loadedIds.includes('europe'))
-      void waitForPromise(this.atlas.show([...this.atlas.loadedIds, 'europe']));
+    // Straight to the help page, nothing is loaded yet: the climate the
+    // planner shows, and the tiles of the towns.
+    const tiles = Object.values(PLACES).map((p) => tileId(p.lat, p.lon));
+    void waitForPromise(
+      this.atlas.show().then(() => this.atlas.want('help', tiles)),
+    );
   }
 
   places = (Object.keys(PLACES) as PlaceId[]).map((id) => ({

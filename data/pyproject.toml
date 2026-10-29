@@ -28,11 +28,9 @@ ignore = ["E501"]  # long lines: the build logs are written for reading, not wra
 
 [tool.ruff.lint.per-file-ignores]
 # Every build fingerprints the source of the modules it depends on, so tidying
-# these (import order, typing imports) would force the hours-long climate and
-# CRU rebuilds. Leave them until those are rebuilt for a real reason.
+# these (import order, typing imports) would force every climate build to rerun.
 "forkcast_data/pipeline.py" = ["UP035"]
 "forkcast_data/cru.py" = ["I001"]
-"forkcast_data/era5land.py" = ["I001"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

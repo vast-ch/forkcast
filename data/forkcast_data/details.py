@@ -3,15 +3,14 @@
 - download: Natural Earth (public domain) populated places (1:10m), rivers and
   lake centerlines and
   lakes (1:50m) into cache/details/.
-- build, per continent:
-  - out/<continent>/places.json: {"places": [[name, lon, lat, isCapital,
+- build, for the whole world:
+  - out/places.json: {"places": [[name, lon, lat, isCapital,
     population, rank]]}. Places are towns of
     50,000 or more and capitals; rank is a town's place by size in its country
-    (1 for the biggest), counted over the whole world so a country split
-    between continents ranks the same in both. The map's city setting (off, the 10 biggest per
+    (1 for the biggest). The map's city setting (off, the 10 biggest per
     country, or over 500,000) picks the towns, and zoomed out only capitals
     keep their names.
-  - out/<continent>/water.json: {"rivers": [[[lon, lat], …], …], "lakes":
+  - out/water.json: {"rivers": [[[lon, lat], …], …], "lakes":
     [[[lon, lat], …], …]}, coordinates to 0.01° (about 1 km).
 
 The relief shading needs no file: the app draws it from the terrain height in
@@ -24,9 +23,8 @@ import json
 import sys
 from pathlib import Path
 
-from . import basemap, continents, pipeline
+from . import basemap, pipeline
 from .basemap import in_bbox
-from .continents import CONTINENTS
 from .pipeline import CACHE, OUT, Stamp, code_hash, ensure, http_get, log
 
 DIR = CACHE / "details"
@@ -53,7 +51,7 @@ def download(fresh: bool = False) -> None:
 
 
 def outputs() -> list[Path]:
-    return [OUT / c["id"] / n for c in CONTINENTS for n in ("places.json", "water.json")]
+    return [OUT / n for n in ("places.json", "water.json")]
 
 
 def _features(name: str) -> list[dict]:
@@ -133,22 +131,16 @@ def _water(bbox) -> dict:
 
 def build(fresh: bool = False) -> None:
     inputs = [DIR / n for n in SOURCES]
-    stamp = Stamp("details", inputs, outputs(), code_hash(sys.modules[__name__], basemap, continents, pipeline))
+    stamp = Stamp("details", inputs, outputs(), code_hash(sys.modules[__name__], basemap, pipeline))
     if not fresh and stamp.up_to_date():
         log("  map details are up to date")
         return
     if stamp.missing_inputs():
         raise SystemExit("Missing map-detail sources. Run: download details")
-    for c in CONTINENTS:
-        folder = OUT / c["id"]
-        folder.mkdir(parents=True, exist_ok=True)
-        places = _places(c["bbox"])
-        water = _water(c["bbox"])
-        (folder / "places.json").write_text(json.dumps(places, ensure_ascii=False, separators=(",", ":")))
-        (folder / "water.json").write_text(json.dumps(water, separators=(",", ":")))
-        size = sum((folder / n).stat().st_size for n in ("places.json", "water.json"))
-        log(
-            f"  {c['id']:14} {len(places['places']):4} places, "
-            f"{len(water['rivers']):4} rivers, {len(water['lakes']):3} lakes, {size / 1e3:.0f} kB"
-        )
+    places = _places(basemap.WORLD)
+    water = _water(basemap.WORLD)
+    (OUT / "places.json").write_text(json.dumps(places, ensure_ascii=False, separators=(",", ":")))
+    (OUT / "water.json").write_text(json.dumps(water, separators=(",", ":")))
+    size = sum((OUT / n).stat().st_size for n in ("places.json", "water.json"))
+    log(f"  {len(places['places'])} places, {len(water['rivers'])} rivers, {len(water['lakes'])} lakes, {size / 1e3:.0f} kB")
     stamp.done()

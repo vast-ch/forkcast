@@ -14,9 +14,12 @@ A month's average flattens each wave a little compared with its value at
 mid-month (by sin(πk/12) / (πk/12) for the k-th wave), so the fitted waves are
 scaled back up by that factor.
 
-Output per continent and climate: out/<continent>/climate[-<variant>].bin and
-.json. One byte per value (255 = no data), laid out [layer][term][row][col],
-then the static layers [row][col] as in the monthly grid. Terms are the mean,
+Output per climate (`last15` and each variant): out/climate/<climate>.json,
+the header, and out/climate/<climate>/ with a file per 10° tile with land
+(<lat>_<lon>.bin, by its south-west corner, 41 × 41 cells sharing its edges
+with its neighbours) and overview.bin (the world at 1°). One byte per value
+(255 = no data), laid out [layer][term][row][col], then the static layers
+[row][col] as in the monthly grid. Terms are the mean,
 then cos and sin of each wave. Each term has its own encoding, value =
 byte / scale + offset (or (byte / scale)² for "sqrt"); rain's waves are
 "relative": a share of the cell's mean rain, so dry places keep their
@@ -28,14 +31,15 @@ Usage: uv run python -m forkcast_data build pack [--fresh]
 from __future__ import annotations
 
 import json
+import shutil
 import sys
+import warnings
 from pathlib import Path
 
 import numpy as np
 
-from . import continents, pipeline, variants
 from . import era5land as e
-from .continents import CONTINENTS
+from . import pipeline, variants
 from .pipeline import OUT, Stamp, code_hash, log
 
 HARMONICS = 3
@@ -45,9 +49,9 @@ PHASES = (np.arange(12) + 0.5) / 12
 
 
 def _temp(low: float) -> list[dict]:
-    """Highs or lows: the mean from `low` °C in 0.25 °C steps (63.5 °C of range)."""
+    """Highs or lows: the mean from `low` °C in 0.29 °C steps (72.6 °C of range)."""
     return [
-        {"kind": "linear", "scale": 4, "offset": low},
+        {"kind": "linear", "scale": 3.5, "offset": low},
         *[{"kind": "linear", "scale": 5, "offset": -38}] * 2,  # yearly wave, −38 … +12.8 °C (Siberia's winters), 0.2 °C steps
         *[{"kind": "linear", "scale": 20, "offset": -6.35}] * 4,  # shorter waves, ±6.35 °C, 0.05 °C steps
     ]
@@ -61,8 +65,8 @@ _RAIN = [
     {"kind": "sqrt", "scale": 40},  # mm per day, up to 40
     *[{"kind": "linear", "scale": 63.5, "offset": -2, "relative": True}] * 6,  # ±2 × the mean
 ]
-# Mean highs run from about −19 to +40 °C, mean lows from −26 to +28 °C.
-ENCODING = {"tmx": _temp(-22), "tmn": _temp(-31), "pre": _RAIN, "r1": _DAYS, "r5": _DAYS, "r10": _DAYS}
+# Mean highs run from about −25 °C (Greenland's ice) to +39 °C, mean lows from −35 to +28 °C.
+ENCODING = {"tmx": _temp(-28), "tmn": _temp(-38), "pre": _RAIN, "r1": _DAYS, "r5": _DAYS, "r10": _DAYS}
 
 
 def fit(monthly: np.ndarray, per_day: bool) -> np.ndarray:
@@ -112,28 +116,89 @@ def decode(name: str, b: np.ndarray) -> np.ndarray:
     return out
 
 
-def _sources(cid: str) -> list[tuple[str, Path, Path]]:
-    """(published name, monthly bin, monthly json) of each climate of a continent."""
-    base = [("climate", e.grid_file(cid, "bin"), e.grid_file(cid, "json"))]
-    return base + [(f"climate-{v}", variants.grid_file(cid, v, "bin"), variants.grid_file(cid, v, "json")) for v in variants.VARIANTS]
+TILE = 10  # degrees; tiles start at multiples of it
+OVERVIEW = 4  # cells of the 0.25° grid per overview cell, each way (1°)
+DIR = OUT / "climate"
+CLIMATES = ["last15", *variants.VARIANTS]
+
+
+def _source(climate: str, ext: str) -> Path:
+    return e.grid_file(ext) if climate == "last15" else variants.grid_file(climate, ext)
+
+
+def header_file(climate: str) -> Path:
+    return DIR / f"{climate}.json"
+
+
+def tile_id(lat: int, lon: int) -> str:
+    """A tile by its south-west corner, e.g. "40_10" for 40–50° N, 10–20° E."""
+    return f"{lat}_{lon}"
 
 
 def outputs() -> list[Path]:
-    return [OUT / c["id"] / f"{n}.{x}" for c in CONTINENTS for n, _, _ in _sources(c["id"]) for x in ("bin", "json")]
+    return [p for c in CLIMATES for p in (header_file(c), DIR / c / "overview.bin")]
 
 
 def inputs() -> list[Path]:
-    return [p for c in CONTINENTS for _, b, j in _sources(c["id"]) for p in (b, j)]
+    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")]
 
 
-def pack(monthly: bytes, header: dict) -> tuple[bytes, dict]:
-    """One monthly grid (era5land.py's layout) → the published grid and its header."""
-    names, cells = header["vars"], header["rows"] * header["cols"]
+def curves(monthly: bytes, header: dict) -> tuple[dict[str, np.ndarray], np.ndarray]:
+    """A monthly grid (era5land.py's layout) → each layer's coefficients (TERMS, rows, cols) and the static bytes (static, rows, cols)."""
+    names, rows, cols = header["vars"], header["rows"], header["cols"]
     raw = np.frombuffer(monthly, dtype=np.uint8)
-    layers = raw[: len(names) * 12 * cells].reshape(len(names), 12, header["rows"], header["cols"])
-    packed = [encode(n, fit(variants.decode(n, layers[i]).astype(np.float64), n not in ("tmx", "tmn"))) for i, n in enumerate(names)]
-    out = dict(header, terms=TERMS, encoding={n: ENCODING[n] for n in names} | {s: e.ENCODING[s] for s in header.get("static", [])})
-    return np.stack(packed).tobytes() + raw[len(names) * 12 * cells :].tobytes(), out
+    n = len(names) * 12 * rows * cols
+    layers = raw[:n].reshape(len(names), 12, rows, cols)
+    coef = {name: fit(variants.decode(name, layers[i]).astype(np.float32), name not in ("tmx", "tmn")).astype(np.float32) for i, name in enumerate(names)}
+    return coef, raw[n:].reshape(-1, rows, cols)
+
+
+def tiles(header: dict) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Each tile's rows and columns of the world grid: the cells whose centres
+    lie on or inside its edges, so neighbouring tiles share their edge cells
+    and a point anywhere in a tile can be interpolated from it alone. Columns
+    wrap round at 180°."""
+    lat0, lon0, step = header["lat0"], header["lon0"], header["step"]
+    rows, cols, size = header["rows"], header["cols"], round(TILE / step) + 1
+    south = lat0 - (rows - 1) * step
+    out = {}
+    for lat in range(int(np.floor(south / TILE)) * TILE, int(lat0) + 1, TILE):
+        r0 = round((lat0 - (lat + TILE)) / step)  # the tile's northern edge
+        r = np.arange(r0, r0 + size)
+        if r[-1] < 0 or r[0] >= rows:
+            continue
+        for lon in range(-180, 180, TILE):
+            c0 = round((lon - lon0) / step)
+            out[tile_id(lat, lon)] = (r, np.arange(c0, c0 + size) % cols)
+    return out
+
+
+def overview(coef: dict[str, np.ndarray], static: np.ndarray, header: dict) -> tuple[dict[str, np.ndarray], np.ndarray, dict]:
+    """The world at OVERVIEW times the cell size: averages of the land cells
+    in each block (a block with any land is land)."""
+    f = OVERVIEW
+    rows, cols = header["rows"] // f, header["cols"] // f
+
+    def blocks(a: np.ndarray) -> np.ndarray:
+        a = a[..., : rows * f, : cols * f]
+        with np.errstate(invalid="ignore"), warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # all-sea blocks
+            return np.nanmean(a.reshape(*a.shape[:-2], rows, f, cols, f), axis=(-3, -1))
+
+    out = {}
+    for name, c in coef.items():
+        # A sea cell's terms are all NaN, so every term averages the same land cells.
+        out[name] = blocks(c)
+    elev = [variants.decode(s, b) for s, b in zip(header.get("static", []), static, strict=True)]
+    step = header["step"] * f
+    geo = {
+        "lon0": header["lon0"] - header["step"] / 2 + step / 2,
+        "lat0": header["lat0"] + header["step"] / 2 - step / 2,
+        "step": step,
+        "rows": rows,
+        "cols": cols,
+    }
+    return out, np.stack([e.encode(s, blocks(v)) for s, v in zip(header.get("static", []), elev, strict=True)]), geo
 
 
 def _write(path: Path, data: bytes) -> None:
@@ -143,18 +208,55 @@ def _write(path: Path, data: bytes) -> None:
     tmp.replace(path)
 
 
+def _cut(a: np.ndarray, r: np.ndarray, c: np.ndarray) -> np.ndarray:
+    """A tile's cells of (…, rows, cols) bytes; rows beyond the grid (towards the poles) are sea."""
+    out = np.full((*a.shape[:-2], len(r), len(c)), e.NODATA, dtype=np.uint8)
+    ok = (r >= 0) & (r < a.shape[-2])
+    out[..., ok, :] = a[..., r[ok][:, None], c[None, :]]
+    return out
+
+
+def pack(climate: str) -> None:
+    """Publish one climate: its tiles, its overview and their header."""
+    header = json.loads(_source(climate, "json").read_text())
+    coef, static = curves(_source(climate, "bin").read_bytes(), header)
+    enc = {name: encode(name, c) for name, c in coef.items()}  # (TERMS, rows, cols) bytes
+    land = ~np.isnan(coef["tmx"][0])
+    folder = DIR / climate
+    if folder.exists():
+        shutil.rmtree(folder)  # tiles of an earlier build that are no longer land
+    ids = []
+    for tid, (r, c) in tiles(header).items():
+        inside = r[(r >= 0) & (r < header["rows"])]
+        if not land[np.ix_(inside, c)].any():
+            continue
+        data = np.stack([_cut(enc[n], r, c) for n in header["vars"]]).tobytes() + _cut(static, r, c).tobytes()
+        _write(folder / f"{tid}.bin", data)
+        ids.append(tid)
+    ov, ov_static, geo = overview(coef, static, header)
+    _write(folder / "overview.bin", np.stack([encode(n, ov[n]) for n in header["vars"]]).tobytes() + ov_static.tobytes())
+    meta = {k: v for k, v in header.items() if k not in ("lon0", "lat0", "rows", "cols", "encoding")}
+    meta |= {
+        "terms": TERMS,
+        "tile": TILE,
+        "size": round(TILE / header["step"]) + 1,
+        "tiles": sorted(ids),
+        "overview": geo,
+        "encoding": {n: ENCODING[n] for n in header["vars"]} | {s: e.ENCODING[s] for s in header.get("static", [])},
+    }
+    _write(header_file(climate), json.dumps(meta, separators=(",", ":")).encode())
+    size = sum(p.stat().st_size for p in folder.iterdir())
+    log(f"  {climate:7} {len(ids)} tiles, {size / 1e6:.1f} MB with the overview ({(folder / 'overview.bin').stat().st_size / 1e6:.1f} MB)")
+
+
 def build(fresh: bool = False) -> None:
-    code = code_hash(sys.modules[__name__], e, variants, continents, pipeline)
+    code = code_hash(sys.modules[__name__], e, variants, pipeline)
     stamp = Stamp("pack", inputs(), outputs(), code)
     if not fresh and stamp.up_to_date():
         log("  packed grids are up to date")
         return
     if missing := stamp.missing_inputs():
         raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants")
-    for c in CONTINENTS:
-        for name, b, j in _sources(c["id"]):
-            data, header = pack(b.read_bytes(), json.loads(j.read_text()))
-            _write(OUT / c["id"] / f"{name}.bin", data)
-            _write(OUT / c["id"] / f"{name}.json", json.dumps(header, separators=(",", ":")).encode())
-        log(f"  {c['id']:14} {len(data) / 1e6:.1f} MB per climate")
+    for climate in CLIMATES:
+        pack(climate)
     stamp.done()

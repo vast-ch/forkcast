@@ -273,34 +273,6 @@ body {
   font-family: var(--wt-font-body);
   font-size: 12px;
 }
-/* Continents not loaded yet: light shapes in the picker's colours, clickable. */
-.wt-other {
-  fill-opacity: 0.35;
-  stroke: #fff;
-  stroke-opacity: 0.7;
-  cursor: pointer;
-}
-.wt-other:hover {
-  fill-opacity: 0.6;
-}
-.wt-other-europe {
-  fill: #8fb3d9;
-}
-.wt-other-africa {
-  fill: #e3b26b;
-}
-.wt-other-asia {
-  fill: #d98f8f;
-}
-.wt-other-north-america {
-  fill: #9cc59a;
-}
-.wt-other-south-america {
-  fill: #c3a3d6;
-}
-.wt-other-oceania {
-  fill: #7fc4bd;
-}
 .wt-overview-route {
   cursor: pointer;
 }

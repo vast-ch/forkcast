@@ -1,6 +1,6 @@
 # Forkcast monorepo.
 #   docker compose up ui                  dev server with hot reload (https://ui.forkcast.orb.local)
-#   docker compose run --rm data          rebuild all data into data/out (or: data climate|routes|basemap)
+#   docker compose run --rm data          download what's missing, build what's stale into data/out (or: data status, data build <step>)
 #   docker compose --profile prod up --build web   production image (nginx) at https://web.forkcast.orb.local
 name: forkcast
 

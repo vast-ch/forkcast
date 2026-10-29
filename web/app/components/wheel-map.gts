@@ -19,11 +19,13 @@ import {
   rainMarks,
   reliefRaster,
   type RainMark,
+  type Raster,
   isCapitalsOnly,
   isPlaceShown,
 } from 'forkcast/utils/layers';
 import { pointAt, type Route } from 'forkcast/utils/route';
-import { climateOn, tempSwatch } from 'forkcast/utils/climate';
+import type ClimateGrid from 'forkcast/utils/climate';
+import { climateOn, tempSwatch, tilesIn } from 'forkcast/utils/climate';
 import { fmtShortDate } from 'forkcast/utils/format';
 import type { DetailKind } from 'forkcast/services/atlas';
 import {
@@ -42,6 +44,33 @@ import {
 const ROUTE_ACCENT = '#a020f0';
 const STOP_RING = '#17212b';
 
+/** Where the map opens the first time: Europe. */
+const FIRST_VIEW: L.LatLngBoundsExpression = [
+  [35, -12],
+  [70, 35],
+];
+
+/**
+ * From this zoom on (a country or two in view) the map draws the climate from
+ * the 0.25° tiles in view, loading them as it goes; further out, from the 1°
+ * world overview, which is always loaded.
+ */
+const TILE_ZOOM = 5;
+
+/** Rasters already drawn, per grid: by layer, week, metric. */
+const rasters = new WeakMap<ClimateGrid, Map<string, Raster>>();
+function cachedRaster(
+  grid: ClimateGrid,
+  key: string,
+  draw: () => Raster,
+): Raster {
+  let byKey = rasters.get(grid);
+  if (!byKey) rasters.set(grid, (byKey = new Map<string, Raster>()));
+  let r = byKey.get(key);
+  if (!r) byKey.set(key, (r = draw()));
+  return r;
+}
+
 /** Room around a route when the map is fitted to it. */
 const FIT = { padding: [30, 30] as [number, number] };
 
@@ -52,7 +81,6 @@ const STICKY_TIP: L.TooltipOptions = { sticky: true, direction: 'top' };
  * selected route and the stops are in Leaflet's own overlay pane (400). */
 const PANES: [name: string, zIndex: number, isInteractive: boolean][] = [
   ['land', 200, false],
-  ['others', 210, true],
   ['climate', 300, false],
   // Relief shading, multiplied onto the colours (see .leaflet-relief-pane).
   ['relief', 320, false],
@@ -64,12 +92,11 @@ const PANES: [name: string, zIndex: number, isInteractive: boolean][] = [
   // The start and the night stops, above every line (the route and the
   // selected day's stretch pass under them), below the names.
   ['stops', 420, true],
-  // City and range names, above the routes so they stay readable.
+  // City names, above the routes so they stay readable.
   ['labels', 450, false],
 ];
 
 type GroupLayer =
-  | 'others'
   | 'overview'
   | 'temp'
   | 'relief'
@@ -111,6 +138,8 @@ interface MapState {
   cities: CityLimit;
   /** How many detail files have arrived, so the map redraws when one does */
   detailFiles: number;
+  /** How many climate tiles are loaded, so the map redraws when one arrives */
+  tiles: number;
   /** Drawing with snapping on: show the cycle network to snap to */
   showCycleNet: boolean;
 }
@@ -131,7 +160,6 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     water?: L.LayerGroup;
     labels?: L.LayerGroup;
     cyclenet?: L.LayerGroup;
-    others?: L.LayerGroup;
     overview?: L.LayerGroup;
     temp?: L.LayerGroup;
     rain?: L.LayerGroup;
@@ -196,15 +224,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     const lastVisit = this.owner?.lastVisit;
     const view = lastVisit?.isResuming ? lastVisit.view : undefined;
     if (lastVisit) lastVisit.isResuming = false;
-    const bbox = this.owner?.atlas.loaded[0]?.continent.bbox;
     if (view) {
       this.keep(() => map.setView([view.lat, view.lon], view.zoom));
       this.isResumed = true;
-    } else if (bbox) {
-      map.fitBounds([
-        [bbox[1], bbox[0]],
-        [bbox[3], bbox[2]],
-      ]);
+    } else {
+      map.fitBounds(FIRST_VIEW);
     }
     map.attributionControl.setPrefix(false);
     // The two notices the route data's licences (ODbL) want next to the map;
@@ -234,8 +258,8 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       if (this.lastState) this.sync(this.lastState);
     });
     map.on('dblclick', () => this.owner?.onDoubleClick());
-    // Remember the view for next time (see LastVisitService).
     map.on('moveend', () => {
+      // Remember the view for next time (see LastVisitService).
       const c = map.getCenter();
       if (this.owner)
         this.owner.lastVisit.view = {
@@ -243,8 +267,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           lon: Math.round(c.lng * 1e4) / 1e4,
           zoom: map.getZoom(),
         };
+      this.wantTiles();
+      if (this.lastState) this.sync(this.lastState);
     });
     this.map = map;
+    this.wantTiles();
     // The container keeps resizing while the page lays out (the day chart
     // appears under it a moment later); keep the map sized and the fit right.
     const ro = new ResizeObserver(() => {
@@ -258,6 +285,33 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       () => ro.disconnect(),
       () => cancelAnimationFrame(frame),
     );
+  }
+
+  /** The tiles in view, when zoomed in enough to draw from them (see TILE_ZOOM). */
+  tilesInView(): string[] {
+    const map = this.map!;
+    if (map.getZoom() < TILE_ZOOM) return [];
+    const b = map.getBounds();
+    return tilesIn([
+      [b.getSouth(), b.getWest()],
+      [b.getNorth(), b.getEast()],
+    ]);
+  }
+
+  /** Ask for the tiles in view (the map redraws as each arrives). */
+  wantTiles(): void {
+    void this.owner?.atlas.want('view', this.tilesInView());
+  }
+
+  /** The grids to draw: the loaded tiles in view, or the overview when zoomed out. */
+  grids(): ClimateGrid[] {
+    const climate = this.owner?.atlas.climate;
+    if (!climate) return [];
+    if (this.map!.getZoom() < TILE_ZOOM) return [climate.overview];
+    return this.tilesInView().flatMap((id) => {
+      const g = climate.tiles.get(id);
+      return g ? [g] : [];
+    });
   }
 
   /** Replace a layer group with a freshly built one (`build` may leave it empty). */
@@ -285,25 +339,23 @@ class LeafletModifier extends Modifier<LeafletSignature> {
   }
 
   /**
-   * Relief, water and names. Water and names come in per-continent files that
-   * are fetched the first time their layer is on (never while it's off); the
-   * map redraws when they arrive.
+   * Relief, water and names. Water and names come in world files that are
+   * fetched the first time their layer is on (never while it's off); the map
+   * redraws when they arrive.
    */
-  syncDetails(s: MapState, ids: string): void {
+  syncDetails(s: MapState, grids: ClimateGrid[]): void {
     const atlas = this.owner!.atlas;
-    const loaded = atlas.loaded;
-    const grids = loaded.map((l) => l.climate);
-    const files = <K extends DetailKind>(kind: K) =>
-      loaded.flatMap((l) => {
-        const data = atlas.detail(kind, l.continent.id);
-        if (!data) void atlas.loadDetail(kind, l.continent.id);
-        return data ? [data] : [];
-      });
+    const files = <K extends DetailKind>(kind: K) => {
+      const data = atlas.detail(kind);
+      if (!data) void atlas.loadDetail(kind);
+      return data ? [data] : [];
+    };
 
-    this.layer('relief', [ids, s.details.relief], (group) => {
+    this.layer('relief', [...grids, s.details.relief], (group) => {
       if (!s.details.relief) return;
-      grids.forEach((g, k) => {
-        const r = reliefRaster(g, grids.slice(0, k));
+      grids.forEach((g) => {
+        // The terrain is the same in every climate: no week or metric in the key.
+        const r = cachedRaster(g, 'relief', () => reliefRaster(g));
         L.imageOverlay(r.url, r.bounds, {
           pane: 'relief',
           interactive: false,
@@ -311,7 +363,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       });
     });
 
-    this.layer('water', [ids, s.detailFiles, s.details.water], (group) => {
+    this.layer('water', [s.detailFiles, s.details.water], (group) => {
       if (!s.details.water) return;
       for (const w of files('water')) {
         for (const lake of w.lakes) {
@@ -335,7 +387,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     });
 
     // While drawing with snapping on, the network the clicks snap to.
-    this.layer('cyclenet', [ids, s.detailFiles, s.showCycleNet], (group) => {
+    this.layer('cyclenet', [s.detailFiles, s.showCycleNet], (group) => {
       if (!s.showCycleNet) return;
       const renderer = (this.netRenderer ??= L.canvas({ pane: 'water' }));
       // Black outline, white inside, like a road on a map, so the routes
@@ -362,9 +414,9 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       }
     });
 
-    // Only the capitals when zoomed out, so a whole continent stays readable.
+    // Only the capitals when zoomed out, so a wide view stays readable.
     const zoom = this.map!.getZoom();
-    const deps = [ids, s.detailFiles, s.cities, isCapitalsOnly(zoom)];
+    const deps = [s.detailFiles, s.cities, isCapitalsOnly(zoom)];
     this.layer('labels', deps, (group) => {
       if (s.cities === 'off') return;
       for (const p of files('places')) {
@@ -416,16 +468,11 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     this.lastState = s;
     const map = this.map!;
     const atlas = this.owner!.atlas;
-    const loaded = atlas.loaded;
-    const ids = atlas.loadedIds.join(',');
+    const countries = atlas.countries;
 
-    const countries = {
-      type: 'FeatureCollection' as const,
-      features: loaded.flatMap((l) => l.countries.features),
-    };
     // The countries are also the land itself, so they always load; the
     // Borders toggle only shows or hides their outlines.
-    if (this.changed('countries', ids)) {
+    if (countries && this.changed('countries', countries)) {
       this.layers.land?.remove();
       this.layers.land = L.geoJSON(countries, {
         pane: 'land',
@@ -433,76 +480,46 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         style: { stroke: false, fillOpacity: 1, className: 'wt-land' },
       }).addTo(map);
     }
-    this.layer('borders', [ids, s.details.borders], (group) => {
-      if (!s.details.borders) return;
+    this.layer('borders', [countries, s.details.borders], (group) => {
+      if (!countries || !s.details.borders) return;
       L.geoJSON(countries, {
         pane: 'borders',
         interactive: false,
         style: { weight: 0.8, fill: false, className: 'wt-border' },
       }).addTo(group);
     });
-    this.syncDetails(s, ids);
+    // The tiles in view, or the overview: grids differ per climate, so a
+    // switch redraws everything that depends on them.
+    const grids = this.grids();
+    this.syncDetails(s, grids);
 
-    // Continents not shown yet: plain shapes that add their climate on click.
-    const world = atlas.world;
-    if (world)
-      this.layer('others', [ids, atlas.continents.length], (group) => {
-        for (const c of atlas.continents) {
-          if (atlas.loadedIds.includes(c.id)) continue;
-          const rings = worldRings(world[c.id] ?? '');
-          if (!rings.length) continue;
-          const mb = (c.gzipBytes / 1e6).toFixed(1);
-          L.polygon(rings, {
-            pane: 'others',
-            className: `wt-other wt-other-${c.id}`,
-            weight: 1,
-          })
-            .bindTooltip(
-              `${c.name}: click to add its climate (${mb}MB)`,
-              STICKY_TIP,
-            )
-            .on(
-              'click',
-              this.unlessDrawing(() => this.owner?.planner.addContinent(c.id)),
-            )
-            .addTo(group);
-        }
-      });
-
-    if (loaded.length) {
-      const grids = loaded.map((l) => l.climate);
-      // Relief and borders are the same in every climate; these aren't.
-      const climate = `${ids}/${atlas.climateId}`;
+    if (grids.length) {
       this.layer(
         'temp',
-        [s.week, s.tempMetric, s.showTemp, climate],
+        [s.week, s.tempMetric, s.showTemp, ...grids],
         (group) => {
           if (!s.showTemp) return;
-          // One image per continent; cells an earlier one covers are left out.
-          grids.forEach((g, k) => {
-            const r = temperatureRaster(
-              g,
-              s.phase,
-              s.tempMetric,
-              grids.slice(0, k),
+          for (const g of grids) {
+            const r = cachedRaster(g, `temp/${s.week}/${s.tempMetric}`, () =>
+              temperatureRaster(g, s.phase, s.tempMetric),
             );
             L.imageOverlay(r.url, r.bounds, {
               pane: 'climate',
               interactive: false,
             }).addTo(group);
-          });
+          }
         },
       );
       const isEmoji = s.rainMetric === 'days';
       const block = this.rainBlock(grids[0]!.step, isEmoji ? 30 : 9);
       this.layer(
         'rain',
-        [climate, s.week, s.rainMetric, s.rainThreshold, s.showRain, block],
+        [s.week, s.rainMetric, s.rainThreshold, s.showRain, block, ...grids],
         (group) => {
           if (!s.showRain) return;
           if (isEmoji) {
-            const marks = grids.flatMap((g, k) =>
-              rainMarks(g, s.phase, s.rainThreshold, block, grids.slice(0, k)),
+            const marks = grids.flatMap((g) =>
+              rainMarks(g, s.phase, s.rainThreshold, block),
             );
             new EmojiLayer(marks).addTo(group);
             return;
@@ -511,14 +528,13 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             pane: 'rain',
             padding: 0.3,
           }));
-          grids.forEach((g, k) => {
+          for (const g of grids) {
             for (const d of rainDots(
               g,
               s.phase,
               s.rainMetric,
               s.rainThreshold,
               block,
-              grids.slice(0, k),
             )) {
               L.circle(latLng(d), {
                 radius: d.radius,
@@ -531,30 +547,27 @@ class LeafletModifier extends Modifier<LeafletSignature> {
                 fillOpacity: 0.6,
               }).addTo(group);
             }
-          });
+          }
         },
       );
     }
 
-    // Every other route, dashed: the presets of the shown continents and your
-    // own routes. Click one to pick it. The Routes toggle hides them (the
+    // Every other route, dashed: the presets and your own routes. Click one to pick it. The Routes toggle hides them (the
     // selected route always shows).
     const selectedId = s.route?.id;
     this.layer(
       'overview',
-      [ids, selectedId, atlas.overview.length, s.ownRoutes, s.details.routes],
+      [selectedId, atlas.overview.length, s.ownRoutes, s.details.routes],
       (group) => {
         if (!s.details.routes) return;
         const names = new Map(atlas.presets.map((r) => [r.id, r.name]));
         const others = [
-          ...atlas.overview
-            .filter((r) => atlas.loadedIds.includes(r.continent))
-            .map((r) => ({
-              id: r.id,
-              name: names.get(r.id) ?? r.id,
-              color: r.color,
-              line: r.lat.map((lat, i) => [lat, r.lon[i]!] as [number, number]),
-            })),
+          ...atlas.overview.map((r) => ({
+            id: r.id,
+            name: names.get(r.id) ?? r.id,
+            color: r.color,
+            line: r.lat.map((lat, i) => [lat, r.lon[i]!] as [number, number]),
+          })),
           ...s.ownRoutes.map((r) => ({
             id: r.id,
             name: r.name,
@@ -772,26 +785,6 @@ const latLng = (p: { lat: number; lon: number }): [number, number] => [
   p.lon,
 ];
 
-/**
- * Rings of a continent from world.json, whose SVG paths use x = lon + 180 and
- * y = 90 − lat ("M x,y L x,y … Z" per ring).
- */
-
-function worldRings(d: string): [number, number][][] {
-  return d
-    .split('M')
-    .filter(Boolean)
-    .map((ring) =>
-      ring
-        .replace('Z', '')
-        .split('L')
-        .map((pt) => {
-          const [x, y] = pt.split(',').map(Number);
-          return [90 - y!, x! - 180] as [number, number];
-        }),
-    );
-}
-
 interface WheelMapSignature {
   Element: HTMLDivElement;
 }
@@ -825,6 +818,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
       ) as Record<MapDetail, boolean>,
       cities: p.cities,
       detailFiles: this.atlas.details.size,
+      tiles: this.atlas.tiles.size,
       showCycleNet: p.isDrawing && p.snapToRoutes,
     };
   }
