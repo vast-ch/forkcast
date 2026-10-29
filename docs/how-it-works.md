@@ -205,6 +205,11 @@ Under the map, one column per day: the day number on top, a bar from the night l
 - **Altitude:** when a point's height is known, high and low are shifted by the month's lapse rate (4.4–6.8 °C per 1,000 m, smaller in winter) for the difference between the point and the cell's mean height. A constant 6.5 °C/km over-warmed winter valleys; see data/README.md for the measured comparison.
 - **Rainy days:** read from the counted layers (≥ 1, 5, 10 mm). The chance
   that a day is rainy is the month's rainy days divided by its length.
+- **Rain when it rains:** the month's rain divided by its days with at least
+  1 mm (the standard "simple daily intensity"), whatever the rainy-day
+  threshold: an average spread over the dry days too can't tell a daily
+  drizzle from a fortnightly downpour. Left out where fewer than one day in
+  50 has rain.
 
 ## Planning the trip
 

@@ -270,8 +270,8 @@ export default class ItineraryChart extends Component<{
             <div><dt>Rain chance</dt><dd>{{fmtPct
                   this.detail.weather.rainChance
                 }}</dd></div>
-            <div><dt>Avg rain</dt><dd>{{fmtMm
-                  this.detail.weather.rainMm
+            <div><dt>When it rains</dt><dd>{{fmtMm
+                  this.detail.weather.wetDayMm
                 }}</dd></div>
             <div><dt>Daylight</dt><dd>{{fmtDaylight
                   this.detail.daylight

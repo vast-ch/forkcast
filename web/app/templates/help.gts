@@ -289,8 +289,11 @@ export default class Help extends Component {
                   of the day's ride.</dd></div>
               <div><dt>High</dt><dd>The day's high in the middle of the day's
                   ride, where you spend most of the riding hours.</dd></div>
-              <div><dt>Rain</dt><dd>The chance that the day is rainy, and the
-                  average rain, also in the middle of the ride.</dd></div>
+              <div><dt>Rain</dt><dd>The chance that the day is rainy, and how
+                  much rain a day brings when it rains (at least 1 mm), also in
+                  the middle of the ride. That says more than an average spread
+                  over the dry days too: 1 mm a day on average can be a drizzle
+                  every day or a downpour once a fortnight.</dd></div>
               <div><dt>Distance</dt><dd>With the stretch of the route (km from
                   the start) and the climbing: every ascent along it added up.</dd></div>
               <div><dt>Riding</dt><dd>The distance at your average speed: time
