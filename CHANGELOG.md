@@ -10,6 +10,7 @@
 
 ### Changed
 
+- The trip summary's coldest night is now called the coldest *average* night, which is what it always was. Single nights vary a few degrees around their average, so the help now says to expect some nights colder than that.
 - Rainy riding days in the trip summary now come with a range, e.g. "9 (6–12)": how many 8 trips out of 10 get. Rain comes in spells, so some trips catch a lot more than the average and some a lot less.
 - Pop-up calendars now have a clear edge and shadow, so they stand out from the panel behind them.
 

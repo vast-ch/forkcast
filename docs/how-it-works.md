@@ -218,6 +218,11 @@ Under the map, one column per day: the day number on top, a bar from the night l
   end of the stretch, where you sleep, because that is the night you feel.
 - **Climbing** sums every ascent along the stretch from the track's elevation.
 - **Daylight** (`web/app/utils/sun.ts`) is sunrise at the start of the stretch to sunset at its end, from the sunrise equation NOAA's solar calculator uses (within a minute or two). Both are absolute times, so the difference needs no time zones, which is why the app shows the duration rather than clock times: those would need each place's time zone (Spain, for one, keeps Central European time west of Greenwich). Midnight sun counts as 24 h, polar night as none.
+- **Coldest average night** is the lowest of the nights' mean lows. It is
+  not the coldest night to expect: single nights scatter around their mean,
+  so the trip's actually coldest night is usually colder. Saying by how much
+  needs the spread of daily lows, which the monthly temperature data doesn't
+  have; the summary says "average" and the help says to expect colder.
 - **Rainy riding days** is the sum of the daily chances: an expected number,
   not a forecast. Its range (`rainyDaysRange`) is where 8 trips out of 10
   fall: the count taken as beta-binomial, with the spread widened from what
