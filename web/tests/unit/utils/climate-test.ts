@@ -28,7 +28,6 @@ function grid(pre: number, r1: number): ClimateGrid {
     tile: 10,
     size: 1,
     tiles: [],
-    overview: CELL,
     dtype: 'u8',
     vars: ['tmx', 'tmn', 'pre', 'r1', 'r5', 'r10'],
     terms: 7,

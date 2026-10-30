@@ -33,6 +33,8 @@ module('Acceptance | planner', function (hooks) {
   test('days come with how far they stray, place by place', async function (assert) {
     const atlas = this.owner.lookup('service:atlas');
     await visit('/');
+    await atlas.pick('50_30');
+    await atlas.pick('0_100');
     const at = (phase: number, lat: number, lon: number) =>
       atlas.climate!.at(phase, lat, lon, 5);
     const moscowJanuary = at(0.04, 55.75, 37.6).lowSpread;
@@ -65,14 +67,44 @@ module('Acceptance | planner', function (hooks) {
     assert.true(atlas.tiles.has('40_0'), 'the Alps and eastern Spain');
     assert.true(atlas.tiles.has('30_-10'), 'Andalusia');
     const climate = atlas.climate!;
-    assert.notStrictEqual(
-      climate.gridAt(46.69, 7.86),
-      climate.overview,
+    assert.strictEqual(
+      climate.gridAt(46.69, 7.86)?.step,
+      0.25,
       'Interlaken is read from its tile',
     );
-    assert.strictEqual(climate.gridAt(46.69, 7.86).step, 0.25);
   });
 
+  test('only the squares of the route load, and a click on the map loads another', async function (assert) {
+    const atlas = this.owner.lookup('service:atlas');
+    await visit('/');
+    assert.deepEqual(
+      [...atlas.tiles.keys()].sort(),
+      ['30_-10', '30_0', '40_-10', '40_0'],
+      'Interlaken – Málaga: four squares, nothing world-wide',
+    );
+    assert.true(
+      Number.isNaN(atlas.climate!.at(0.04, 55.75, 37.6, 5).high),
+      'Moscow: nothing known yet',
+    );
+    assert.dom('[data-tile="50_30"]').exists('its square is outlined');
+    // A real click on an outlined square (the test page is scaled, so where
+    // exactly it lands is Leaflet's business): that square loads.
+    const square = find('[data-tile="50_30"]')!;
+    const box = square.getBoundingClientRect();
+    await click(square, {
+      clientX: box.left + box.width / 2,
+      clientY: box.top + box.height / 2,
+    });
+    const [picked] = atlas.squares;
+    assert.strictEqual(atlas.squares.length, 1, 'kept for the next visit');
+    assert.true(atlas.tiles.has(picked!), 'the clicked square loaded');
+    assert.dom(`[data-tile="${picked}"]`).doesNotExist('its outline is gone');
+    await atlas.pick('50_30');
+    assert.false(
+      Number.isNaN(atlas.climate!.at(0.04, 55.75, 37.6, 5).high),
+      'Moscow, once its square is in',
+    );
+  });
   test('the climate switches the grids the map and the trip use', async function (assert) {
     const atlas = this.owner.lookup('service:atlas');
     // Madrid, mid-July: last 5 years are warmer than the 15-year average.

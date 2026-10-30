@@ -13,7 +13,7 @@ A bikepacking weather planner built on climate records rather than forecasts, so
 
 **Live at [forkcast.vast.earth](https://forkcast.vast.earth).** What changed in each release: [CHANGELOG.md](CHANGELOG.md), also shown in the app at [/changelog](https://forkcast.vast.earth/changelog).
 
-- **The map:** 15 years of climate records for any week of the year: average highs or lows as colour, rain on top: rainy days a week (over 1, 5 or 10mm) as emoji, or mm as dots. It opens on Europe and covers the whole world: zoom in anywhere.
+- **The map:** 15 years of climate records for any week of the year: average highs or lows as colour, rain on top: rainy days a week (over 1, 5 or 10mm) as emoji, or mm as dots. It opens on Europe and covers the whole world: click any 10° square to load its climate.
 - **Routes:** all 17 EuroVelo routes and a demo route, Interlaken – Málaga, are built in. You can also draw your own or import a GPX, and export any route as GPX.
 - **The trip:** set a start date, km per day, average speed and a pattern of riding and rest days (e.g. ride 5, rest 2, repeat).
 - **Each day:** the expected high, low and chance of rain where you'll be on that date, plus climbing, riding time and hours of daylight. A 🔦 marks days with more riding than daylight.
@@ -72,7 +72,7 @@ docker compose --profile tools run --rm data status # see data/README.md for the
 docker compose exec ui pnpm build                   # writes web/dist
 ```
 
-`web/dist` is the whole site, data included (about 134 MB; a visitor downloads the world at a glance, about 1 MB gzipped, then only the 10° squares they zoom into or ride through, about 30 kB each): upload it to any static host.
+`web/dist` is the whole site, data included (about 134 MB; a visitor downloads only the 10° squares of climate their route crosses or they click, about 30 kB each): upload it to any static host.
 
 - **Serve it from the domain root.** Asset URLs are absolute (`/assets/…`); a sub-path such as `example.com/forkcast/` needs `rootURL` in `web/config/environment.js` and Vite's `base` changed to match.
 - **Deep links work without rewrite rules:** the build writes `help/index.html`, one `help/<section>/index.html` per help tab (`web/app/help-sections.json`) and a `404.html` fallback, all copies of `index.html`. Settings live in the query string, so the planner's links are all `/`.
@@ -85,7 +85,7 @@ docker compose exec ui pnpm build                   # writes web/dist
 |---|---|
 | `web/` | The app: Ember 7.3 (`.gts`, TypeScript), Vite + Embroider, Leaflet, Tailwind 4, Frontile. pnpm. |
 | `data/` | Python (uv) builders for the data files the app loads. |
-| `data/out/` | Built data, committed: `climate/<climate>.json` (a climate's header) and `climate/<climate>/` (its seasonal curves as byte grids: one file per 10° tile with land, and a 1° world overview), for the 2011–2025 climate (`last15`) and the others (last 10 and 5 years, 2025 alone, El Niño, La Niña); the world's `countries.json` (TopoJSON), `places.json`, `water.json` and `cyclenet.json`; `routes/index.json` and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
+| `data/out/` | Built data, committed: `climate/<climate>.json` (a climate's header) and `climate/<climate>/` (its seasonal curves as byte grids: one file per 10° tile with land), for the 2011–2025 climate (`last15`) and the others (last 10 and 5 years, 2025 alone, El Niño, La Niña); the world's `countries.json` (TopoJSON), `places.json`, `water.json` and `cyclenet.json`; `routes/index.json` and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
 | `data/eurovelo/` | The official EuroVelo GPX tracks (gzipped, ODbL), with their licence. |
 | `data/cache/` | Downloads and BRouter responses (git-ignored). |
 | `compose.yaml` | `ui` (dev), `web` (prod, profile `prod`), `data` (builder, profile `tools`). |

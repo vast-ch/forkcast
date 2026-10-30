@@ -124,6 +124,8 @@ export interface Hover {
   lon: number;
   /** The average climate there in the week shown, if there is data */
   climate: DayClimate | null;
+  /** A square with climate data that isn't loaded yet (a click loads it), or is on its way */
+  square?: 'unloaded' | 'loading';
   /** Set when the pointer is near the selected route */
   onRoute?: {
     km: number;
@@ -381,8 +383,8 @@ export default class PlannerService extends Service {
     const route = this.route;
     const climate = this.atlas.climate;
     if (!route || !climate || route.points.length < 2) return undefined;
-    // The tiles along the route, for the finest data; until they are in, the
-    // overview answers, and the trip is planned again as each arrives.
+    // The tiles along the route; until they are in, its days have no
+    // weather, and the trip is planned again as each arrives.
     void this.atlas.want('route', tilesAlong(route, climate.header.tile));
     return planTrip(route, climate, {
       start: this.start,

@@ -963,3 +963,17 @@ body {
 }
 
 /* stylelint-enable */
+
+/* Squares with climate data not loaded yet: a click loads one. */
+.wt-square {
+  stroke: var(--wt-accent);
+  stroke-opacity: 0.45;
+  stroke-dasharray: 4 4;
+  fill: var(--wt-accent);
+  fill-opacity: 0.04;
+}
+
+.wt-square-loading {
+  stroke-dasharray: none;
+  fill-opacity: 0.12;
+}

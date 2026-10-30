@@ -1,5 +1,5 @@
 // Climate normals on a regular lat/lon grid, as smooth seasonal curves, in 10°
-// tiles and a coarse world overview (built by data/forkcast_data/era5land.py
+// tiles (built by data/forkcast_data/era5land.py
 // and variants.py, packed into curves and tiles by pack.py).
 
 import { isMissing } from './helpers';
@@ -19,8 +19,8 @@ export interface GridGeometry {
 }
 
 /**
- * Header of a climate (data/out/climate/<climate>.json): what its tiles and
- * overview hold and how their bytes are read.
+ * Header of a climate (data/out/climate/<climate>.json): what its tiles hold
+ * and how their bytes are read.
  */
 export interface ClimateHeader {
   source: string;
@@ -40,8 +40,6 @@ export interface ClimateHeader {
   size: number;
   /** The tiles there are (where there is land), by id (see tileId) */
   tiles: string[];
-  /** The coarse grid of the whole world, for the map zoomed out */
-  overview: GridGeometry;
   /** One byte per value, decoded with `encoding` */
   dtype: 'u8';
   /** Layers stored as seasonal curves, as many terms each as its encoding lists */
@@ -552,14 +550,25 @@ export function tileArea(
   ];
 }
 
+/** A day where no tile is loaded: nothing known. */
+const UNKNOWN: DayClimate = {
+  high: Number.NaN,
+  low: Number.NaN,
+  highSpread: Number.NaN,
+  lowSpread: Number.NaN,
+  rainMm: Number.NaN,
+  rainChance: Number.NaN,
+  wetDayMm: Number.NaN,
+  altitudeShift: 0,
+};
+
 /**
- * One climate as the trip and the map read it: the tiles loaded so far, and
- * the coarse world overview wherever there is no tile yet.
+ * One climate as the trip and the map read it: the tiles loaded so far.
+ * Where none is, nothing is known (NaN) until it arrives.
  */
 export class TiledClimate implements ClimateSource {
   constructor(
     readonly header: ClimateHeader,
-    readonly overview: ClimateGrid,
     readonly tiles: ReadonlyMap<string, ClimateGrid>,
   ) {}
 
@@ -567,13 +576,13 @@ export class TiledClimate implements ClimateSource {
     return this.header.years;
   }
 
-  /** The finest grid loaded for a point. */
-  gridAt(lat: number, lon: number): ClimateGrid {
-    return this.tiles.get(tileId(lat, lon, this.header.tile)) ?? this.overview;
+  /** The tile of a point, if loaded. */
+  gridAt(lat: number, lon: number): ClimateGrid | undefined {
+    return this.tiles.get(tileId(lat, lon, this.header.tile));
   }
 
   covers(lat: number, lon: number): boolean {
-    return this.gridAt(lat, lon).covers(lat, lon);
+    return this.gridAt(lat, lon)?.covers(lat, lon) ?? false;
   }
 
   at(
@@ -583,6 +592,8 @@ export class TiledClimate implements ClimateSource {
     threshold: number,
     ele?: number | null,
   ): DayClimate {
-    return this.gridAt(lat, lon).at(phase, lat, lon, threshold, ele);
+    return (
+      this.gridAt(lat, lon)?.at(phase, lat, lon, threshold, ele) ?? UNKNOWN
+    );
   }
 }
