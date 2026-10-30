@@ -35,6 +35,8 @@ export interface TripDay {
   weather: DayClimate;
   /** Low at the overnight stop */
   nightLow: number;
+  /** How far single lows there stray from it (°C, a standard deviation) */
+  nightLowSpread: number;
   /** Hours in the saddle at the average speed (0 on rest days) */
   ridingHours: number;
   /** More riding time than daylight: part of the day is ridden in the dark */
@@ -50,7 +52,11 @@ export interface Trip {
   end: Date;
   km: number;
   avgHigh: number;
-  coldestNight: TripDay | undefined;
+  lowestLow: TripDay | undefined;
+  /** The trip's lowest single low, in an average year: as likely to come out colder as warmer (see likelyExtreme) */
+  likelyLowest: number;
+  /** The same for its highest high on a riding day */
+  likelyHighest: number;
   /** Expected number of days with some rain, riding days only */
   rainyDays: number;
   /** Fewest and most rainy riding days in 8 trips out of 10 (see rainyDaysRange) */
@@ -96,6 +102,9 @@ export function planTrip(
     const mid = pointAt(route.points, (km + to) / 2);
     const sleep = pointAt(route.points, to);
     const weather = climateOn(climate, date, mid, settings.rainThreshold);
+    const night = isRest
+      ? weather
+      : climateOn(climate, date, sleep, settings.rainThreshold);
     const daylight = daylightHours(date, here, sleep);
     const ridingHours = (to - km) / settings.speed;
     days.push({
@@ -109,9 +118,8 @@ export function planTrip(
       climb: isRest ? 0 : climbBetween(route.points, km, to),
       sleep,
       weather,
-      nightLow: isRest
-        ? weather.low
-        : climateOn(climate, date, sleep, settings.rainThreshold).low,
+      nightLow: night.low,
+      nightLowSpread: night.lowSpread,
       daylight,
       needsLights: !isRest && ridingHours > daylight,
     });
@@ -136,7 +144,15 @@ export function planTrip(
     km: total,
     avgHigh:
       valid.reduce((s, d) => s + d.weather.high, 0) / (valid.length || 1),
-    coldestNight: coldest,
+    lowestLow: coldest,
+    likelyLowest: likelyExtreme(
+      days.map((d) => [d.nightLow, d.nightLowSpread]),
+      'lowest',
+    ),
+    likelyHighest: likelyExtreme(
+      valid.map((d) => [d.weather.high, d.weather.highSpread]),
+      'highest',
+    ),
     rainyDays: valid.reduce((s, d) => s + d.weather.rainChance, 0),
     rainyDaysRange: rainyDaysRange(
       valid.map((d) => d.weather.rainChance),
@@ -157,6 +173,63 @@ const SPELL_FACTOR: Record<number, number> = { 1: 2, 5: 1.6, 10: 1.5 };
 
 /** Share of trips below the range, and above it. */
 const RANGE_TAIL = 0.1;
+
+/**
+ * Low lows and high highs come in spells, so a trip's lows are fewer
+ * independent tries at a low one than there are lows: about one in 2, and
+ * one in 2.5 for hot days. Measured on NOAA CPC's daily highs and lows,
+ * 2011–2025, at 1,200 random places, trips of 7 to 60 days: with these, the
+ * real lowest low came out below likelyExtreme's in 47–51% of trips (the
+ * highest high above it in 40–58%), against 21–32% counting every day.
+ */
+const EXTREME_SPELL = { lowest: 2, highest: 2.5 } as const;
+
+/** The normal distribution's cumulative probability (Abramowitz–Stegun 7.1.26, within 1.5e-7). */
+function normalCdf(z: number): number {
+  const a = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * a);
+  const erf =
+    1 -
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) *
+      t +
+      0.254829592) *
+      t *
+      Math.exp(-a * a);
+  return 0.5 * (1 + Math.sign(z) * erf);
+}
+
+/**
+ * The lowest (or highest) single value over some days, each [mean, spread]
+ * with normally distributed days, that the trip is as likely to beat as not:
+ * x where the chance that every day stays on the mild side of it, counted
+ * over 1 in EXTREME_SPELL days (but at least one), is one half. NaN without
+ * spreads.
+ */
+export function likelyExtreme(
+  days: [number, number][],
+  side: 'lowest' | 'highest',
+): number {
+  const known = days.filter(([m, s]) => !Number.isNaN(m) && s > 0);
+  if (known.length === 0) return Number.NaN;
+  const sign = side === 'lowest' ? -1 : 1;
+  // In "how far beyond" terms (−x for the lowest), so both sides search alike.
+  // At least one try: a trip shorter than a spell gets its days' typical value.
+  const target = Math.min(EXTREME_SPELL[side], known.length) * Math.log(0.5);
+  const logMild = (x: number) =>
+    known.reduce(
+      (sum, [m, s]) =>
+        sum + Math.log(Math.max(1e-300, normalCdf((x - sign * m) / s))),
+      0,
+    );
+  let lo = Math.min(...known.map(([m, s]) => sign * m - 6 * s));
+  let hi = Math.max(...known.map(([m, s]) => sign * m + 6 * s));
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (logMild(mid) < target) lo = mid;
+    else hi = mid;
+  }
+  return (sign * (lo + hi)) / 2;
+}
 
 /**
  * The fewest and most rainy days in 8 trips out of 10, given each day's chance.

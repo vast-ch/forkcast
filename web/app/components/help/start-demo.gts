@@ -98,8 +98,8 @@ export default class StartDemo extends Component {
         aria-label="Temperature"
         as |Ctl|
       >
-        <Ctl.Item @value="high">Day high</Ctl.Item>
-        <Ctl.Item @value="low">Night low</Ctl.Item>
+        <Ctl.Item @value="high">High</Ctl.Item>
+        <Ctl.Item @value="low">Low</Ctl.Item>
       </SegmentedControl>
       <div class="wt-help-calendar">
         <TempCalendar

@@ -26,7 +26,7 @@ export const DEFAULTS = {
   climate: 'last15' as ClimateId,
   /** Quarter-month shown on the map, 0–47 (see utils/weeks.ts); the current one by default */
   week: weekOfDate(new Date()),
-  /** Temperature shown: day high or night low */
+  /** Temperature shown: high or low */
   tempMetric: 'high' as TempMetric,
   /** Show the temperature colours */
   showTemp: true,

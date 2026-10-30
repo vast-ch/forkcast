@@ -44,8 +44,9 @@ export interface ClimateHeader {
   overview: GridGeometry;
   /** One byte per value, decoded with `encoding` */
   dtype: 'u8';
-  /** Layers stored as seasonal curves, `terms` values each (see SEASON_TERMS) */
+  /** Layers stored as seasonal curves, as many terms each as its encoding lists */
   vars: SeasonVar[];
+  /** The most terms a layer has (TERMS); a layer's missing waves are 0 */
   terms: number;
   /** Layers without seasons, stored after the curves. */
   static?: 'elev'[];
@@ -73,6 +74,10 @@ export interface DayClimate {
   high: number;
   /** Mean daily low, °C */
   low: number;
+  /** How far single days' highs stray from `high`: a standard deviation, °C (NaN if unknown) */
+  highSpread: number;
+  /** The same for the lows */
+  lowSpread: number;
   /** Mean precipitation per day, mm */
   rainMm: number;
   /** Chance of a rainy day (at least the chosen threshold of rain), 0..1 */
@@ -175,9 +180,19 @@ export function lapseRateAt(phase: number): number {
 
 /**
  * The seasonal curves: tmx/tmn the mean daily max/min, °C; pre the rain, mm
- * per day; r1/r5/r10 the share of days with at least 1/5/10 mm.
+ * per day; r1/r5/r10 the share of days with at least 1/5/10 mm; tmxsd/tmnsd
+ * how far single days' max/min stray from their mean (a standard deviation, °C).
  */
-type SeasonVar = 'tmx' | 'tmn' | 'pre' | 'r1' | 'r5' | 'r10';
+type SeasonVar =
+  'tmx' | 'tmn' | 'pre' | 'r1' | 'r5' | 'r10' | 'tmxsd' | 'tmnsd';
+
+/** 8 days in 10 fall within this many standard deviations of the mean (normal distribution). */
+const USUAL_Z = 1.2816;
+
+/** The range 8 days in 10 fall within: a mean ± USUAL_Z spreads. */
+export function usualRange(mean: number, spread: number): [number, number] {
+  return [mean - USUAL_Z * spread, mean + USUAL_Z * spread];
+}
 
 export default class ClimateGrid implements ClimateSource {
   readonly source: string;
@@ -197,8 +212,9 @@ export default class ClimateGrid implements ClimateSource {
   /**
    * @param header how values are stored
    * @param geometry where the cells are
-   * @param buffer one byte per value, laid out [variable][term][row][col],
-   *   then the static layers [variable][row][col]
+   * @param buffer one byte per value, laid out [variable][term][row][col]
+   *   (each variable with the terms its encoding lists), then the static
+   *   layers [variable][row][col]
    * @param area what the grid answers for, if not all of it
    */
   constructor(
@@ -219,29 +235,31 @@ export default class ClimateGrid implements ClimateSource {
       throw new Error(`Climate grid has ${header.terms} terms, not ${TERMS}`);
     const raw = new Uint8Array(buffer);
     const cells = this.rows * this.cols;
-    header.vars.forEach((v, vi) => {
+    let first = 0; // the layer's first byte
+    for (const v of header.vars) {
       const encodings = header.encoding[v] ?? [];
       const c = new Float32Array(cells * TERMS);
       for (let i = 0; i < cells; i++) {
-        const at = vi * TERMS * cells + i;
+        const at = first + i;
         if (raw[at] === header.nodata) {
           c[i * TERMS] = Number.NaN;
           continue;
         }
         const mean = decode(encodings[0], raw[at]!);
         c[i * TERMS] = mean;
-        for (let t = 1; t < TERMS; t++) {
+        for (let t = 1; t < encodings.length; t++) {
           const e = encodings[t];
           const x = decode(e, raw[at + t * cells]!);
           c[i * TERMS + t] = e?.kind === 'linear' && e.relative ? x * mean : x;
         }
       }
       this.season[v] = c;
-    });
+      first += encodings.length * cells;
+    }
     const statics = header.static ?? [];
     const e = statics.indexOf('elev');
     if (e >= 0) {
-      const off = (header.vars.length * TERMS + e) * cells;
+      const off = first + e * cells;
       this.elev = new Float32Array(cells);
       for (let i = 0; i < cells; i++) {
         const x = raw[off + i]!;
@@ -394,6 +412,8 @@ export default class ClimateGrid implements ClimateSource {
     return {
       high: this.sampleAt('tmx', phase, lat, lon) + shift,
       low: this.sampleAt('tmn', phase, lat, lon) + shift,
+      highSpread: this.sampleAt('tmxsd', phase, lat, lon),
+      lowSpread: this.sampleAt('tmnsd', phase, lat, lon),
       rainMm: rain,
       rainChance: chance,
       wetDayMm: wet >= MIN_WET_SHARE ? rain / wet : Number.NaN,

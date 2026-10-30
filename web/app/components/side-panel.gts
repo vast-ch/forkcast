@@ -140,16 +140,18 @@ export default class SidePanel extends Component<SidePanelSignature> {
   get summary() {
     const t = this.trip;
     if (!t) return [];
-    const cold = t.coldestNight;
+    const cold = t.lowestLow;
     return [
       ['Days', t.days.length],
       ['Arrive', fmtDate(t.end)],
       ['Riding days', t.ridingDays],
       ['Rest days', t.restDays],
       ['Average high', fmtTemp(t.avgHigh)],
+      ['Highest high, likely', fmtTemp(t.likelyHighest)],
       ['Rainy riding days', fmtRainyDays(t.rainyDays, t.rainyDaysRange)],
-      ['Coldest average night', cold ? fmtTemp(cold.nightLow) : '–'],
-      ['Coldest night on', cold ? fmtShortDate(cold.date) : '–'],
+      ['Lowest low, likely', fmtTemp(t.likelyLowest)],
+      ['Lowest average low', cold ? fmtTemp(cold.nightLow) : '–'],
+      ['Lowest average low on', cold ? fmtShortDate(cold.date) : '–'],
     ].map(([label, value]) => ({ label, value }));
   }
 
@@ -494,8 +496,8 @@ export default class SidePanel extends Component<SidePanelSignature> {
               aria-label="Temperature shown"
               as |Ctl|
             >
-              <Ctl.Item @value="high">Day high</Ctl.Item>
-              <Ctl.Item @value="low">Night low</Ctl.Item>
+              <Ctl.Item @value="high">High</Ctl.Item>
+              <Ctl.Item @value="low">Low</Ctl.Item>
             </SegmentedControl>
           </div>
           <div class="flex items-center justify-between gap-3">

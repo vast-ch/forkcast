@@ -50,7 +50,7 @@ module('Acceptance | help', function (hooks) {
     const north = picked();
     await click(button('Málaga'));
     assert.true(picked() > north, 'Málaga is warmer than Nordkapp');
-    await click(button('Night low'));
+    await click(button('Low'));
     assert
       .dom('[data-selected="true"] .wt-temp-day')
       .hasAttribute('title', /^Low in Málaga: /);

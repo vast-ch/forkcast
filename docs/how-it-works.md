@@ -45,7 +45,7 @@ anyone the rider didn't send it to.
 ## What gets downloaded, and when
 
 1. **On start:** the code, `routes/index.json` (the preset routes, under 1 kB gzipped), `routes/overview.json` (every preset route simplified to ~1 km, 64 kB), `countries.json` (the world's borders as TopoJSON, 231 kB) and the climate's header and world overview (`climate/<climate>.json` and `climate/<climate>/overview.bin`: the whole world at 1°, 530 kB). The app opens straight on the planner, on Europe; there is no separate start page.
-2. **As the map is zoomed in, and along the route:** from zoom 5 on (a country or two in view) the map draws from the 0.25° tiles in view (`climate/<climate>/<lat>_<lon>.bin`, 10° squares, 25–35 kB gzipped each, only where there is land), fetching each as it comes into view; zoomed out it draws from the overview. The trip always uses the tiles its route crosses: they load with the route, and until they're in, the overview answers. Picking another climate (last 10 or 5 years, 2025, El Niño, La Niña) loads its overview and the same tiles of it.
+2. **As the map is zoomed in, and along the route:** from zoom 5 on (a country or two in view) the map draws from the 0.25° tiles in view (`climate/<climate>/<lat>_<lon>.bin`, 10° squares, 25–40 kB gzipped each, only where there is land), fetching each as it comes into view; zoomed out it draws from the overview. The trip always uses the tiles its route crosses: they load with the route, and until they're in, the overview answers. Picking another climate (last 10 or 5 years, 2025, El Niño, La Niña) loads its overview and the same tiles of it.
 
 A tile holds 41 × 41 cells: its edges' cells are also in its neighbours, so any point in it is interpolated from that tile alone, without seams. `TiledClimate` in `web/app/utils/climate.ts` answers each point from its tile if loaded, else from the overview; the map draws each tile's own square, and rain emoji and dots are grouped on the worldwide grid so the patterns line up across tiles.
 
@@ -95,7 +95,7 @@ top.
 
 ## The day chart
 
-Under the map, one column per day: the day number on top, a bar from the night low to the day high, coloured by the high, the chance of a rainy day under it. Rest days are shaded columns, with the weather at the rest stop, and a line, labelled with the month's name along it, marks the start of each month; the selected day's date is above the chart. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
+Under the map, one column per day: the day number on top, a bar from the low to the high, coloured by the high, the chance of a rainy day under it. Rest days are shaded columns, with the weather at the rest stop, and a line, labelled with the month's name along it, marks the start of each month; the selected day's date is above the chart. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
 
 **Why:** a list of days repeated what the chart shows, and on a phone it was a long scroll. The selected day's figures sit above the chart.
 
@@ -182,7 +182,8 @@ Under the map, one column per day: the day number on top, a bar from the night l
   falls back to the nearest land cell.
 - **Through the year:** every cell's twelve monthly values are turned into a
   smooth seasonal curve: the yearly mean plus three harmonics (12-, 6- and
-  4-month waves), 7 numbers per value instead of 12. The data build does the
+  4-month waves), 7 numbers per value instead of 12 (3 for how far days
+  stray: the mean and the yearly wave). The data build does the
   fit and publishes the 7 numbers (`data/forkcast_data/pack.py`; precision
   and size in data/README.md), so the app only evaluates the curves. Rain is fitted as mm per day and rainy days as the share of days, so
   months of different lengths compare fairly; results are clamped to
@@ -220,15 +221,27 @@ Under the map, one column per day: the day number on top, a bar from the night l
   days follow the repeating pattern (ride N, rest M). A trip never ends on a
   rest day.
 - **A day's high and rain** are taken at the middle of its stretch: that is
-  where you spend most of the riding hours. **The night low** is taken at the
-  end of the stretch, where you sleep, because that is the night you feel.
+  where you spend most of the riding hours. **The low** is taken at the end of
+  the stretch, where you sleep, because that is the low you feel.
 - **Climbing** sums every ascent along the stretch from the track's elevation.
 - **Daylight** (`web/app/utils/sun.ts`) is sunrise at the start of the stretch to sunset at its end, from the sunrise equation NOAA's solar calculator uses (within a minute or two). Both are absolute times, so the difference needs no time zones, which is why the app shows the duration rather than clock times: those would need each place's time zone (Spain, for one, keeps Central European time west of Greenwich). Midnight sun counts as 24 h, polar night as none.
-- **Coldest average night** is the lowest of the nights' mean lows. It is
-  not the coldest night to expect: single nights scatter around their mean,
-  so the trip's actually coldest night is usually colder. Saying by how much
-  needs the spread of daily lows, which the monthly temperature data doesn't
-  have; the summary says "average" and the help says to expect colder.
+- **Usual ranges:** each day's high and low come with how far single days
+  stray from them there and then (`highSpread`, `lowSpread`: a standard
+  deviation, measured on NOAA CPC's station data; data/README.md, "How far
+  single days stray"). The usual range, shown in brackets, is where 8 days in 10 fall, mean ± 1.28
+  spreads (`usualRange`); the day chart draws it as a thin line through each
+  bar, from the usual warmest high to the usual coldest low.
+- **Lowest low, likely** and **highest high, likely** (`likelyExtreme`):
+  the value the trip's lowest low (highest high on a riding day) is as likely
+  to beat as not, each low (high) normal with its mean and spread. Lows are
+  not independent tries, since cold comes in spells: counted as one try per 2
+  lows and per 2.5 highs (`EXTREME_SPELL`), measured on CPC's 2011–2025 days
+  at 1,200 places for trips of 7–60 days. With every low counted, the real
+  lowest low came out below the estimate in only 21–32% of trips; with
+  these, 47–51% (the highest high above it 40–58%).
+- **Lowest average low** is the lowest of the days' mean lows, and its
+  date: when the cold is likeliest, while the likely lowest low says how
+  cold.
 - **Rainy riding days** is the sum of the daily chances: an expected number,
   not a forecast. Its range (`rainyDaysRange`) is where 8 trips out of 10
   fall: the count taken as beta-binomial, with the spread widened from what
@@ -283,6 +296,6 @@ Under the map, one column per day: the day number on top, a bar from the night l
 - 0.25° cells (≈ 25 km) still blur narrow coasts; the altitude correction
   helps route points in mountains but not, for example, a seafront town whose
   cell includes hills at the same height.
-- Winter in Alpine valleys reads 2–3 °C too mild, nights more (cold-air pooling, fog).
+- Winter in Alpine valleys reads 2–3 °C too mild, lows more (cold-air pooling, fog).
 - The demo route and EuroVelo tracks are simplified (≈ 30–40 m tolerance),
   which slightly understates climbing.

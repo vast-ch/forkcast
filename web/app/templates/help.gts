@@ -117,8 +117,8 @@ export default class Help extends Component {
             <h3>Temperature</h3>
             <p>
               The colour is the average
-              <strong>day high</strong>, or the
-              <strong>night low</strong>
+              <strong>high</strong>, or the
+              <strong>low</strong>
               if you switch to it. The same colours fill the temperature pills
               for a day of your trip and for a spot on the map:
             </p>
@@ -218,10 +218,10 @@ export default class Help extends Component {
             <h3>Pointing at the map</h3>
             <p>
               Point at the map (tap, on a phone) to read that spot's averages
-              for the week: the night low and day high, the week's rain and how
-              many of its days are rainy. Point at your route instead to see
-              which day of your trip you'd be there, and the weather expected on
-              that date.
+              for the week: the low and high, the week's rain and how many of
+              its days are rainy. Point at your route instead to see which day
+              of your trip you'd be there, and the weather expected on that
+              date.
             </p>
           </section>
         {{/if}}
@@ -245,10 +245,10 @@ export default class Help extends Component {
             <h3>Picking a start date</h3>
             <p>
               The start date's calendar is coloured by the weather where your
-              route begins if you set off that day: the day high, or the night
-              low when the map shows lows, in the map's colours. A good time to
-              leave stands out at a glance; hover over a day to read its
-              temperature. Try a few starting towns:
+              route begins if you set off that day: the high, or the low when
+              the map shows lows, in the map's colours. A good time to leave
+              stands out at a glance; hover over a day to read its temperature.
+              Try a few starting towns:
             </p>
             <StartDemo />
 
@@ -259,7 +259,7 @@ export default class Help extends Component {
             <ul>
               <li>a
                 <strong>bar</strong>
-                from the night low to the day high, coloured by the high;</li>
+                from the low to the high, coloured by the high;</li>
               <li>underneath, the
                 <strong>chance of a rainy day</strong>;</li>
               <li>a
@@ -286,10 +286,16 @@ export default class Help extends Component {
 
             <h3>A day's numbers</h3>
             <dl class="wt-help-defs">
-              <div><dt>Low</dt><dd>The night's low where you sleep, at the end
-                  of the day's ride.</dd></div>
+              <div><dt>Low</dt><dd>The low where you sleep, at the end of the
+                  day's ride.</dd></div>
               <div><dt>High</dt><dd>The day's high in the middle of the day's
                   ride, where you spend most of the riding hours.</dd></div>
+              <div><dt>(9 to 20 °C)</dt><dd>In brackets next to the low and the
+                  high: the usual range, where 8 days in 10 fall at that time of
+                  year. The thin line through each day's bar in the chart shows
+                  it, from the usual highest high to the usual lowest low. How
+                  wide it is depends on the place: a few degrees by the sea or
+                  in the tropics, 15 °C and more in a continental winter.</dd></div>
               <div><dt>Rain</dt><dd>The chance that the day is rainy, and how
                   much rain a day brings when it rains (at least 1 mm), also in
                   the middle of the ride. That says more than an average spread
@@ -324,10 +330,15 @@ export default class Help extends Component {
                   up: how many to expect, not a promise. In brackets, the range
                   8 trips out of 10 fall in. Rain comes in spells, so some trips
                   catch a lot more and some a lot less.</dd></div>
-              <div><dt>Coldest average night</dt><dd>The night with the lowest
-                  average low, and its date. Single nights often come out 4–6 °C
-                  colder or warmer than their average, so on a trip of more than
-                  a few days, expect some nights colder than this.</dd></div>
+              <div><dt>Highest high, likely</dt><dd>The highest single high your
+                  trip is as likely to beat as not, in a usual year. Heat comes
+                  in spells, which Forkcast takes into account.</dd></div>
+              <div><dt>Lowest low, likely</dt><dd>The same for the lowest single
+                  low: half of trips get a lower one. Pack for a few degrees
+                  below it.</dd></div>
+              <div><dt>Lowest average low</dt><dd>The lowest average low of the
+                  trip, and its date: when to expect the cold, where the likely
+                  lowest low is how cold.</dd></div>
             </dl>
 
             <h3>On a phone</h3>
@@ -412,8 +423,8 @@ export default class Help extends Component {
           <section id="data">
             <h2>Where the numbers come from</h2>
             <p>
-              Forkcast combines two well-established climate datasets, each for
-              what it does best, both from
+              Forkcast combines three well-established climate datasets, each
+              for what it does best, all from
               {{this.years}}.
             </p>
             <dl class="wt-help-defs">
@@ -427,6 +438,11 @@ export default class Help extends Component {
                   from thousands of weather stations. Coarser (about 50 km), but
                   its highs and lows are what thermometers actually recorded, so
                   Forkcast uses it to set their level.</dd></div>
+              <div><dt>NOAA CPC</dt><dd>Daily highs and lows from the world's
+                  weather stations, from the US National Oceanic and Atmospheric
+                  Administration. Forkcast uses it to measure how far single
+                  days stray from the average, place by place: the usual ranges
+                  and the likely lowest low and highest high.</dd></div>
             </dl>
             <p>
               Both are prepared in advance on a grid of 0.25° (about 25 km),
@@ -550,9 +566,10 @@ export default class Help extends Component {
                 ±1.7 °C; more in continental winters (Kraków in January ±2.1 °C)
                 and less by the Mediterranean (Valencia in January ±0.9 °C).</li>
               <li><strong>Day to day</strong>
-                the spread is far larger: single days often sit 4–6 °C above or
-                below the average. Read the numbers as “what to pack for”, not
-                “what it will be”.</li>
+                the spread is far larger, which is why each day comes with its
+                usual range: 8 days in 10 fall in it, so 1 in 10 is warmer and 1
+                in 10 colder. Read the numbers as “what to pack for”, not “what
+                it will be”.</li>
               <li><strong>Rain varies most:</strong>
                 a month's rainfall typically differs from its average by about a
                 third (Interlaken in January: 92 mm on average, ±44 mm).</li>
@@ -565,9 +582,9 @@ export default class Help extends Component {
                 differ; the altitude correction fixes most of that on your
                 route, but not, say, a seafront town whose cell includes hills.</li>
               <li><strong>Winter valleys</strong>
-                in the Alps still come out 2–3 °C too mild, nights more: cold
-                air pooling and fog are too local for the data. Expect colder
-                winter mornings in valleys.</li>
+                in the Alps still come out 2–3 °C too mild, lows more: cold air
+                pooling and fog are too local for the data. Expect colder winter
+                mornings in valleys.</li>
               <li><strong>Tibetan Plateau winters</strong>
                 jump about 10 °C warmer in the data from 2021 on, most likely a
                 flaw in how it tracks snow there. Winters on the Plateau come
@@ -652,7 +669,15 @@ export default class Help extends Component {
                 Anglia. Both averaged over
                 {{this.years}}. Contains modified Copernicus Climate Change
                 Service information 2026; neither the European Commission nor
-                ECMWF is responsible for any use of it.
+                ECMWF is responsible for any use of it. How far single days
+                stray:
+                <a
+                  href="https://psl.noaa.gov/data/gridded/data.cpc.globaltemp.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >CPC Global Unified Temperature</a>
+                data provided by the NOAA PSL, Boulder, Colorado, USA, from
+                their website at https://psl.noaa.gov.
               </li>
               <li>
                 <strong>EuroVelo routes:</strong>

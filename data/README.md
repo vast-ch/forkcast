@@ -30,6 +30,7 @@ work after `data`).
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
 | `details` | Natural Earth populated places (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
 | `oni` | NOAA's Oceanic Niño Index, monthly since 1950 | 10 kB | Decides which months were El Niño or La Niña. |
+| `cpc` | NOAA CPC Global Unified Temperature: daily highs and lows from weather stations, 0.5°, one file per year and kind, 2011–2025 | 2.4 GB | Public domain (NOAA PSL). How far single days stray from the average (see "How far single days stray"). About 1 min a file. |
 | `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API: first an index of every route (id, version, box), then each route's ways by id, 10 routes per query, cached per route and version in `cache/cyclenet/icn/` | a few hundred routes | ODbL, © OpenStreetMap contributors. Rotates through public Overpass servers, waits when asked (429), backs off; a route that keeps failing is skipped and listed, and the next run fetches just those. `--fresh` refreshes the index; changed routes are refetched by version. |
 
 ### Builds (into `out/`, committed)
@@ -41,9 +42,10 @@ work after `data`).
 | `routes` | `eurovelo/`, `cache/brouter/`, `cache/borders/` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `cache/grids/climate.bin` + `climate.json`, the world from 84°N to 60°S, monthly (intermediate) |
+| `spread` | `cache/cpc/`, `cache/grids/climate.json` | `cache/grids/spread.npz`: per month and 0.25° cell, how far single days' highs and lows stray from the average (a standard deviation, °C; intermediate, ~8 min) |
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
 | `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `last1`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
-| `pack` | `cache/grids/` | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land and `overview.bin` (the world at 1°), for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
+| `pack` | `cache/grids/` (with `spread.npz`) | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land and `overview.bin` (the world at 1°), for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
 | `cyclenet` | `cache/cyclenet/icn/` | `out/cyclenet.json`: the ways of every route, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches it only when the rider draws with snapping on. |
 
 `all` runs every download, then every build, in the order of these tables.
@@ -188,6 +190,40 @@ app's first version used it alone; now it calibrates ERA5-Land.
   Result: ERA5-Land's spatial detail at CRU's measured level. The build logs
   the median offset per month so a change in the sources shows up.
 
+### How far single days stray
+
+- **Why:** the averages say what a typical day is like, but a rider meets
+  single days. How far they stray depends on the place and season: Moscow's
+  January nights by 7 °C (a standard deviation), Singapore's by 1 °C,
+  London's summer highs by 3.5 °C. One figure for the world (the help used to
+  say "4–6 °C") is wrong for most places.
+- **What we download:** NOAA CPC's Global Unified Temperature, the daily
+  maximum and minimum of the world's weather stations gridded at 0.5°
+  (`cpc`). ERA5-Land's daily extremes would need the slow CDS
+  daily-statistics service (see "Highs and lows"); CPC is a plain download.
+- **What we measure** (`spread` build, `forkcast_data/cpc.py`): per 0.5° cell,
+  each day's departure from the cell's seasonal curve (mean and three yearly
+  waves fitted to all 15 years of days), then per month the standard deviation
+  of those departures over every year's days in it: day-to-day weather and
+  year-to-year differences together, what a rider can meet. Interpolated to
+  the climate's 0.25° grid; land cells beyond CPC's coastline take their
+  neighbours' value. The averages stay ERA5-Land's; only the spread is CPC's.
+- **Stored:** as two more seasonal curves per cell (`tmxsd`, `tmnsd`), with
+  the mean and the yearly wave only: 3 bytes each, not 7. The monthly values
+  are noisy (15 years of a month's days), and the 3-term curve stays within
+  0.5 °C RMS of them. The same in every climate, since how far days stray
+  hardly depends on which years are averaged.
+- **Used in the app:** each day's usual range, "(9 to 20 °C)", where 8
+  days in 10 fall (mean ± 1.28 standard deviations), and the trip's likely
+  lowest low and highest high. Those count lows and highs as fewer tries
+  than there are, because cold and heat come in spells: one try per 2 lows
+  and per 2.5 highs, measured on CPC at 1,200 places (`EXTREME_SPELL` in
+  `web/app/utils/itinerary.ts`).
+- **Limits:** a normal distribution; real lows have a slightly longer
+  tail in winter inland (cold-air pools), so the lowest lows can be a
+  degree or two colder than the range says. CPC is sparse where stations are
+  (Sahara, Amazon, Siberia's interior): its spread there is interpolated.
+
 ### Altitude
 
 - **Why:** a 0.25° cell is about 25 km across; in mountains its mean height can
@@ -216,11 +252,11 @@ app's first version used it alone; now it calibrates ERA5-Land.
   and ride through, not a continent, and never pick one first. A tile is
   41 × 41 cells: its edge cells are also in its neighbours, so a point is
   interpolated from one tile, without seams (5% more bytes). Only tiles with
-  land are written: 317 per climate, 25–35 kB gzipped each, 6.7 MB for the
-  whole world. Tile `<lat>_<lon>` is named by its south-west corner.
+  land are written: 317 per climate, 25–40 kB gzipped each, 7.4 MB for the
+  whole world with the overview. Tile `<lat>_<lon>` is named by its south-west corner.
 - **Why a 1° overview:** zoomed out to a continent the map needs everything
   in view but not its detail; each overview cell averages the land cells of a
-  4 × 4 block, 0.5 MB gzipped for the world. The app answers from it until a
+  4 × 4 block, 0.6 MB gzipped for the world. The app answers from it until a
   point's tile is in.
 - The files get content-hashed names in the app build and are cached by
   browsers for a year.
@@ -353,4 +389,7 @@ licences" and the map's attribution line) whenever the data is published:
 - **CRU TS** (Open Database License, as linked from the CRU TS download
   page): credit the Climatic Research Unit, University of East Anglia; the
   climatology derived from it stays under the ODbL.
+- **NOAA CPC Global Unified Temperature** (public domain): "CPC Global
+  Unified Temperature data provided by the NOAA PSL, Boulder, Colorado, USA,
+  from their website at https://psl.noaa.gov".
 - **Natural Earth**: public domain; credit is courteous, not required.

@@ -1,5 +1,10 @@
 import { module, test } from 'qunit';
-import { milestones, planTrip, rainyDaysRange } from 'forkcast/utils/itinerary';
+import {
+  likelyExtreme,
+  milestones,
+  planTrip,
+  rainyDaysRange,
+} from 'forkcast/utils/itinerary';
 import { withDistances } from 'forkcast/utils/route';
 import type { ClimateSource, DayClimate } from 'forkcast/utils/climate';
 import { closeTo } from 'forkcast/tests/helpers/close-to';
@@ -11,6 +16,8 @@ const climate: ClimateSource = {
   at: (): DayClimate => ({
     high: 20,
     low: 10,
+    highSpread: 4,
+    lowSpread: 3,
     rainMm: 1,
     rainChance: 0.25,
     wetDayMm: 4,
@@ -44,6 +51,10 @@ const settings = {
   restDays: 1,
   rainThreshold: 5,
 };
+
+/** n days alike, as [mean, spread]. */
+const days = (n: number, d: [number, number]): [number, number][] =>
+  Array.from({ length: n }, () => d);
 
 module('Unit | Utility | itinerary', function () {
   const trip = planTrip(route, climate, settings);
@@ -138,5 +149,24 @@ module('Unit | Utility | itinerary', function () {
         [8, 'Week 2'],
       ],
     );
+  });
+
+  test('the likely lowest low and highest high: as likely beaten as not, counting spells', function (assert) {
+    // One night: its mean. 14 nights of 10 ± 3 °C, as 7 tries: each mild
+    // with 0.25^(1/14), 1.315 spreads below the mean.
+    closeTo(assert, likelyExtreme([[10, 3]], 'lowest'), 10);
+    closeTo(assert, likelyExtreme(days(14, [10, 3]), 'lowest'), 6.06);
+    // 10 days of 20 ± 4 °C, as 4 tries: 0.998 spreads above.
+    closeTo(assert, likelyExtreme(days(10, [20, 4]), 'highest'), 23.99);
+    assert.true(Number.isNaN(likelyExtreme([[10, Number.NaN]], 'lowest')));
+    // The trip: 7 nights of 10 ± 3, 5 riding days of 20 ± 4.
+    closeTo(
+      assert,
+      trip.likelyLowest,
+      likelyExtreme(days(7, [10, 3]), 'lowest'),
+      6,
+    );
+    assert.true(trip.likelyLowest < 10);
+    assert.true(trip.likelyHighest > 20);
   });
 });

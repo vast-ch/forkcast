@@ -10,6 +10,7 @@ import {
   fmtKm,
   fmtMm,
   fmtPct,
+  fmtUsual,
 } from 'forkcast/utils/format';
 
 const round = (n: number | null | undefined) =>
@@ -76,9 +77,17 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             {{#if this.route.weather}}
               <dl class="wt-readout mt-2">
                 <dt>Low</dt>
-                <dd><TempPill @t={{this.route.weather.low}} /></dd>
+                <dd><TempPill @t={{this.route.weather.low}} />
+                  <span class="wt-muted text-xs">{{fmtUsual
+                      this.route.weather.low
+                      this.route.weather.lowSpread
+                    }}</span></dd>
                 <dt>High</dt>
-                <dd><TempPill @t={{this.route.weather.high}} /></dd>
+                <dd><TempPill @t={{this.route.weather.high}} />
+                  <span class="wt-muted text-xs">{{fmtUsual
+                      this.route.weather.high
+                      this.route.weather.highSpread
+                    }}</span></dd>
                 <dt>Rainy day chance</dt>
                 <dd>{{fmtPct this.route.weather.rainChance}}</dd>
                 <dt>When it rains</dt>
@@ -105,10 +114,18 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
         {{else if this.hover.climate}}
           <p class="wt-eyebrow">{{this.weekLabel}} average · {{this.coords}}</p>
           <dl class="wt-readout mt-2">
-            <dt>Night low</dt>
-            <dd><TempPill @t={{this.hover.climate.low}} /></dd>
-            <dt>Day high</dt>
-            <dd><TempPill @t={{this.hover.climate.high}} /></dd>
+            <dt>Low</dt>
+            <dd><TempPill @t={{this.hover.climate.low}} />
+              <span class="wt-muted text-xs">{{fmtUsual
+                  this.hover.climate.low
+                  this.hover.climate.lowSpread
+                }}</span></dd>
+            <dt>High</dt>
+            <dd><TempPill @t={{this.hover.climate.high}} />
+              <span class="wt-muted text-xs">{{fmtUsual
+                  this.hover.climate.high
+                  this.hover.climate.highSpread
+                }}</span></dd>
             <dt>Rain</dt>
             <dd>{{this.weekRain}}</dd>
             <dt>Rainy days (≥{{this.planner.rainThreshold}}mm)</dt>
