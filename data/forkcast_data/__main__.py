@@ -6,21 +6,22 @@
     python -m forkcast_data <command> ... --fresh   redo everything the command covers, ignoring what is there
     python -m forkcast_data status                  what is downloaded and what is up to date
 
-Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
+Downloads (into cache/):
     cru                   CRU TS 4.10 monthly grids (calibrates highs and lows)
     era5land-rain         ERA5-Land daily rain totals, 1981–2025 (Copernicus CDS key needed)
     era5land-temperature  ERA5-Land monthly temperature by hour of day, 1981–2025 (CDS key needed)
     cpc                   NOAA CPC daily highs and lows from weather stations, 2011–2025
     orography             ERA5-Land terrain height (for the altitude correction)
-    eurovelo              official EuroVelo GPX tracks
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
     details               Natural Earth places, rivers and lakes
-    cyclenet              OpenStreetMap international cycle routes via Overpass
+    osm                   the OpenStreetMap planet (about 96 GB; every route comes from it)
+    dem                   Copernicus GLO-90 terrain heights for the routes' area (about 5 GB)
     oni                   NOAA's Oceanic Niño Index (which months were El Niño or La Niña)
 
 Builds (into out/, except the CRU climatology which is an intermediate in cache/):
     borders    the world's country outlines
+    bicycle    every OpenStreetMap bicycle route, cut out of the planet (intermediate)
     details    the world's town names, rivers and lakes
     cyclenet   the world's cycle network (for drawing along routes)
     routes     every preset route plus the route index
@@ -40,7 +41,7 @@ import argparse
 import sys
 import time
 
-from . import basemap, cpc, cru, cyclenet, details, era5land, era5land_download, eurovelo, pack, routes, variants
+from . import basemap, cpc, cru, cyclenet, dem, details, era5land, era5land_download, osm, pack, routes, variants
 from .pipeline import STAMPS, is_verified, log
 
 YEARS = (2011, 2025)
@@ -61,18 +62,19 @@ DOWNLOADS = {
     "era5land-temperature": lambda a: era5land_download.temperature(_history(a), a.fresh),
     "cpc": lambda a: cpc.download(_years(a), a.fresh),
     "orography": lambda a: era5land_download.orography(a.fresh),
-    "eurovelo": lambda a: eurovelo.download(a.fresh),
     "brouter": lambda a: routes.download(a.fresh),
     "borders": lambda a: basemap.download(a.fresh),
     "details": lambda a: details.download(a.fresh),
-    "cyclenet": lambda a: cyclenet.download(a.fresh),
+    "osm": lambda a: osm.download(a.fresh),
+    "dem": lambda a: dem.download(a.fresh),
     "oni": lambda a: variants.download(a.fresh),
 }
 
-# In dependency order: routes need the borders.
+# In dependency order: routes need the borders and the bicycle routes, the cycle network the bicycle routes.
 BUILDS = {
     "borders": lambda a: basemap.build(a.fresh),
     "details": lambda a: details.build(a.fresh),
+    "bicycle": lambda a: osm.build(a.fresh),
     "routes": lambda a: routes.build(a.fresh),
     "cru": lambda a: cru.build(a.y0, a.y1, a.fresh),
     "climate": lambda a: era5land.build(a.y0, a.y1, a.fresh),
@@ -102,10 +104,10 @@ def status(a) -> None:
         "era5land-temperature": [era5land_download.temperature_file(i) for i in y],
         "cpc": cpc.files(_years(a)),
         "orography": [era5land_download.orography_file()],
-        "eurovelo": [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG],
         "borders": [basemap.DIR / n for n in basemap.SOURCES],
         "details": [details.DIR / n for n in details.SOURCES],
-        "cyclenet": cyclenet.files(),
+        "osm": [osm.PLANET],
+        "dem": dem.files(),
         "oni": [variants.ONI_FILE],
     }
     log("downloads (verified / present / expected)")

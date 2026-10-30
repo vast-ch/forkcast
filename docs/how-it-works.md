@@ -255,10 +255,11 @@ Under the map, one column per day: the day number on top, a bar from the low to 
 
 ## Routes
 
-- **EuroVelo:** the official GPX tracks contain variants (both banks of a
-  river, alternatives through different countries) and spurs. Riding all of
-  them would roughly double some routes, so stages form a network and the
-  route is the shortest path from start to finish. Holes between stages are
+- **EuroVelo:** built from OpenStreetMap's route relations, leaving out
+  members marked as alternatives or variants. What is left still has spurs
+  and both banks of some rivers; riding all of it would stretch the route, so
+  the ways form a network and the route is the shortest path between its
+  official ends. Heights come from the Copernicus terrain model. Holes between stages are
   bridged: over the sea as ferries (travel time, not riding distance), over
   land as unmapped stretches (counted).
 - **Demo route:** a list of towns routed with BRouter's touring profile, so

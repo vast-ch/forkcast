@@ -18,20 +18,20 @@ work after `data`).
 
 ## Steps
 
-### Downloads (into `cache/`, git-ignored; EuroVelo tracks into `eurovelo/`, committed)
+### Downloads (into `cache/`, git-ignored)
 
 | Step | What | Size | Notes |
 |---|---|---|---|
 | `cru` | CRU TS 4.10 monthly grids: tmx, tmn, pre, wet for 2011–2025 | 215 MB | University of East Anglia. Used to calibrate highs and lows. |
 | `era5land-rain` | ERA5-Land daily rain totals, one file per year, 1981–2025, 0.25°, world without Antarctica | ~10 GB | Copernicus CDS key needed (see below). 2011–2025 make the climate; the earlier years only the El Niño / La Niña variants. |
 | `era5land-temperature` | ERA5-Land monthly mean 2 m temperature for each hour of the day, one file per year, 1981–2025, 0.25° | ~6.7 GB | CDS key needed. The 30 extra years took about 3.5 hours from the CDS. |
-| `eurovelo` | Official EuroVelo GPX tracks, one per route, gzipped | 11 MB | ODbL, see `eurovelo/README.md`. |
 | `brouter` | Geocodes the hand-made routes' stops (`forkcast_data/geocoded.json`, committed) and routes each leg with BRouter | small | Public servers: Nominatim (1 request/s) and brouter.de. |
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
 | `details` | Natural Earth populated places (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
 | `oni` | NOAA's Oceanic Niño Index, monthly since 1950 | 10 kB | Decides which months were El Niño or La Niña. |
 | `cpc` | NOAA CPC Global Unified Temperature: daily highs and lows from weather stations, 0.5°, one file per year and kind, 2011–2025 | 2.4 GB | Public domain (NOAA PSL). How far single days stray from the average (see "How far single days stray"). About 1 min a file. |
-| `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API: first an index of every route (id, version, box), then each route's ways by id, 10 routes per query, cached per route and version in `cache/cyclenet/icn/` | a few hundred routes | ODbL, © OpenStreetMap contributors. Rotates through public Overpass servers, waits when asked (429), backs off; a route that keeps failing is skipped and listed, and the next run fetches just those. `--fresh` refreshes the index; changed routes are refetched by version. |
+| `osm` | The OpenStreetMap planet, `cache/osm/planet.osm.pbf`, from planet.openstreetmap.org (redirected to a mirror) | ~96 GB | ODbL, © OpenStreetMap contributors. The single source of the EuroVelo routes and the cycle network. The dated file that "latest" names is pinned in `planet.osm.pbf.source`, so an interrupted download resumes the same file (HTTP range), even days later; checked against the planet's MD5. `--fresh` takes the newest planet. A few hours at the mirror's speed. |
+| `dem` | Copernicus GLO-90 terrain heights (about 90 m), one GeoTIFF per 1° square with land, 34–72°N, 32°W–45°E | ~5 GB, 1,700 files | © DLR / Airbus, provided under COPERNICUS by the EU and ESA (free licence). OSM has no heights; the EuroVelo routes take theirs from it. |
 
 ### Builds (into `out/`, committed)
 
@@ -39,31 +39,25 @@ work after `data`).
 |---|---|---|
 | `borders` | `cache/borders/` | `out/countries.json`: the world's country outlines as TopoJSON (each border once, quantized; 231 kB gzipped) |
 | `details` | `cache/details/` | `out/places.json` (the world's towns of 50,000 or more and capitals, each with its population and its rank by size in its country, for the map's city setting; 76 kB gzipped) and `out/water.json` (rivers and lakes to 0.01°; 190 kB gzipped). The app fetches each only while its layer is on. |
-| `routes` | `eurovelo/`, `cache/brouter/`, `cache/borders/` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
+| `bicycle` | `cache/osm/planet.osm.pbf` | `cache/osm/bicycle.osm.pbf` (intermediate): every `route=bicycle` relation with its members and their nodes, cut out with osmium |
+| `routes` | `cache/osm/bicycle.osm.pbf`, `cache/dem/`, `cache/brouter/`, `cache/borders/` | `out/routes/<id>.json`, `out/routes/index.json`, `out/routes/overview.json` (all routes simplified to ~1 km, 64 kB gzipped) |
 | `cru` | `cache/cru/*.nc.gz` | `cache/cru/climatology-2011-2025.nc` (intermediate) |
 | `climate` | ERA5-Land rain and temperature, CRU climatology | `cache/grids/climate.bin` + `climate.json`, the world from 84°N to 60°S, monthly (intermediate) |
 | `spread` | `cache/cpc/`, `cache/grids/climate.json` | `cache/grids/spread.npz`: per month and 0.25° cell, how far single days' highs and lows stray from the average (a standard deviation, °C; intermediate, ~8 min) |
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
 | `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `last1`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
 | `pack` | `cache/grids/` (with `spread.npz`) | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land, for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
-| `cyclenet` | `cache/cyclenet/icn/` | `out/cyclenet.json`: the ways of every route, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches it only when the rider draws with snapping on. |
+| `cyclenet` | `cache/osm/bicycle.osm.pbf` | `out/cyclenet.json`: the ways of every international route (`network=icn`), each once, joined end to end into long lines, simplified to about 300 m. The app fetches it only when the rider draws with snapping on. |
 
 `all` runs every download, then every build, in the order of these tables.
 
 ### Cycle network
 
-The committed `out/cyclenet.json` is still the earlier area-based fetch
-(Europe, Africa and Asia, merged from the old per-continent files), made
-while every public Overpass server was overloaded; the Americas and Oceania
-have none yet (drawing there gives straight lines). `download cyclenet` then
-`build cyclenet` replaces it once a server lets the download finish: routes
-missing from the cache are left out of a build and reported, so a build from
-a half-finished download would ship less than the file has now.
-
-Why by route and not by area: on a busy public Overpass server, what times out
-is a query that has to scan a large region (a 20° tile, or a whole continent),
-and most of those regions are empty. Asking for routes by id never scans an
-area, so each query is quick and its size is set by the routes, not the map.
+Built from the planet like the EuroVelo routes, so the two can't disagree.
+The Overpass API used before was shared and overloaded: fetching a few
+hundred routes from it took days and often never finished, which left the
+Americas and Oceania without a network. A planet file is one plain download
+that resumes, and filtering it is local and repeatable.
 
 For drawing routes that follow cycle routes, offline: international routes
 only (`icn`), for the whole world. Why not more, measured on Switzerland:
@@ -73,17 +67,42 @@ only (`icn`), for the whole world. Why not more, measured on Switzerland:
 - With regional routes (`rcn`) one 5° tile (45–50°N, 5–10°E) was 206,610 ways
   and about 2 million points, still 415,000 after simplifying to 300 m: far too
   much to ship.
-- National routes (`ncn`) would roughly triple Europe; the cache keeps tiles per
-  choice of networks (`cache/cyclenet/<networks>/`), so trying them
-  later doesn't mix with these.
+- National routes (`ncn`) would roughly triple Europe; they are in
+  `bicycle.osm.pbf` already, so trying them is a change to `NETWORKS` in
+  `cyclenet.py` and a rebuild.
+
+### EuroVelo routes
+
+Each EuroVelo route is a tree of relations in OpenStreetMap: a superroute
+`ref=EV<n>` with a part per country, stages below them, then ways. Some
+countries hang their part under a national route instead, so the route's
+relations are every relation with that ref that isn't inside another one.
+Members with a role such as `alternative`, `variant` or `excursion` are left
+out.
+
+What is left still has spurs, both banks of a river and holes, so the ways
+form a graph and the route is the shortest path through it between its
+official ends (pinned in `CATALOG`, with via points for the loop, EV10).
+Pieces that don't touch are bridged between their loose ends: within 1 km
+simply joined, otherwise as a ferry over the sea or an unmapped stretch over
+land, costed higher than riding so the path takes one only where the mapping
+really has a gap. OSM has no heights: they come from the Copernicus terrain
+model every 50 m, averaged over 250 m against its noise. Points are kept
+where they matter for the line (30 m) or for the climbing (5 m).
+
+Before this, the routes were the official GPX tracks from EuroVelo.com,
+committed to the repository. OpenStreetMap holds the same routes, kept up to
+date by the people who ride them, so it is the one source for every route
+and the cycle network.
 
 Builds never use the network; a build whose inputs are missing stops and says
 which download to run.
 
 ## How it decides what to do
 
-Why this matters: a full run downloads about 8 GB from servers that queue and
-throttle requests, and some steps take a while. Interrupting it, changing one
+Why this matters: a full run downloads about 120 GB (most of it the
+OpenStreetMap planet) from servers that queue and throttle requests, and some
+steps take a while. Interrupting it, changing one
 step, or rerunning it should cost only what actually changed, and a broken or
 half-written file must never be mistaken for a good one.
 
@@ -91,7 +110,8 @@ half-written file must never be mistaken for a good one.
 `<name>.part`, validated, and only then renamed into place, so an interrupted
 download never looks finished. The checks are:
 
-- gzip files (CRU, EuroVelo) must decompress completely; GPX must contain a track;
+- gzip files (CRU) must decompress completely; the planet must match its
+  published MD5; terrain squares must open as GeoTIFFs;
 - NetCDF files must open, have the expected number of time steps (365/366 days
   of rain, 12 × 24 hours of temperature) on the global 0.25° grid, and their
   last time step must read;
@@ -112,8 +132,8 @@ an output, and it runs again.
 **`--fresh`** is passed from `all` down to every step it runs: downloads fetch
 every file again (replacing the old one only once the new one has passed its
 checks), and builds run regardless of their stamps. Use it on a single step to
-redo just that step, e.g. `./build.sh download eurovelo --fresh` to pick up new
-EuroVelo tracks. `--fresh` on `brouter` also geocodes every stop again.
+redo just that step, e.g. `./build.sh download osm --fresh` to pick up the
+newest OpenStreetMap planet. `--fresh` on `brouter` also geocodes every stop again.
 
 **Years**: `--from` and `--to` (default 2011 and 2025) set the climate period
 for the ERA5-Land downloads and the `cru` and `climate` builds.
@@ -234,7 +254,7 @@ app's first version used it alone; now it calibrates ERA5-Land.
   terrain (the `orography` download, 52 MB, published by ECMWF), averaged to
   0.25°.
 - **Where it is applied:** in the app, not here. Route points know their
-  height (from the GPX or BRouter tracks), so the app shifts a day's high and low by the month's lapse rate times the height difference between the route and the cell: from 4.4 °C per 1,000 m in December to 6.8 °C in June–July (seasonal rates measured across the Alps, Rolland 2003; `LAPSE_RATES` in `web/app/utils/climate.ts`). The map itself shows cell averages.
+  height (from the terrain model or BRouter tracks), so the app shifts a day's high and low by the month's lapse rate times the height difference between the route and the cell: from 4.4 °C per 1,000 m in December to 6.8 °C in June–July (seasonal rates measured across the Alps, Rolland 2003; `LAPSE_RATES` in `web/app/utils/climate.ts`). The map itself shows cell averages.
 - **Limits, measured:** against published town climates (2011–2025 data, corrected to town height) summer highs are within about 1 °C (Madrid 33.6 vs 33, Seville 37.0 vs 36, Interlaken 24.8 vs 24, Bergen 18.0 vs 19). Winter in Alpine valleys stays 2–3 °C too mild (Interlaken January high 6 vs 3) and nights more: cold-air pooling and fog are local effects neither the grid nor a lapse rate captures. A constant 6.5 °C/km made winter worse, which is why the rate is seasonal.
 
 ### Size and format
@@ -379,12 +399,13 @@ licences" and the map's attribution line) whenever the data is published:
   Change Service information <year>; neither the European Commission nor ECMWF
   is responsible for any use that may be made of the Copernicus information or
   data it contains."
-- **EuroVelo tracks** (ODbL): "Contains information from EuroVelo GPX tracks
-  downloaded from www.EuroVelo.com on <date>, which is made available here
-  under the Open Database License (ODbL)." Derived route files stay under the
-  ODbL (see `eurovelo/README.md`).
-- **OpenStreetMap** (ODbL), via BRouter for the demo route: "© OpenStreetMap
-  contributors".
+- **OpenStreetMap** (ODbL): the EuroVelo routes, the cycle network and, via
+  BRouter, the demo route: "© OpenStreetMap contributors". Derived route files
+  stay under the ODbL. EuroVelo® is a registered trademark of the European
+  Cyclists' Federation.
+- **Copernicus DEM GLO-90**: "© DLR e.V. 2010–2014 and © Airbus Defence and
+  Space GmbH 2014–2018 provided under COPERNICUS by the European Union and
+  ESA; all rights reserved." (heights of the EuroVelo routes)
 - **CRU TS** (Open Database License, as linked from the CRU TS download
   page): credit the Climatic Research Unit, University of East Anglia; the
   climatology derived from it stays under the ODbL.

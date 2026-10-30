@@ -355,11 +355,12 @@ export default class Help extends Component {
             <p>
               All
               {{this.routeCount}}
-              EuroVelo routes are built in, from the official EuroVelo tracks.
-              Where a route offers variants, such as both banks of a river or
-              alternatives through different countries, Forkcast follows the
-              shortest way from start to finish; ferries count as travel time,
-              not riding distance. The demo route, Interlaken – Málaga, runs
+              EuroVelo routes are built in, as mapped on OpenStreetMap by the
+              people who ride them. Where a route offers variants, such as both
+              banks of a river or alternatives through different countries,
+              Forkcast follows the shortest way from start to finish; ferries
+              count as travel time, not riding distance. Climbing comes from a
+              terrain model with a point every 90 m. The demo route, Interlaken – Málaga, runs
               down the Rhône valley and Spain's east coast, routed for touring
               bikes on cycle-friendly roads.
             </p>
@@ -678,18 +679,22 @@ export default class Help extends Component {
               </li>
               <li>
                 <strong>EuroVelo routes:</strong>
-                contains information from EuroVelo GPX tracks downloaded from
+                from ©
                 <a
-                  href="https://www.eurovelo.com"
+                  href="https://www.openstreetmap.org/copyright"
                   target="_blank"
                   rel="noopener noreferrer"
-                >www.EuroVelo.com</a>
-                on 2026-10-23, which is made available here under the
+                >OpenStreetMap</a>
+                contributors (data of 2026-10-26), made available here under
+                the
                 <a
                   href="https://opendatacommons.org/licenses/odbl/1-0/"
                   target="_blank"
                   rel="noopener noreferrer"
-                >Open Database License (ODbL)</a>. EuroVelo® is a registered
+                >Open Database License (ODbL)</a>. Their heights: Copernicus
+                DEM GLO-90, © DLR e.V. 2010–2014 and © Airbus Defence and
+                Space GmbH 2014–2018, provided under COPERNICUS by the European
+                Union and ESA; all rights reserved. EuroVelo® is a registered
                 trademark of the European Cyclists' Federation.
               </li>
               <li>
@@ -716,13 +721,7 @@ export default class Help extends Component {
                   target="_blank"
                   rel="noopener noreferrer"
                 >OpenStreetMap</a>
-                contributors, fetched with the
-                <a
-                  href="https://overpass-api.de"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >Overpass API</a>
-                and made available here under the
+                contributors, made available here under the
                 <a
                   href="https://opendatacommons.org/licenses/odbl/1-0/"
                   target="_blank"
