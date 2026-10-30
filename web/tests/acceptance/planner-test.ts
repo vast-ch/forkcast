@@ -30,6 +30,20 @@ module('Acceptance | planner', function (hooks) {
     assert.dom('[aria-label="Weather by day"]').exists('the day chart shows');
   });
 
+  test('days come with how far they stray, place by place', async function (assert) {
+    const atlas = this.owner.lookup('service:atlas');
+    await visit('/');
+    const at = (phase: number, lat: number, lon: number) =>
+      atlas.climate!.at(phase, lat, lon, 5);
+    const moscowJanuary = at(0.04, 55.75, 37.6).lowSpread;
+    const singaporeJanuary = at(0.04, 1.35, 103.8).lowSpread;
+    assert.true(moscowJanuary > 5, `Moscow's January nights ±${moscowJanuary}`);
+    assert.true(singaporeJanuary < 2, `Singapore's ±${singaporeJanuary}`);
+    const cold = Number.parseFloat(summary('Coldest night, likely') ?? '');
+    const average = Number.parseFloat(summary('Coldest average night') ?? '');
+    assert.true(cold < average, `likely ${cold} °C, on average ${average} °C`);
+  });
+
   test('trip settings go into the URL and change the trip', async function (assert) {
     await visit('/');
     const days = Number(summary('Days'));

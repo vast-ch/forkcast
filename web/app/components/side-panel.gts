@@ -147,9 +147,11 @@ export default class SidePanel extends Component<SidePanelSignature> {
       ['Riding days', t.ridingDays],
       ['Rest days', t.restDays],
       ['Average high', fmtTemp(t.avgHigh)],
+      ['Hottest day, likely', fmtTemp(t.likelyHottest)],
       ['Rainy riding days', fmtRainyDays(t.rainyDays, t.rainyDaysRange)],
+      ['Coldest night, likely', fmtTemp(t.likelyColdest)],
       ['Coldest average night', cold ? fmtTemp(cold.nightLow) : '–'],
-      ['Coldest night on', cold ? fmtShortDate(cold.date) : '–'],
+      ['Coldest average night on', cold ? fmtShortDate(cold.date) : '–'],
     ].map(([label, value]) => ({ label, value }));
   }
 

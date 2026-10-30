@@ -5,7 +5,7 @@ import { fn } from '@ember/helper';
 import { modifier } from 'ember-modifier';
 import type PlannerService from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
-import { tempSwatch } from 'forkcast/utils/climate';
+import { tempSwatch, usualRange } from 'forkcast/utils/climate';
 import TempPill from 'forkcast/components/temp-pill';
 import {
   css,
@@ -18,6 +18,7 @@ import {
   fmtMonth,
   fmtPct,
   fmtTemp,
+  fmtUsual,
 } from 'forkcast/utils/format';
 
 const COL = 18; // px per day
@@ -67,12 +68,23 @@ interface Bar {
   barX: number;
   yHigh: number;
   barH: number;
+  /** The faint band behind the bar: from the usual warmest day to the usual coldest night (8 in 10), if known */
+  usualY?: number;
+  usualH?: number;
   rainY: number;
   color: string;
   rainH: number;
   isHighlighted: boolean;
   /** Set on the first day of a month after the trip's first: its name, for the line before it */
   monthStart?: string;
+}
+
+/** A day's usual extremes, 8 days in 10: the warmest high and coldest low (NaN if unknown). */
+function usual(day: TripDay): [number, number] {
+  return [
+    usualRange(day.weather.high, day.weather.highSpread)[1],
+    usualRange(day.nightLow, day.nightLowSpread)[0],
+  ];
 }
 
 export default class ItineraryChart extends Component<{
@@ -86,8 +98,11 @@ export default class ItineraryChart extends Component<{
     let hi = -Infinity;
     for (const d of this.args.trip.days) {
       if (Number.isNaN(d.weather.high)) continue;
+      const [warm, cold] = usual(d);
       lo = Math.min(lo, d.weather.low, d.nightLow);
       hi = Math.max(hi, d.weather.high);
+      if (!Number.isNaN(cold)) lo = Math.min(lo, cold);
+      if (!Number.isNaN(warm)) hi = Math.max(hi, warm);
     }
     if (!Number.isFinite(lo)) return [0, 20];
     return [Math.floor(lo / 5) * 5, Math.ceil(hi / 5) * 5];
@@ -179,7 +194,13 @@ export default class ItineraryChart extends Component<{
       const low = noData ? 0 : Math.min(day.weather.low, day.nightLow);
       const prev = this.args.trip.days[i - 1];
       const rainH = noData ? 0 : day.weather.rainChance * RAIN_H;
+      const [warm, cold] = usual(day);
+      const band =
+        noData || Number.isNaN(warm) || Number.isNaN(cold)
+          ? {}
+          : { usualY: this.y(warm), usualH: this.y(cold) - this.y(warm) };
       return {
+        ...band,
         day,
         x: colX(day.n),
         barX: colX(day.n) + 3,
@@ -224,7 +245,7 @@ export default class ItineraryChart extends Component<{
       return `${this.planner.weekSlot.label}: ${this.offTripNote}`;
     if (!d) return 'No day selected';
     const w = d.weather;
-    return `${this.detailTitle}, ${this.detailRoute}, low ${fmtTemp(d.nightLow)}, high ${fmtTemp(w.high)}, rain chance ${fmtPct(w.rainChance)}, daylight ${fmtDaylight(d.daylight)}`;
+    return `${this.detailTitle}, ${this.detailRoute}, low ${fmtTemp(d.nightLow)} (${fmtUsual(d.nightLow, d.nightLowSpread)}), high ${fmtTemp(w.high)} (${fmtUsual(w.high, w.highSpread)}), rain chance ${fmtPct(w.rainChance)}, daylight ${fmtDaylight(d.daylight)}`;
   }
 
   /** Arrow keys step through the days (Home and End jump to the ends). */
@@ -261,12 +282,16 @@ export default class ItineraryChart extends Component<{
             <p class="wt-muted text-xs">{{this.detailRoute}}</p>
           </div>
           <dl class="wt-inline-stats">
-            <div><dt>Low</dt><dd><TempPill
-                  @t={{this.detail.nightLow}}
-                /></dd></div>
-            <div><dt>High</dt><dd><TempPill
-                  @t={{this.detail.weather.high}}
-                /></dd></div>
+            <div><dt>Low</dt><dd><TempPill @t={{this.detail.nightLow}} />
+                <span class="wt-muted text-xs">{{fmtUsual
+                    this.detail.nightLow
+                    this.detail.nightLowSpread
+                  }}</span></dd></div>
+            <div><dt>High</dt><dd><TempPill @t={{this.detail.weather.high}} />
+                <span class="wt-muted text-xs">{{fmtUsual
+                    this.detail.weather.high
+                    this.detail.weather.highSpread
+                  }}</span></dd></div>
             <div><dt>Rain chance</dt><dd>{{fmtPct
                   this.detail.weather.rainChance
                 }}</dd></div>
@@ -392,6 +417,17 @@ export default class ItineraryChart extends Component<{
                   text-anchor="middle"
                   class="wt-lights"
                 >🔦</text>
+              {{/if}}
+              {{#if b.usualH}}
+                <rect
+                  x={{b.barX}}
+                  y={{b.usualY}}
+                  width={{this.barW}}
+                  height={{b.usualH}}
+                  class="wt-temp-usual"
+                  style={{css "fill: " b.color}}
+                  rx="2"
+                />
               {{/if}}
               <rect
                 x={{b.barX}}

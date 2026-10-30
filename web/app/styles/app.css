@@ -745,6 +745,10 @@ body {
 .wt-day.is-active .wt-day-hit {
   fill: var(--wt-pick-wash);
 }
+/* Behind the bar: where 8 days in 10 fall, from the warmest high to the coldest low. */
+.wt-temp-usual {
+  opacity: 0.3;
+}
 .wt-temp-bar {
   stroke: rgb(0 0 0 / 18%);
   stroke-width: 0.5;

@@ -290,6 +290,12 @@ export default class Help extends Component {
                   of the day's ride.</dd></div>
               <div><dt>High</dt><dd>The day's high in the middle of the day's
                   ride, where you spend most of the riding hours.</dd></div>
+              <div><dt>Usually</dt><dd>Next to the low and the high: the range 8
+                  days in 10 fall in there at that time of year. The faint band
+                  behind each day's bar in the chart shows it, from the usual
+                  warmest afternoon to the usual coldest night. How wide it is
+                  depends on the place: a few degrees by the sea or in the
+                  tropics, 15 °C and more in a continental winter.</dd></div>
               <div><dt>Rain</dt><dd>The chance that the day is rainy, and how
                   much rain a day brings when it rains (at least 1 mm), also in
                   the middle of the ride. That says more than an average spread
@@ -324,10 +330,15 @@ export default class Help extends Component {
                   up: how many to expect, not a promise. In brackets, the range
                   8 trips out of 10 fall in. Rain comes in spells, so some trips
                   catch a lot more and some a lot less.</dd></div>
+              <div><dt>Hottest day, likely</dt><dd>The hottest single afternoon
+                  your trip is as likely to beat as not, in a usual year. Hot
+                  days come in spells, which Forkcast takes into account.</dd></div>
+              <div><dt>Coldest night, likely</dt><dd>The same for the coldest
+                  single night: half of trips get a colder one. Pack for a few
+                  degrees below it.</dd></div>
               <div><dt>Coldest average night</dt><dd>The night with the lowest
-                  average low, and its date. Single nights often come out 4–6 °C
-                  colder or warmer than their average, so on a trip of more than
-                  a few days, expect some nights colder than this.</dd></div>
+                  average low, and its date: when to expect the cold, where the
+                  likely coldest night is how cold.</dd></div>
             </dl>
 
             <h3>On a phone</h3>
@@ -412,8 +423,8 @@ export default class Help extends Component {
           <section id="data">
             <h2>Where the numbers come from</h2>
             <p>
-              Forkcast combines two well-established climate datasets, each for
-              what it does best, both from
+              Forkcast combines three well-established climate datasets, each
+              for what it does best, all from
               {{this.years}}.
             </p>
             <dl class="wt-help-defs">
@@ -427,6 +438,11 @@ export default class Help extends Component {
                   from thousands of weather stations. Coarser (about 50 km), but
                   its highs and lows are what thermometers actually recorded, so
                   Forkcast uses it to set their level.</dd></div>
+              <div><dt>NOAA CPC</dt><dd>Daily highs and lows from the world's
+                  weather stations, from the US National Oceanic and Atmospheric
+                  Administration. Forkcast uses it to measure how far single
+                  days stray from the average, place by place: the “usually”
+                  ranges and the likely coldest night and hottest day.</dd></div>
             </dl>
             <p>
               Both are prepared in advance on a grid of 0.25° (about 25 km),
@@ -550,9 +566,10 @@ export default class Help extends Component {
                 ±1.7 °C; more in continental winters (Kraków in January ±2.1 °C)
                 and less by the Mediterranean (Valencia in January ±0.9 °C).</li>
               <li><strong>Day to day</strong>
-                the spread is far larger: single days often sit 4–6 °C above or
-                below the average. Read the numbers as “what to pack for”, not
-                “what it will be”.</li>
+                the spread is far larger, which is why each day comes with its
+                usual range: 8 days in 10 fall in it, so 1 in 10 is warmer and 1
+                in 10 colder. Read the numbers as “what to pack for”, not “what
+                it will be”.</li>
               <li><strong>Rain varies most:</strong>
                 a month's rainfall typically differs from its average by about a
                 third (Interlaken in January: 92 mm on average, ±44 mm).</li>
@@ -652,7 +669,15 @@ export default class Help extends Component {
                 Anglia. Both averaged over
                 {{this.years}}. Contains modified Copernicus Climate Change
                 Service information 2026; neither the European Commission nor
-                ECMWF is responsible for any use of it.
+                ECMWF is responsible for any use of it. How far single days
+                stray:
+                <a
+                  href="https://psl.noaa.gov/data/gridded/data.cpc.globaltemp.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >CPC Global Unified Temperature</a>
+                data provided by the NOAA PSL, Boulder, Colorado, USA, from
+                their website at https://psl.noaa.gov.
               </li>
               <li>
                 <strong>EuroVelo routes:</strong>
