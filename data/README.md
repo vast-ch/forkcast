@@ -45,7 +45,7 @@ work after `data`).
 | `spread` | `cache/cpc/`, `cache/grids/climate.json` | `cache/grids/spread.npz`: per month and 0.25° cell, how far single days' highs and lows stray from the average (a standard deviation, °C; intermediate, ~8 min) |
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
 | `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `last1`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
-| `pack` | `cache/grids/` (with `spread.npz`) | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land and `overview.bin` (the world at 1°), for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
+| `pack` | `cache/grids/` (with `spread.npz`) | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land, for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
 | `cyclenet` | `cache/cyclenet/icn/` | `out/cyclenet.json`: the ways of every route, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches it only when the rider draws with snapping on. |
 
 `all` runs every download, then every build, in the order of these tables.
@@ -252,12 +252,11 @@ app's first version used it alone; now it calibrates ERA5-Land.
   and ride through, not a continent, and never pick one first. A tile is
   41 × 41 cells: its edge cells are also in its neighbours, so a point is
   interpolated from one tile, without seams (5% more bytes). Only tiles with
-  land are written: 317 per climate, 25–40 kB gzipped each, 7.4 MB for the
-  whole world with the overview. Tile `<lat>_<lon>` is named by its south-west corner.
-- **Why a 1° overview:** zoomed out to a continent the map needs everything
-  in view but not its detail; each overview cell averages the land cells of a
-  4 × 4 block, 0.6 MB gzipped for the world. The app answers from it until a
-  point's tile is in.
+  land are written: 317 per climate, 25–40 kB gzipped each, 6.7 MB for the
+  whole world. Tile `<lat>_<lon>` is named by its south-west corner.
+- **Why no world overview:** the app loads the squares the route crosses and
+  the ones the rider clicks on the map, nothing world-wide, so a first visit
+  downloads a few hundred kB of climate, not the planet.
 - The files get content-hashed names in the app build and are cached by
   browsers for a year.
 

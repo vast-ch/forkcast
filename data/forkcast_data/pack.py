@@ -17,7 +17,7 @@ scaled back up by that factor.
 Output per climate (`last15` and each variant): out/climate/<climate>.json,
 the header, and out/climate/<climate>/ with a file per 10° tile with land
 (<lat>_<lon>.bin, by its south-west corner, 41 × 41 cells sharing its edges
-with its neighbours) and overview.bin (the world at 1°). One byte per value
+with its neighbours). One byte per value
 (255 = no data), laid out [layer][term][row][col], then the static layers
 [row][col] as in the monthly grid. Terms are the mean,
 then cos and sin of each wave; a layer stores as many as its encoding lists
@@ -35,7 +35,6 @@ from __future__ import annotations
 import json
 import shutil
 import sys
-import warnings
 from pathlib import Path
 
 import numpy as np
@@ -148,7 +147,6 @@ def spread(land: np.ndarray) -> dict[str, np.ndarray]:
 
 
 TILE = 10  # degrees; tiles start at multiples of it
-OVERVIEW = 4  # cells of the 0.25° grid per overview cell, each way (1°)
 DIR = OUT / "climate"
 CLIMATES = ["last15", *variants.VARIANTS]
 
@@ -167,7 +165,7 @@ def tile_id(lat: int, lon: int) -> str:
 
 
 def outputs() -> list[Path]:
-    return [p for c in CLIMATES for p in (header_file(c), DIR / c / "overview.bin")]
+    return [header_file(c) for c in CLIMATES]
 
 
 def inputs() -> list[Path]:
@@ -204,34 +202,6 @@ def tiles(header: dict) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     return out
 
 
-def overview(coef: dict[str, np.ndarray], static: np.ndarray, header: dict) -> tuple[dict[str, np.ndarray], np.ndarray, dict]:
-    """The world at OVERVIEW times the cell size: averages of the land cells
-    in each block (a block with any land is land)."""
-    f = OVERVIEW
-    rows, cols = header["rows"] // f, header["cols"] // f
-
-    def blocks(a: np.ndarray) -> np.ndarray:
-        a = a[..., : rows * f, : cols * f]
-        with np.errstate(invalid="ignore"), warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)  # all-sea blocks
-            return np.nanmean(a.reshape(*a.shape[:-2], rows, f, cols, f), axis=(-3, -1))
-
-    out = {}
-    for name, c in coef.items():
-        # A sea cell's terms are all NaN, so every term averages the same land cells.
-        out[name] = blocks(c)
-    elev = [variants.decode(s, b) for s, b in zip(header.get("static", []), static, strict=True)]
-    step = header["step"] * f
-    geo = {
-        "lon0": header["lon0"] - header["step"] / 2 + step / 2,
-        "lat0": header["lat0"] + header["step"] / 2 - step / 2,
-        "step": step,
-        "rows": rows,
-        "cols": cols,
-    }
-    return out, np.stack([e.encode(s, blocks(v)) for s, v in zip(header.get("static", []), elev, strict=True)]), geo
-
-
 def _write(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".part")
@@ -248,7 +218,7 @@ def _cut(a: np.ndarray, r: np.ndarray, c: np.ndarray) -> np.ndarray:
 
 
 def pack(climate: str) -> None:
-    """Publish one climate: its tiles, its overview and their header."""
+    """Publish one climate: its tiles and their header."""
     header = json.loads(_source(climate, "json").read_text())
     coef, static = curves(_source(climate, "bin").read_bytes(), header)
     land = ~np.isnan(coef["tmx"][0])
@@ -266,8 +236,6 @@ def pack(climate: str) -> None:
         data = np.concatenate([_cut(enc[n], r, c) for n in names]).tobytes() + _cut(static, r, c).tobytes()
         _write(folder / f"{tid}.bin", data)
         ids.append(tid)
-    ov, ov_static, geo = overview(coef, static, header)
-    _write(folder / "overview.bin", np.concatenate([encode(n, ov[n]) for n in names]).tobytes() + ov_static.tobytes())
     meta = {k: v for k, v in header.items() if k not in ("lon0", "lat0", "rows", "cols", "encoding")}
     meta |= {
         "vars": names,
@@ -275,12 +243,11 @@ def pack(climate: str) -> None:
         "tile": TILE,
         "size": round(TILE / header["step"]) + 1,
         "tiles": sorted(ids),
-        "overview": geo,
         "encoding": {n: ENCODING[n] for n in names} | {s: e.ENCODING[s] for s in header.get("static", [])},
     }
     _write(header_file(climate), json.dumps(meta, separators=(",", ":")).encode())
     size = sum(p.stat().st_size for p in folder.iterdir())
-    log(f"  {climate:7} {len(ids)} tiles, {size / 1e6:.1f} MB with the overview ({(folder / 'overview.bin').stat().st_size / 1e6:.1f} MB)")
+    log(f"  {climate:7} {len(ids)} tiles, {size / 1e6:.1f} MB")
 
 
 def build(fresh: bool = False) -> None:

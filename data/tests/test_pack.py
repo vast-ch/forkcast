@@ -71,19 +71,6 @@ def test_tiles_beyond_the_grid_are_sea():
     assert out[0, 1:].tolist() == [[0, 0], [0, 0]]
 
 
-def test_the_overview_averages_land_cells():
-    coef = {"tmx": np.full((pack.TERMS, 4, 8), np.nan)}
-    coef["tmx"][:, 0, 0] = 10.0
-    coef["tmx"][:, 1, 1] = 20.0
-    static = era5land.encode("elev", np.full((1, 4, 8), np.nan))
-    header = {"lon0": -180.0, "lat0": 84.0, "step": 0.25, "rows": 4, "cols": 8, "static": ["elev"]}
-    out, _, geo = pack.overview(coef, static, header)
-    assert out["tmx"].shape == (pack.TERMS, 1, 2)
-    assert out["tmx"][0, 0, 0] == 15.0, "the two land cells of the block, averaged"
-    assert np.isnan(out["tmx"][0, 0, 1]), "a block of sea stays sea"
-    assert geo == {"lon0": -179.625, "lat0": 83.625, "step": 1.0, "rows": 1, "cols": 2}
-
-
 def test_the_fit_reproduces_monthly_averages():
     # Averaged over each month, the curve gives back the month's value (the
     # flattening correction undoes what averaging over a month takes away).
