@@ -3,7 +3,7 @@
 Each stop is (country code, name for geocoding[, "ferry"]); "ferry" marks
 the leg arriving at that stop as a ferry crossing.
 The Interlaken – Málaga route (Rhône valley, then Spain's east coast) is a demo route, not an official one.
-EuroVelo routes are not listed here: they come from the official GPX tracks
+EuroVelo routes are not listed here: they come from OpenStreetMap
 (see eurovelo.py).
 """
 
