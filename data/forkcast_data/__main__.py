@@ -10,6 +10,7 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     cru                   CRU TS 4.10 monthly grids (calibrates highs and lows)
     era5land-rain         ERA5-Land daily rain totals, 1981–2025 (Copernicus CDS key needed)
     era5land-temperature  ERA5-Land monthly temperature by hour of day, 1981–2025 (CDS key needed)
+    cpc                   NOAA CPC daily highs and lows from weather stations, 2011–2025
     orography             ERA5-Land terrain height (for the altitude correction)
     eurovelo              official EuroVelo GPX tracks
     brouter               stops geocoded and legs routed for the hand-made routes
@@ -25,6 +26,7 @@ Builds (into out/, except the CRU climatology which is an intermediate in cache/
     routes     every preset route plus the route index
     cru        CRU climatology for the years (intermediate)
     climate    the world's climate grid (ERA5-Land, calibrated with CRU; intermediate)
+    spread     how far single days' highs and lows stray from the average, from CPC (intermediate)
     years      each year's monthly fields, 1981–2025 (intermediate)
     variants   grids of the other climates: last 10 and 5 years, El Niño, La Niña (intermediate)
     pack       every climate as the app's seasonal curves, in 10° tiles and a 1° overview
@@ -38,7 +40,7 @@ import argparse
 import sys
 import time
 
-from . import basemap, cru, cyclenet, details, era5land, era5land_download, eurovelo, pack, routes, variants
+from . import basemap, cpc, cru, cyclenet, details, era5land, era5land_download, eurovelo, pack, routes, variants
 from .pipeline import STAMPS, is_verified, log
 
 YEARS = (2011, 2025)
@@ -57,6 +59,7 @@ DOWNLOADS = {
     "cru": lambda a: cru.download(a.fresh),
     "era5land-rain": lambda a: era5land_download.rain(_history(a), a.fresh),
     "era5land-temperature": lambda a: era5land_download.temperature(_history(a), a.fresh),
+    "cpc": lambda a: cpc.download(_years(a), a.fresh),
     "orography": lambda a: era5land_download.orography(a.fresh),
     "eurovelo": lambda a: eurovelo.download(a.fresh),
     "brouter": lambda a: routes.download(a.fresh),
@@ -73,6 +76,7 @@ BUILDS = {
     "routes": lambda a: routes.build(a.fresh),
     "cru": lambda a: cru.build(a.y0, a.y1, a.fresh),
     "climate": lambda a: era5land.build(a.y0, a.y1, a.fresh),
+    "spread": lambda a: cpc.build(_years(a), a.fresh),
     "years": lambda a: variants.extract(_history(a), a.fresh),
     "variants": lambda a: variants.build((a.y0, a.y1), a.fresh),
     "pack": lambda a: pack.build(a.fresh),
@@ -96,6 +100,7 @@ def status(a) -> None:
         "cru": cru.files(),
         "era5land-rain": [era5land_download.rain_file(i) for i in y] + [era5land_download.rain_last_day(y[-1] + 1)],
         "era5land-temperature": [era5land_download.temperature_file(i) for i in y],
+        "cpc": cpc.files(_years(a)),
         "orography": [era5land_download.orography_file()],
         "eurovelo": [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG],
         "borders": [basemap.DIR / n for n in basemap.SOURCES],

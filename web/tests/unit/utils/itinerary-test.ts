@@ -11,6 +11,8 @@ const climate: ClimateSource = {
   at: (): DayClimate => ({
     high: 20,
     low: 10,
+    highSpread: 4,
+    lowSpread: 3,
     rainMm: 1,
     rainChance: 0.25,
     wetDayMm: 4,

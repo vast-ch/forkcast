@@ -20,7 +20,9 @@ the header, and out/climate/<climate>/ with a file per 10° tile with land
 with its neighbours) and overview.bin (the world at 1°). One byte per value
 (255 = no data), laid out [layer][term][row][col], then the static layers
 [row][col] as in the monthly grid. Terms are the mean,
-then cos and sin of each wave. Each term has its own encoding, value =
+then cos and sin of each wave; a layer stores as many as its encoding lists
+(7, or 3 for the spread of single days' highs and lows from cpc.py, added to
+every climate). Each term has its own encoding, value =
 byte / scale + offset (or (byte / scale)² for "sqrt"); rain's waves are
 "relative": a share of the cell's mean rain, so dry places keep their
 precision.
@@ -38,8 +40,8 @@ from pathlib import Path
 
 import numpy as np
 
+from . import cpc, pipeline, variants
 from . import era5land as e
-from . import pipeline, variants
 from .pipeline import OUT, Stamp, code_hash, log
 
 HARMONICS = 3
@@ -67,8 +69,24 @@ _RAIN = [
     # month, is 2 / (sin(πk/12) / (πk/12)), 2.22 for the 4-month wave (2025 has such cells).
     *[{"kind": "linear", "scale": 56.4, "offset": -2.25, "relative": True}] * 6,
 ]
+# How far single days stray (cpc.py), a standard deviation in °C: the mean
+# and the yearly wave only. It hardly changes faster, and the monthly values
+# it is fitted to are noisier than the shorter waves (0.5 °C RMS off them).
+_SPREAD = [
+    {"kind": "linear", "scale": 16, "offset": 0},  # 0 … 15.9 °C (Siberia's winter nights reach 15)
+    *[{"kind": "linear", "scale": 20, "offset": -6.35}] * 2,  # ±6.35 °C (high plateaus swing 5 °C and more)
+]
 # Mean highs run from about −25 °C (Greenland's ice) to +39 °C, mean lows from −35 to +28 °C.
-ENCODING = {"tmx": _temp(-28), "tmn": _temp(-38), "pre": _RAIN, "r1": _DAYS, "r5": _DAYS, "r10": _DAYS}
+ENCODING = {
+    "tmx": _temp(-28),
+    "tmn": _temp(-38),
+    "pre": _RAIN,
+    "r1": _DAYS,
+    "r5": _DAYS,
+    "r10": _DAYS,
+    "tmxsd": _SPREAD,
+    "tmnsd": _SPREAD,
+}
 
 
 def fit(monthly: np.ndarray, per_day: bool) -> np.ndarray:
@@ -92,8 +110,8 @@ def evaluate(c: np.ndarray, phase: np.ndarray) -> np.ndarray:
 
 
 def encode(name: str, c: np.ndarray) -> np.ndarray:
-    """Coefficients (TERMS, …) → bytes; a cell without data is NODATA in every term."""
-    out = np.empty(c.shape, dtype=np.uint8)
+    """Coefficients (TERMS, …) → bytes, as many terms as its encoding has; a cell without data is NODATA in every term."""
+    out = np.empty((len(ENCODING[name]), *c.shape[1:]), dtype=np.uint8)
     mean = c[0]
     for i, enc in enumerate(ENCODING[name]):
         v = c[i] / np.where(mean > 0, mean, np.inf) if enc.get("relative") else c[i]
@@ -107,14 +125,25 @@ def encode(name: str, c: np.ndarray) -> np.ndarray:
 
 
 def decode(name: str, b: np.ndarray) -> np.ndarray:
-    """The inverse of encode (and what the app does)."""
-    out = np.empty(b.shape, dtype=np.float64)
+    """The inverse of encode (and what the app does): (TERMS, …), the terms not stored 0."""
+    out = np.zeros((TERMS, *b.shape[1:]), dtype=np.float64)
     for i, enc in enumerate(ENCODING[name]):
         x = b[i].astype(np.float64)
         out[i] = (x / enc["scale"]) ** 2 if enc["kind"] == "sqrt" else x / enc["scale"] + enc["offset"]
         if enc.get("relative"):
             out[i] *= out[0]
     out[:, b[0] == e.NODATA] = np.nan
+    return out
+
+
+def spread(land: np.ndarray) -> dict[str, np.ndarray]:
+    """The spread layers' coefficients (TERMS, rows, cols) on land, NaN elsewhere."""
+    z = np.load(cpc.OUT)
+    out = {}
+    for name in cpc.LAYERS.values():
+        c = fit(z[name], False).astype(np.float32)
+        c[:, ~land] = np.nan
+        out[name] = c
     return out
 
 
@@ -142,7 +171,7 @@ def outputs() -> list[Path]:
 
 
 def inputs() -> list[Path]:
-    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")]
+    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")] + [cpc.OUT]
 
 
 def curves(monthly: bytes, header: dict) -> tuple[dict[str, np.ndarray], np.ndarray]:
@@ -222,8 +251,10 @@ def pack(climate: str) -> None:
     """Publish one climate: its tiles, its overview and their header."""
     header = json.loads(_source(climate, "json").read_text())
     coef, static = curves(_source(climate, "bin").read_bytes(), header)
-    enc = {name: encode(name, c) for name, c in coef.items()}  # (TERMS, rows, cols) bytes
     land = ~np.isnan(coef["tmx"][0])
+    coef |= spread(land)  # the same in every climate: how far days stray hardly depends on the years
+    names = [*header["vars"], *cpc.LAYERS.values()]
+    enc = {name: encode(name, c) for name, c in coef.items()}  # (its terms, rows, cols) bytes
     folder = DIR / climate
     if folder.exists():
         shutil.rmtree(folder)  # tiles of an earlier build that are no longer land
@@ -232,19 +263,20 @@ def pack(climate: str) -> None:
         inside = r[(r >= 0) & (r < header["rows"])]
         if not land[np.ix_(inside, c)].any():
             continue
-        data = np.stack([_cut(enc[n], r, c) for n in header["vars"]]).tobytes() + _cut(static, r, c).tobytes()
+        data = np.concatenate([_cut(enc[n], r, c) for n in names]).tobytes() + _cut(static, r, c).tobytes()
         _write(folder / f"{tid}.bin", data)
         ids.append(tid)
     ov, ov_static, geo = overview(coef, static, header)
-    _write(folder / "overview.bin", np.stack([encode(n, ov[n]) for n in header["vars"]]).tobytes() + ov_static.tobytes())
+    _write(folder / "overview.bin", np.concatenate([encode(n, ov[n]) for n in names]).tobytes() + ov_static.tobytes())
     meta = {k: v for k, v in header.items() if k not in ("lon0", "lat0", "rows", "cols", "encoding")}
     meta |= {
-        "terms": TERMS,
+        "vars": names,
+        "terms": TERMS,  # the most a layer has; each has as many as its encoding
         "tile": TILE,
         "size": round(TILE / header["step"]) + 1,
         "tiles": sorted(ids),
         "overview": geo,
-        "encoding": {n: ENCODING[n] for n in header["vars"]} | {s: e.ENCODING[s] for s in header.get("static", [])},
+        "encoding": {n: ENCODING[n] for n in names} | {s: e.ENCODING[s] for s in header.get("static", [])},
     }
     _write(header_file(climate), json.dumps(meta, separators=(",", ":")).encode())
     size = sum(p.stat().st_size for p in folder.iterdir())
@@ -252,13 +284,13 @@ def pack(climate: str) -> None:
 
 
 def build(fresh: bool = False) -> None:
-    code = code_hash(sys.modules[__name__], e, variants, pipeline)
+    code = code_hash(sys.modules[__name__], e, variants, cpc, pipeline)
     stamp = Stamp("pack", inputs(), outputs(), code)
     if not fresh and stamp.up_to_date():
         log("  packed grids are up to date")
         return
     if missing := stamp.missing_inputs():
-        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants")
+        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants, build spread")
     for climate in CLIMATES:
         pack(climate)
     stamp.done()
