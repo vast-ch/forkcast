@@ -66,11 +66,13 @@ interface Bar {
   day: TripDay;
   x: number;
   barX: number;
+  /** The bar's middle, where the usual-range line runs */
+  midX: number;
   yHigh: number;
   barH: number;
-  /** The faint band behind the bar: from the usual warmest day to the usual coldest night (8 in 10), if known */
+  /** The thin line through the bar: from the usual warmest day to the usual coldest night (8 in 10), if known */
   usualY?: number;
-  usualH?: number;
+  usualEnd?: number;
   rainY: number;
   color: string;
   rainH: number;
@@ -198,12 +200,13 @@ export default class ItineraryChart extends Component<{
       const band =
         noData || Number.isNaN(warm) || Number.isNaN(cold)
           ? {}
-          : { usualY: this.y(warm), usualH: this.y(cold) - this.y(warm) };
+          : { usualY: this.y(warm), usualEnd: this.y(cold) };
       return {
         ...band,
         day,
         x: colX(day.n),
         barX: colX(day.n) + 3,
+        midX: colX(day.n) + 3 + this.barW / 2,
         yHigh: this.y(high),
         barH: Math.max(2, this.y(low) - this.y(high)),
         rainY: this.rainTop + RAIN_H - rainH,
@@ -418,15 +421,13 @@ export default class ItineraryChart extends Component<{
                   class="wt-lights"
                 >🔦</text>
               {{/if}}
-              {{#if b.usualH}}
-                <rect
-                  x={{b.barX}}
-                  y={{b.usualY}}
-                  width={{this.barW}}
-                  height={{b.usualH}}
+              {{#if b.usualEnd}}
+                <line
+                  x1={{b.midX}}
+                  x2={{b.midX}}
+                  y1={{b.usualY}}
+                  y2={{b.usualEnd}}
                   class="wt-temp-usual"
-                  style={{css "fill: " b.color}}
-                  rx="2"
                 />
               {{/if}}
               <rect

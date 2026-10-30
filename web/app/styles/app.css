@@ -747,7 +747,8 @@ body {
 }
 /* Behind the bar: where 8 days in 10 fall, from the warmest high to the coldest low. */
 .wt-temp-usual {
-  opacity: 0.3;
+  stroke: var(--wt-muted);
+  stroke-width: 1;
 }
 .wt-temp-bar {
   stroke: rgb(0 0 0 / 18%);

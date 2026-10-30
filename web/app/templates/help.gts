@@ -292,7 +292,7 @@ export default class Help extends Component {
                   ride, where you spend most of the riding hours.</dd></div>
               <div><dt>(9 to 20 °C)</dt><dd>In brackets next to the low and the
                   high: the usual range, where 8 days in 10 fall at that time of
-                  year. The faint band behind each day's bar in the chart shows
+                  year. The thin line through each day's bar in the chart shows
                   it, from the usual warmest afternoon to the usual coldest
                   night. How wide it is depends on the place: a few degrees by
                   the sea or in the tropics, 15 °C and more in a continental
