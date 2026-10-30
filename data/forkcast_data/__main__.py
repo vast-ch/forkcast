@@ -29,7 +29,7 @@ Builds (into out/, except the CRU climatology which is an intermediate in cache/
     spread     how far single days' highs and lows stray from the average, from CPC (intermediate)
     years      each year's monthly fields, 1981–2025 (intermediate)
     variants   grids of the other climates: last 10 and 5 years, El Niño, La Niña (intermediate)
-    pack       every climate as the app's seasonal curves, in 10° tiles and a 1° overview
+    pack       every climate as the app's seasonal curves, in 10° tiles
 
 See data/README.md for how skipping, checking and --fresh work.
 """

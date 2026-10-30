@@ -65,6 +65,10 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
     return d ? fmtDayTitle(d) : '';
   }
 
+  get isSquareLoading() {
+    return this.hover?.square === 'loading';
+  }
+
   <template>
     <div class="wt-card pointer-events-none w-64 p-3 text-sm" ...attributes>
       {{#if this.hover}}
@@ -133,6 +137,12 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <dt>When it rains</dt>
             <dd>{{fmtMm this.hover.climate.wetDayMm}} a day</dd>
           </dl>
+        {{else if this.isSquareLoading}}
+          <p class="wt-eyebrow">{{this.coords}}</p>
+          <p class="wt-muted mt-1">Loading this square's climate…</p>
+        {{else if this.hover.square}}
+          <p class="wt-eyebrow">{{this.coords}}</p>
+          <p class="wt-muted mt-1">Click to load this square's climate.</p>
         {{else}}
           <p class="wt-eyebrow">{{this.coords}}</p>
           <p class="wt-muted mt-1">No climate data here (sea or outside the map
@@ -140,8 +150,9 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
         {{/if}}
       {{else}}
         <p class="wt-eyebrow">{{this.weekLabel}} average</p>
-        <p class="wt-muted mt-1">Point at the map for the climate, or at the
-          route for the weather on that day of your trip.</p>
+        <p class="wt-muted mt-1">Point at the map for the climate (click an
+          outlined square to load it), or at the route for the weather on that
+          day of your trip.</p>
       {{/if}}
     </div>
   </template>

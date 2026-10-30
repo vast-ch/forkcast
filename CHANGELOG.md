@@ -17,7 +17,7 @@
 - Temperatures are just the high and the low, everywhere: the map's switch, a day of your trip, the summary and the help. The low is where you sleep, the high where you ride; together they span the day and night you camp through.
 - Rainy riding days in the trip summary now come with a range, e.g. "9 (6–12)": how many 8 trips out of 10 get. Rain comes in spells, so some trips catch a lot more than the average and some a lot less.
 - The map's climate data is half the size, so it downloads about twice as fast, with the same temperatures and rain, give or take a few tenths of a degree.
-- The whole world is on the map from the start: no more clicking a continent to add it. Zoomed out you see a lighter overview; as you zoom in, or wherever your route goes, the full detail loads for just that area, so you download only the parts of the world you look at. The help's privacy section explains what this means for what our host can see.
+- The whole world is on the map, in 10° squares: no more clicking a continent to add it. The squares your route crosses load by themselves; any other square is outlined, and a click loads its climate, a few dozen kB. Forkcast remembers the squares you loaded, so you download only the parts of the world you ask for. The help's privacy section explains what this means for what our host can see.
 - Pop-up calendars now have a clear edge and shadow, so they stand out from the panel behind them.
 
 ## v0.13.0 - 2026-10-27

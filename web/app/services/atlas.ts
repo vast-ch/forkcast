@@ -1,6 +1,6 @@
 import Service from '@ember/service';
 import { cached, tracked } from '@glimmer/tracking';
-import { TrackedMap } from 'tracked-built-ins';
+import { TrackedMap, TrackedSet } from 'tracked-built-ins';
 import ClimateGrid, {
   TiledClimate,
   tileArea,
@@ -11,6 +11,7 @@ import { fetchBuffer, fetchJson } from 'forkcast/utils/assets';
 import type { CycleNetJson } from 'forkcast/utils/cyclenet';
 import { errorMessage } from 'forkcast/utils/helpers';
 import { DEFAULTS } from 'forkcast/utils/settings';
+import { stored } from 'forkcast/utils/stored';
 import {
   countriesFromTopology,
   type CountriesJson,
@@ -51,18 +52,20 @@ export interface DetailFiles {
 }
 export type DetailKind = keyof DetailFiles;
 
-/** A climate's header and its world overview, which load before any tile. */
-interface LoadedClimate {
-  header: ClimateHeader;
-  overview: ClimateGrid;
+/** Tile ids kept in localStorage: a list of "<lat>_<lon>" strings. */
+function parseTileIds(raw: unknown): string[] | undefined {
+  return Array.isArray(raw) &&
+    raw.every((id) => typeof id === 'string' && /^-?\d+_-?\d+$/.test(id))
+    ? (raw as string[])
+    : undefined;
 }
 
 /**
- * Loads the static data files built by the `data` container. The route list,
- * the country outlines and the climate's world overview load first; a climate
- * tile (10° square) when the map shows it closely or a route crosses it, and
- * a route's track when it is picked. Switching the climate loads its overview
- * and the same tiles of it.
+ * Loads the static data files built by the `data` container. The route list
+ * and the country outlines load first, then the climate's header; a climate
+ * tile (10° square) only when a route crosses it or the rider clicks it on
+ * the map, and a route's track when it is picked. Nothing world-wide.
+ * Switching the climate loads the same tiles of it.
  */
 export default class AtlasService extends Service {
   /** The preset routes */
@@ -70,11 +73,15 @@ export default class AtlasService extends Service {
   /** Every preset route simplified to ~1 km, for drawing them all on the map */
   @tracked overview: RouteOverview[] = [];
   @tracked countries?: CountriesJson;
-  /** The climate shown, once its header and overview are in */
-  @tracked current?: LoadedClimate;
+  /** The climate shown, once its header is in */
+  @tracked current?: { header: ClimateHeader };
   @tracked climateId: ClimateId = DEFAULTS.climate;
   /** The current climate's tiles loaded so far, by id */
   tiles = new TrackedMap<string, ClimateGrid>();
+  /** Tiles on their way, by id */
+  loading = new TrackedSet<string>();
+  /** The squares the rider clicked on the map, kept for the next visit */
+  @stored('squares', parseTileIds) squares: string[] = [];
   @tracked error?: string;
   @tracked loadingRouteId?: string;
   tracks = new TrackedMap<string, Route>();
@@ -82,21 +89,19 @@ export default class AtlasService extends Service {
   details = new TrackedMap<string, DetailFiles[DetailKind]>();
 
   #basics?: Promise<void>;
-  #climateLoads = new Map<string, Promise<LoadedClimate>>();
+  #climateLoads = new Map<string, Promise<{ header: ClimateHeader }>>();
   /** By "<climate>/<tile id>" */
   #tileLoads = new Map<string, Promise<ClimateGrid>>();
   #routeLoads = new Map<string, Promise<Route>>();
   #detailLoads = new Map<string, Promise<void>>();
-  /** The tiles each purpose wants (the map's view, the route…), so a climate switch loads them again. */
+  /** The tiles each purpose wants (the route, the help's towns…), so a climate switch loads them again. */
   #wanted = new Map<string, string[]>();
 
   /** The climate, from the finest data loaded at each point. */
   @cached
   get climate(): TiledClimate | undefined {
     const c = this.current;
-    return c
-      ? new TiledClimate(c.header, c.overview, new Map(this.tiles))
-      : undefined;
+    return c ? new TiledClimate(c.header, new Map(this.tiles)) : undefined;
   }
 
   /** The route list, the routes' outlines and the countries: needed before anything else. */
@@ -136,20 +141,15 @@ export default class AtlasService extends Service {
     return load;
   }
 
-  #loadClimate(climate: ClimateId): Promise<LoadedClimate> {
-    return this.#once(this.#climateLoads, climate, async () => {
-      const header = await fetchJson<ClimateHeader>(`climate/${climate}.json`);
-      const buffer = await fetchBuffer(`climate/${climate}/overview.bin`);
-      return {
-        header,
-        overview: new ClimateGrid(header, header.overview, buffer),
-      };
-    });
+  #loadClimate(climate: ClimateId): Promise<{ header: ClimateHeader }> {
+    return this.#once(this.#climateLoads, climate, async () => ({
+      header: await fetchJson<ClimateHeader>(`climate/${climate}.json`),
+    }));
   }
 
   /**
-   * Show a climate: the basics, its header and overview, then the tiles the
-   * map and the route want, in it. Earlier tiles of another climate go.
+   * Show a climate: the basics, its header, then the tiles the route and the
+   * clicked squares want, in it. Earlier tiles of another climate go.
    */
   async show(climate = this.climateId): Promise<void> {
     try {
@@ -169,8 +169,8 @@ export default class AtlasService extends Service {
   }
 
   /**
-   * Load these tiles for `purpose` ("view": what the map shows closely;
-   * "route": what the route crosses…), replacing what it wanted before.
+   * Load these tiles for `purpose` ("route": what the route crosses; "help":
+   * the help's towns…), replacing what it wanted before.
    * Loaded tiles stay; ids without a tile (sea) are skipped.
    */
   want(purpose: string, ids: string[]): Promise<void> {
@@ -178,22 +178,31 @@ export default class AtlasService extends Service {
     return this.#loadWanted();
   }
 
+  /** Load a square the rider clicked, and keep it for the next visit. */
+  pick(id: string): Promise<void> {
+    if (!this.squares.includes(id)) this.squares = [...this.squares, id];
+    return this.#loadWanted();
+  }
+
   async #loadWanted(): Promise<void> {
+    // The trip asks for its tiles while it renders: mark them loading after it.
+    await Promise.resolve();
     const c = this.current;
     if (!c) return;
     const climate = this.climateId;
     const exists = new Set(c.header.tiles);
-    const ids = [...new Set([...this.#wanted.values()].flat())].filter(
-      (id) => exists.has(id) && !this.tiles.has(id),
-    );
+    const ids = [
+      ...new Set([...this.#wanted.values(), this.squares].flat()),
+    ].filter((id) => exists.has(id) && !this.tiles.has(id));
     try {
       await Promise.all(
         ids.map((id) =>
-          this.#once(this.#tileLoads, `${climate}/${id}`, () =>
-            fetchBuffer(`climate/${climate}/${id}.bin`).then((buffer) =>
-              tileGrid(c.header, id, buffer),
-            ),
-          ).then((grid) => {
+          this.#once(this.#tileLoads, `${climate}/${id}`, () => {
+            this.loading.add(id);
+            return fetchBuffer(`climate/${climate}/${id}.bin`)
+              .then((buffer) => tileGrid(c.header, id, buffer))
+              .finally(() => this.loading.delete(id));
+          }).then((grid) => {
             // A tile that arrives after a switch to another climate is dropped.
             if (this.climateId === climate) this.tiles.set(id, grid);
           }),

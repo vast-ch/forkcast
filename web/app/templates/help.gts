@@ -207,12 +207,10 @@ export default class Help extends Component {
             <h3>The whole world</h3>
             <p>
               Forkcast opens on Europe, but the climate covers every continent
-              but Antarctica. Zoomed out, the map is drawn from a coarser
-              version of the data (cells of about 100 km), so you can browse the
-              world at once. Zoom in to a country or two and it switches to the
-              full detail (about 25 km), fetching each 10° square as it comes
-              into view, a few dozen kB each. Your route's weather always uses
-              the full detail along the whole route.
+              but Antarctica, in 10° squares of a few dozen kB each. The squares
+              your route crosses load by themselves. Every other square is
+              outlined on the map: click one to load its climate. Forkcast
+              remembers the squares you loaded for your next visit.
             </p>
 
             <h3>Pointing at the map</h3>
@@ -446,8 +444,7 @@ export default class Help extends Component {
             </dl>
             <p>
               Both are prepared in advance on a grid of 0.25° (about 25 km),
-              split into 10° squares that load as you need them, plus a 1°
-              version of the whole world for the map zoomed out.
+              split into 10° squares that load as you need them.
             </p>
 
             <h3>How they're turned into the numbers</h3>
@@ -640,10 +637,10 @@ export default class Help extends Component {
             </p>
             <p>
               One thing does show: the climate data comes in 10° squares, and
-              your browser fetches the ones the map shows closely and the ones
-              your route crosses. The site's host could see which squares of the
-              world were looked at, though not your route, dates or anything
-              else in your plan.
+              your browser fetches the ones your route crosses and the ones you
+              click. The site's host could see which squares of the world were
+              looked at, though not your route, dates or anything else in your
+              plan.
             </p>
           </section>
         {{/if}}
