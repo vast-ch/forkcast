@@ -228,7 +228,7 @@ Under the map, one column per day: the day number on top, a bar from the night l
 - **Usual ranges:** each day's high and low come with how far single days
   stray from them there and then (`highSpread`, `lowSpread`: a standard
   deviation, measured on NOAA CPC's station data; data/README.md, "How far
-  single days stray"). "Usually" is where 8 days in 10 fall, mean ± 1.28
+  single days stray"). The usual range, shown in brackets, is where 8 days in 10 fall, mean ± 1.28
   spreads (`usualRange`); the day chart draws it as a faint band behind each
   bar, from the usual warmest high to the usual coldest low.
 - **Coldest night, likely** and **hottest day, likely** (`likelyExtreme`):

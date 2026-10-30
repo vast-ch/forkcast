@@ -5,11 +5,11 @@ import { isMissing } from './helpers';
 export const fmtTemp = (t: number | undefined | null): string =>
   isMissing(t) ? '–' : `${Math.round(t)}°C`;
 
-/** A temperature's usual range (see usualRange): "usually 19 to 29°C", or "" without a spread. */
+/** A temperature's usual range (see usualRange): "(19 to 29°C)", or "" without a spread. */
 export const fmtUsual = (mean: number, spread: number): string => {
   if (isMissing(mean) || isMissing(spread)) return '';
   const [lo, hi] = usualRange(mean, spread);
-  return `usually ${Math.round(lo)} to ${Math.round(hi)}°C`;
+  return `(${Math.round(lo)} to ${Math.round(hi)}°C)`;
 };
 
 export const fmtKm = (km: number): string =>

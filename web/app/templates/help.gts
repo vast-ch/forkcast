@@ -290,12 +290,13 @@ export default class Help extends Component {
                   of the day's ride.</dd></div>
               <div><dt>High</dt><dd>The day's high in the middle of the day's
                   ride, where you spend most of the riding hours.</dd></div>
-              <div><dt>Usually</dt><dd>Next to the low and the high: the range 8
-                  days in 10 fall in there at that time of year. The faint band
-                  behind each day's bar in the chart shows it, from the usual
-                  warmest afternoon to the usual coldest night. How wide it is
-                  depends on the place: a few degrees by the sea or in the
-                  tropics, 15 °C and more in a continental winter.</dd></div>
+              <div><dt>(9 to 20 °C)</dt><dd>In brackets next to the low and the
+                  high: the usual range, where 8 days in 10 fall at that time of
+                  year. The faint band behind each day's bar in the chart shows
+                  it, from the usual warmest afternoon to the usual coldest
+                  night. How wide it is depends on the place: a few degrees by
+                  the sea or in the tropics, 15 °C and more in a continental
+                  winter.</dd></div>
               <div><dt>Rain</dt><dd>The chance that the day is rainy, and how
                   much rain a day brings when it rains (at least 1 mm), also in
                   the middle of the ride. That says more than an average spread
@@ -441,8 +442,8 @@ export default class Help extends Component {
               <div><dt>NOAA CPC</dt><dd>Daily highs and lows from the world's
                   weather stations, from the US National Oceanic and Atmospheric
                   Administration. Forkcast uses it to measure how far single
-                  days stray from the average, place by place: the “usually”
-                  ranges and the likely coldest night and hottest day.</dd></div>
+                  days stray from the average, place by place: the usual ranges
+                  and the likely coldest night and hottest day.</dd></div>
             </dl>
             <p>
               Both are prepared in advance on a grid of 0.25° (about 25 km),

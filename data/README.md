@@ -213,7 +213,7 @@ app's first version used it alone; now it calibrates ERA5-Land.
   are noisy (15 years of a month's days), and the 3-term curve stays within
   0.5 °C RMS of them. The same in every climate, since how far days stray
   hardly depends on which years are averaged.
-- **Used in the app:** each day's usual range, "usually 9 to 20 °C", where 8
+- **Used in the app:** each day's usual range, "(9 to 20 °C)", where 8
   days in 10 fall (mean ± 1.28 standard deviations), and the trip's likely
   coldest night and hottest day. Those count nights and days as fewer tries
   than there are, because cold and heat come in spells: one try per 2 nights
