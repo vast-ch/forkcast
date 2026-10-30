@@ -239,6 +239,14 @@ Under the map, one column per day: the day number on top, a bar from the low to 
   at 1,200 places for trips of 7–60 days. With every low counted, the real
   lowest low came out below the estimate in only 21–32% of trips; with
   these, 47–51% (the highest high above it 40–58%).
+- **Headwind** (`headwindBetween`): the prevailing wind in riding hours
+  (`windU`, `windV`, at the middle of the stretch, like the high) against
+  the straight line from the day's start to its night stop, divided by the
+  distance ridden. With one wind for the whole day this is exact, however the
+  road winds: its pieces add up to that line. Negative is a tailwind; rest
+  days have none. The trip's is the riding days' average by distance. The
+  map's Wind switch draws the same wind as arrows (`windArrows`, `WindLayer`
+  in `wheel-map.gts`), one per ~44 px, longer when stronger.
 - **Lowest average low** is the lowest of the days' mean lows, and its
   date: when the cold is likeliest, while the likely lowest low says how
   cold.

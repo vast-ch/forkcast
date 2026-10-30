@@ -12,6 +12,7 @@ import {
   fmtDate,
   fmtDaylight,
   fmtDayTitle,
+  fmtHeadwind,
   fmtHours,
   fmtKm,
   fmtMm,
@@ -248,7 +249,7 @@ export default class ItineraryChart extends Component<{
       return `${this.planner.weekSlot.label}: ${this.offTripNote}`;
     if (!d) return 'No day selected';
     const w = d.weather;
-    return `${this.detailTitle}, ${this.detailRoute}, low ${fmtTemp(d.nightLow)} ${fmtUsual(d.nightLow, d.nightLowSpread)}, high ${fmtTemp(w.high)} ${fmtUsual(w.high, w.highSpread)}, rain chance ${fmtPct(w.rainChance)}, daylight ${fmtDaylight(d.daylight)}`;
+    return `${this.detailTitle}, ${this.detailRoute}, low ${fmtTemp(d.nightLow)} ${fmtUsual(d.nightLow, d.nightLowSpread)}, high ${fmtTemp(w.high)} ${fmtUsual(w.high, w.highSpread)}, rain chance ${fmtPct(w.rainChance)}, wind ${fmtHeadwind(d.headwind)}, daylight ${fmtDaylight(d.daylight)}`;
   }
 
   /** Arrow keys step through the days (Home and End jump to the ends). */
@@ -301,6 +302,11 @@ export default class ItineraryChart extends Component<{
             <div><dt>When it rains</dt><dd>{{fmtMm
                   this.detail.weather.wetDayMm
                 }}</dd></div>
+            {{#unless this.detail.isRest}}
+              <div><dt>Wind</dt><dd>{{fmtHeadwind
+                    this.detail.headwind
+                  }}</dd></div>
+            {{/unless}}
             <div><dt>Daylight</dt><dd>{{fmtDaylight
                   this.detail.daylight
                 }}</dd></div>

@@ -11,6 +11,8 @@ import {
   fmtMm,
   fmtPct,
   fmtUsual,
+  fmtHeadwind,
+  fmtWind,
 } from 'forkcast/utils/format';
 
 const round = (n: number | null | undefined) =>
@@ -96,6 +98,10 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                 <dd>{{fmtPct this.route.weather.rainChance}}</dd>
                 <dt>When it rains</dt>
                 <dd>{{fmtMm this.route.weather.wetDayMm}} a day</dd>
+                {{#unless this.route.day.isRest}}
+                  <dt>Wind</dt>
+                  <dd>{{fmtHeadwind this.route.day.headwind}}</dd>
+                {{/unless}}
                 <dt>Riding time</dt>
                 <dd>{{fmtHours this.route.day.ridingHours}}{{#if
                     this.route.day.needsLights
@@ -136,6 +142,11 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <dd>{{this.weekRainyDays}}</dd>
             <dt>When it rains</dt>
             <dd>{{fmtMm this.hover.climate.wetDayMm}} a day</dd>
+            <dt>Wind</dt>
+            <dd>{{fmtWind
+                this.hover.climate.windU
+                this.hover.climate.windV
+              }}</dd>
           </dl>
         {{else if this.isSquareLoading}}
           <p class="wt-eyebrow">{{this.coords}}</p>

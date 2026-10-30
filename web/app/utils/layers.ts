@@ -283,16 +283,43 @@ export function rainMarks(
   });
 }
 
+export interface WindArrow {
+  lat: number;
+  lon: number;
+  /** The prevailing wind in riding hours, m/s toward the east and the north */
+  u: number;
+  v: number;
+}
+
+/** The prevailing wind, one arrow per block of cells (their average). */
+export function windArrows(
+  grid: ClimateGrid,
+  /** Position in the year, 0 … 1 */
+  phase: number,
+  block = 1,
+): WindArrow[] {
+  const comp = (name: 'u10' | 'v10') =>
+    blocks(grid, block, (r, c) => grid.cellAt(name, phase, r, c), false);
+  const v = comp('v10');
+  return comp('u10').map((u, i) => ({
+    lat: u.lat,
+    lon: u.lon,
+    u: u.val,
+    v: v[i]!.val,
+  }));
+}
+
 /**
  * The average of `value` over block × block cells, at the centre of each
  * block in the grid's own area. Blocks are aligned to the worldwide grid, not
  * to this tile's corner, so neighbouring tiles merge cells into the same
- * pattern.
+ * pattern. Only positive averages unless `positiveOnly` is false.
  */
 function blocks(
   grid: ClimateGrid,
   block: number,
   value: (row: number, col: number) => number,
+  positiveOnly = true,
 ): { lat: number; lon: number; val: number }[] {
   const out: { lat: number; lon: number; val: number }[] = [];
   const rowStart = -(Math.round((90 - grid.lat0) / grid.step) % block);
@@ -317,7 +344,7 @@ function blocks(
       // Skip mostly-sea blocks so coasts don't sprout dots offshore.
       if (n === 0 || n < (block * block) / 3) continue;
       const val = sum / n;
-      if (val <= 0) continue;
+      if (positiveOnly && val <= 0) continue;
       const lat = grid.lat0 - (r0 + (block - 1) / 2) * grid.step;
       const lonC = grid.lon0 + (c0 + (block - 1) / 2) * grid.step;
       if (!grid.owns(lat, lonC)) continue;

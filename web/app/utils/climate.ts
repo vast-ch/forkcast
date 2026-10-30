@@ -76,6 +76,9 @@ export interface DayClimate {
   highSpread: number;
   /** The same for the lows */
   lowSpread: number;
+  /** The prevailing wind in riding hours, m/s: toward the east, and toward the north (NaN if unknown) */
+  windU: number;
+  windV: number;
   /** Mean precipitation per day, mm */
   rainMm: number;
   /** Chance of a rainy day (at least the chosen threshold of rain), 0..1 */
@@ -132,6 +135,16 @@ function clamp01(x: number): number {
  */
 const MIN_WET_SHARE = 0.02;
 
+/** Compass points, clockwise from north. */
+const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
+
+/** Where a wind blowing toward (u east, v north) comes from: "SW". */
+export function windFrom(u: number, v: number): string {
+  const toward = (Math.atan2(u, v) * 180) / Math.PI; // clockwise from north
+  const from = (toward + 180 + 360) % 360;
+  return COMPASS[Math.round(from / 45) % 8]!;
+}
+
 /** The stored rainy-day count for a threshold (1, 5 or 10 mm). */
 function countVar(threshold: number): SeasonVar {
   return threshold <= 1 ? 'r1' : threshold >= 10 ? 'r10' : 'r5';
@@ -179,10 +192,21 @@ export function lapseRateAt(phase: number): number {
 /**
  * The seasonal curves: tmx/tmn the mean daily max/min, °C; pre the rain, mm
  * per day; r1/r5/r10 the share of days with at least 1/5/10 mm; tmxsd/tmnsd
- * how far single days' max/min stray from their mean (a standard deviation, °C).
+ * how far single days' max/min stray from their mean (a standard deviation, °C);
+ * u10/v10 the prevailing wind in riding hours, m/s toward the east and north
+ * (the mean of the wind vector, see data/forkcast_data/wind.py).
  */
 type SeasonVar =
-  'tmx' | 'tmn' | 'pre' | 'r1' | 'r5' | 'r10' | 'tmxsd' | 'tmnsd';
+  | 'tmx'
+  | 'tmn'
+  | 'pre'
+  | 'r1'
+  | 'r5'
+  | 'r10'
+  | 'tmxsd'
+  | 'tmnsd'
+  | 'u10'
+  | 'v10';
 
 /** 8 days in 10 fall within this many standard deviations of the mean (normal distribution). */
 const USUAL_Z = 1.2816;
@@ -412,6 +436,8 @@ export default class ClimateGrid implements ClimateSource {
       low: this.sampleAt('tmn', phase, lat, lon) + shift,
       highSpread: this.sampleAt('tmxsd', phase, lat, lon),
       lowSpread: this.sampleAt('tmnsd', phase, lat, lon),
+      windU: this.sampleAt('u10', phase, lat, lon),
+      windV: this.sampleAt('v10', phase, lat, lon),
       rainMm: rain,
       rainChance: chance,
       wetDayMm: wet >= MIN_WET_SHARE ? rain / wet : Number.NaN,
@@ -560,6 +586,8 @@ const UNKNOWN: DayClimate = {
   rainChance: Number.NaN,
   wetDayMm: Number.NaN,
   altitudeShift: 0,
+  windU: Number.NaN,
+  windV: Number.NaN,
 };
 
 /**

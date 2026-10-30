@@ -15,6 +15,7 @@ export default class IndexController extends Controller {
   @tracked tempMetric = DEFAULTS.tempMetric;
   @tracked showTemp = DEFAULTS.showTemp;
   @tracked showRain = DEFAULTS.showRain;
+  @tracked showWind = DEFAULTS.showWind;
   @tracked borders = DEFAULTS.borders;
   @tracked relief = DEFAULTS.relief;
   @tracked water = DEFAULTS.water;

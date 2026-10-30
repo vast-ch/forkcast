@@ -8,6 +8,9 @@ import { css } from 'forkcast/utils/format';
 import { DOT_FULL, rainEmojiTiers } from 'forkcast/utils/layers';
 
 /** The legend's sample dots, as mm in the week shown. */
+/** What the arrows show (see WindLayer in wheel-map.gts). */
+const WIND_LABEL = 'Prevailing wind while riding, longer when stronger';
+
 const DOT_STEPS = [
   { label: '5', value: 5 },
   { label: '15', value: 15 },
@@ -79,13 +82,16 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
     const parts = [
       this.planner.showTemp ? this.tempLabel : '',
       this.planner.showRain ? this.rainLabel : '',
+      this.planner.showWind ? WIND_LABEL : '',
     ].filter(Boolean);
     return `Legend: ${parts.join('; ')}. Hide the legend`;
   }
 
   /** Nothing to explain when both layers are off. */
   get hasContent() {
-    return this.planner.showTemp || this.planner.showRain;
+    return (
+      this.planner.showTemp || this.planner.showRain || this.planner.showWind
+    );
   }
 
   <template>
@@ -153,6 +159,12 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
                 {{/each}}
               </span>
             {{/if}}
+          {{/if}}
+          {{#if this.planner.showWind}}
+            <span class="flex items-center gap-1.5">
+              <span class="wt-legend-wind" aria-hidden="true">➝</span>
+              {{WIND_LABEL}}
+            </span>
           {{/if}}
         {{else}}
           <span
