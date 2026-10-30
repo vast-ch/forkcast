@@ -79,6 +79,16 @@ module('Acceptance | planner', function (hooks) {
     assert.deepEqual(colours(), usual.colours);
   });
 
+  test('1 yr is a real year, 2025: Madrid had a record-hot June', async function (assert) {
+    const atlas = this.owner.lookup('service:atlas');
+    const june = () => atlas.climate!.at(5.5 / 12, 40.4, -3.7, 5).high;
+    await visit('/');
+    const usual = june();
+    await click(button('1 yr'));
+    assert.strictEqual(currentURL(), '/?climate=last1');
+    assert.true(june() > usual + 2, `${june()} °C against ${usual} °C`);
+  });
+
   test('the climate switch fills its row, and scrolls sideways on a narrow panel', async function (assert) {
     await visit('/');
     const panel = find('.wt-panel') as HTMLElement;

@@ -5,6 +5,7 @@
 ### Added
 
 - Choose the climate: the map and your trip can also use only the last 10 or 5 years (to see how much warmer it has become), or a year with El Niño or La Niña. Forecasters see those coming months ahead, so if your trip falls in one, you can plan for what it tends to bring: a drier spring in eastern Australia, a milder winter in western Canada and more. The help's new Climates page explains each and where they matter (in Europe, El Niño and La Niña hardly change anything).
+- A one-year climate, “1 yr”: see your trip in 2025, a real year, each month as it actually was, rather than the average. Spain's record-hot June is in it, and every unusually wet or dry month. One year is one roll of the dice, so it shows what can happen rather than what to expect.
 - An About page in the help: who makes Forkcast, where to report a problem or ask for a feature, and a QR code to our Discord channel.
 - The start date's calendar is coloured by the weather: each day shows, in the map's colours, how warm it usually is where your route begins if you set off that day, so a good time to leave stands out at a glance. The help's “Your trip” page lets you try it for a few starting towns.
 

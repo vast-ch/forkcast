@@ -499,6 +499,17 @@ export default class Help extends Component {
               for planning, 15 yrs is the safer choice.
             </p>
 
+            <h3>1 yr</h3>
+            <p>
+              Only the most recent year, 2025, each month as it really was:
+              Spain's record-hot June is there, and so is every wet or dry month
+              of the year. Ride your trip through it to see how a real year can
+              differ from the average, for better or worse. One year is just one
+              roll of the dice, so don't plan by it alone. Each place still
+              shows its monthly averages for 2025, so a single hot week or storm
+              within a month is smoothed out.
+            </p>
+
             <h3>El Niño and La Niña</h3>
             <p>
               Every few years the tropical Pacific runs warmer than usual (El

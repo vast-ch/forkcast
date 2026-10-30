@@ -91,6 +91,7 @@ export const CLIMATES = [
   'last15',
   'last10',
   'last5',
+  'last1',
   'elnino',
   'lanina',
 ] as const;

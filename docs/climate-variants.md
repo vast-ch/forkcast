@@ -1,8 +1,8 @@
 # Climate variants
 
 Status: built (October 2026). The app's "Climate" setting offers the
-2011–2025 average plus four variants: the last 10 years, the last 5, El Niño
-and La Niña. How they are built is in `data/README.md` ("Climate variants");
+2011–2025 average plus five variants: the last 10 years, the last 5, the
+year 2025 alone, El Niño and La Niña. How they are built is in `data/README.md` ("Climate variants");
 this file is why: the question, the research and what it decided.
 
 ## The question

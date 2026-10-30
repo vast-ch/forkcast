@@ -57,6 +57,7 @@ const CLIMATE_LABELS: Record<ClimateId, { label: string; title: string }> = {
   last15: { label: '15 yrs', title: 'The average of 2011–2025' },
   last10: { label: '10 yrs', title: 'The average of 2016–2025' },
   last5: { label: '5 yrs', title: 'The average of 2021–2025' },
+  last1: { label: '1 yr', title: 'Only 2025: each month as it was' },
   elnino: {
     label: 'El Niño',
     title: 'A year with El Niño: how El Niño months differed, 1981–2025',

@@ -63,7 +63,9 @@ _DAYS = [
 ]
 _RAIN = [
     {"kind": "sqrt", "scale": 40},  # mm per day, up to 40
-    *[{"kind": "linear", "scale": 63.5, "offset": -2, "relative": True}] * 6,  # ±2 × the mean
+    # ±2.25 × the mean: the most a wave can be, with all of a year's rain in one
+    # month, is 2 / (sin(πk/12) / (πk/12)), 2.22 for the 4-month wave (2025 has such cells).
+    *[{"kind": "linear", "scale": 56.4, "offset": -2.25, "relative": True}] * 6,
 ]
 # Mean highs run from about −25 °C (Greenland's ice) to +39 °C, mean lows from −35 to +28 °C.
 ENCODING = {"tmx": _temp(-28), "tmn": _temp(-38), "pre": _RAIN, "r1": _DAYS, "r5": _DAYS, "r10": _DAYS}

@@ -131,6 +131,9 @@ def test_check_stops_the_build_on_a_flipped_enso_effect():
     stats[("elnino", "Europe", "tmx", 3)] = (0.1, 9.0)
     with pytest.raises(SystemExit, match="up to 9.0"):
         variants.check(stats)
+    stats = _calm_stats()
+    stats[(variants.YEAR, "Europe", "tmx", 3)] = (0.1, 9.0)  # a single year's month may be this far off
+    variants.check(stats)
 
 
 def test_check_holds_known_data_flaws_to_their_own_limit():
@@ -141,7 +144,9 @@ def test_check_holds_known_data_flaws_to_their_own_limit():
     for v in variants.VARIANTS:
         for f in ("tmx", "tmn"):
             for m in range(12):
-                stats[(v, name, f, m)] = variants.MAX_TEMP + 1  # beyond the usual limit, within its own
+                stats[(v, name, f, m)] = variants.MAX_TEMP_AVERAGE + 1  # beyond the usual limit, within its own
+    variants.check(stats)
+    stats[(variants.YEAR, name, "tmn", 0)] = limit + 1  # a single year may go further
     variants.check(stats)
     stats[("last5", name, "tmn", 0)] = limit + 1
     with pytest.raises(SystemExit, match=name):

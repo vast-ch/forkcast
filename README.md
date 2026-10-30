@@ -85,7 +85,7 @@ docker compose exec ui pnpm build                   # writes web/dist
 |---|---|
 | `web/` | The app: Ember 7.3 (`.gts`, TypeScript), Vite + Embroider, Leaflet, Tailwind 4, Frontile. pnpm. |
 | `data/` | Python (uv) builders for the data files the app loads. |
-| `data/out/` | Built data, committed: `climate/<climate>.json` (a climate's header) and `climate/<climate>/` (its seasonal curves as byte grids: one file per 10° tile with land, and a 1° world overview), for the 2011–2025 climate (`last15`) and the others (last 10 and 5 years, El Niño, La Niña); the world's `countries.json` (TopoJSON), `places.json`, `water.json` and `cyclenet.json`; `routes/index.json` and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
+| `data/out/` | Built data, committed: `climate/<climate>.json` (a climate's header) and `climate/<climate>/` (its seasonal curves as byte grids: one file per 10° tile with land, and a 1° world overview), for the 2011–2025 climate (`last15`) and the others (last 10 and 5 years, 2025 alone, El Niño, La Niña); the world's `countries.json` (TopoJSON), `places.json`, `water.json` and `cyclenet.json`; `routes/index.json` and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
 | `data/eurovelo/` | The official EuroVelo GPX tracks (gzipped, ODbL), with their licence. |
 | `data/cache/` | Downloads and BRouter responses (git-ignored). |
 | `compose.yaml` | `ui` (dev), `web` (prod, profile `prod`), `data` (builder, profile `tools`). |
