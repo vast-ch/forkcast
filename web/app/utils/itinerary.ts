@@ -35,7 +35,7 @@ export interface TripDay {
   weather: DayClimate;
   /** Low at the overnight stop */
   nightLow: number;
-  /** How far single nights' lows there stray from it (°C, a standard deviation) */
+  /** How far single lows there stray from it (°C, a standard deviation) */
   nightLowSpread: number;
   /** Hours in the saddle at the average speed (0 on rest days) */
   ridingHours: number;
@@ -52,11 +52,11 @@ export interface Trip {
   end: Date;
   km: number;
   avgHigh: number;
-  coldestNight: TripDay | undefined;
-  /** The trip's coldest single night, in an average year: as likely to come out colder as warmer (see likelyExtreme) */
-  likelyColdest: number;
-  /** The same for its hottest riding day */
-  likelyHottest: number;
+  lowestLow: TripDay | undefined;
+  /** The trip's lowest single low, in an average year: as likely to come out colder as warmer (see likelyExtreme) */
+  likelyLowest: number;
+  /** The same for its highest high on a riding day */
+  likelyHighest: number;
   /** Expected number of days with some rain, riding days only */
   rainyDays: number;
   /** Fewest and most rainy riding days in 8 trips out of 10 (see rainyDaysRange) */
@@ -144,12 +144,12 @@ export function planTrip(
     km: total,
     avgHigh:
       valid.reduce((s, d) => s + d.weather.high, 0) / (valid.length || 1),
-    coldestNight: coldest,
-    likelyColdest: likelyExtreme(
+    lowestLow: coldest,
+    likelyLowest: likelyExtreme(
       days.map((d) => [d.nightLow, d.nightLowSpread]),
       'lowest',
     ),
-    likelyHottest: likelyExtreme(
+    likelyHighest: likelyExtreme(
       valid.map((d) => [d.weather.high, d.weather.highSpread]),
       'highest',
     ),
@@ -175,12 +175,12 @@ const SPELL_FACTOR: Record<number, number> = { 1: 2, 5: 1.6, 10: 1.5 };
 const RANGE_TAIL = 0.1;
 
 /**
- * Cold nights and hot days come in spells, so a trip's nights are fewer
- * independent tries at a cold one than there are nights: about one in 2, and
+ * Low lows and high highs come in spells, so a trip's lows are fewer
+ * independent tries at a low one than there are lows: about one in 2, and
  * one in 2.5 for hot days. Measured on NOAA CPC's daily highs and lows,
  * 2011–2025, at 1,200 random places, trips of 7 to 60 days: with these, the
- * real coldest night came out below likelyExtreme's in 47–51% of trips (the
- * hottest day above it in 40–58%), against 21–32% counting every day.
+ * real lowest low came out below likelyExtreme's in 47–51% of trips (the
+ * highest high above it in 40–58%), against 21–32% counting every day.
  */
 const EXTREME_SPELL = { lowest: 2, highest: 2.5 } as const;
 

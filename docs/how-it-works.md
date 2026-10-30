@@ -95,7 +95,7 @@ top.
 
 ## The day chart
 
-Under the map, one column per day: the day number on top, a bar from the night low to the day high, coloured by the high, the chance of a rainy day under it. Rest days are shaded columns, with the weather at the rest stop, and a line, labelled with the month's name along it, marks the start of each month; the selected day's date is above the chart. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
+Under the map, one column per day: the day number on top, a bar from the low to the high, coloured by the high, the chance of a rainy day under it. Rest days are shaded columns, with the weather at the rest stop, and a line, labelled with the month's name along it, marks the start of each month; the selected day's date is above the chart. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
 
 **Why:** a list of days repeated what the chart shows, and on a phone it was a long scroll. The selected day's figures sit above the chart.
 
@@ -221,8 +221,8 @@ Under the map, one column per day: the day number on top, a bar from the night l
   days follow the repeating pattern (ride N, rest M). A trip never ends on a
   rest day.
 - **A day's high and rain** are taken at the middle of its stretch: that is
-  where you spend most of the riding hours. **The night low** is taken at the
-  end of the stretch, where you sleep, because that is the night you feel.
+  where you spend most of the riding hours. **The low** is taken at the end of
+  the stretch, where you sleep, because that is the low you feel.
 - **Climbing** sums every ascent along the stretch from the track's elevation.
 - **Daylight** (`web/app/utils/sun.ts`) is sunrise at the start of the stretch to sunset at its end, from the sunrise equation NOAA's solar calculator uses (within a minute or two). Both are absolute times, so the difference needs no time zones, which is why the app shows the duration rather than clock times: those would need each place's time zone (Spain, for one, keeps Central European time west of Greenwich). Midnight sun counts as 24 h, polar night as none.
 - **Usual ranges:** each day's high and low come with how far single days
@@ -231,16 +231,16 @@ Under the map, one column per day: the day number on top, a bar from the night l
   single days stray"). The usual range, shown in brackets, is where 8 days in 10 fall, mean ± 1.28
   spreads (`usualRange`); the day chart draws it as a thin line through each
   bar, from the usual warmest high to the usual coldest low.
-- **Coldest night, likely** and **hottest day, likely** (`likelyExtreme`):
-  the value the trip's coldest night (hottest riding day) is as likely to
-  beat as not, each night (day) normal with its mean and spread. Nights are
+- **Lowest low, likely** and **highest high, likely** (`likelyExtreme`):
+  the value the trip's lowest low (highest high on a riding day) is as likely
+  to beat as not, each low (high) normal with its mean and spread. Lows are
   not independent tries, since cold comes in spells: counted as one try per 2
-  nights and per 2.5 days (`EXTREME_SPELL`), measured on CPC's 2011–2025 days
-  at 1,200 places for trips of 7–60 days. With every night counted, the real
-  coldest night came out below the estimate in only 21–32% of trips; with
-  these, 47–51% (the hottest day above it 40–58%).
-- **Coldest average night** is the lowest of the nights' mean lows, and its
-  date: when the cold is likeliest, while the likely coldest night says how
+  lows and per 2.5 highs (`EXTREME_SPELL`), measured on CPC's 2011–2025 days
+  at 1,200 places for trips of 7–60 days. With every low counted, the real
+  lowest low came out below the estimate in only 21–32% of trips; with
+  these, 47–51% (the highest high above it 40–58%).
+- **Lowest average low** is the lowest of the days' mean lows, and its
+  date: when the cold is likeliest, while the likely lowest low says how
   cold.
 - **Rainy riding days** is the sum of the daily chances: an expected number,
   not a forecast. Its range (`rainyDaysRange`) is where 8 trips out of 10
@@ -296,6 +296,6 @@ Under the map, one column per day: the day number on top, a bar from the night l
 - 0.25° cells (≈ 25 km) still blur narrow coasts; the altitude correction
   helps route points in mountains but not, for example, a seafront town whose
   cell includes hills at the same height.
-- Winter in Alpine valleys reads 2–3 °C too mild, nights more (cold-air pooling, fog).
+- Winter in Alpine valleys reads 2–3 °C too mild, lows more (cold-air pooling, fog).
 - The demo route and EuroVelo tracks are simplified (≈ 30–40 m tolerance),
   which slightly understates climbing.

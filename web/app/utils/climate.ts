@@ -76,7 +76,7 @@ export interface DayClimate {
   low: number;
   /** How far single days' highs stray from `high`: a standard deviation, °C (NaN if unknown) */
   highSpread: number;
-  /** The same for the nights' lows */
+  /** The same for the lows */
   lowSpread: number;
   /** Mean precipitation per day, mm */
   rainMm: number;

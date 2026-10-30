@@ -215,12 +215,12 @@ app's first version used it alone; now it calibrates ERA5-Land.
   hardly depends on which years are averaged.
 - **Used in the app:** each day's usual range, "(9 to 20 °C)", where 8
   days in 10 fall (mean ± 1.28 standard deviations), and the trip's likely
-  coldest night and hottest day. Those count nights and days as fewer tries
-  than there are, because cold and heat come in spells: one try per 2 nights
-  and per 2.5 days, measured on CPC at 1,200 places (`EXTREME_SPELL` in
+  lowest low and highest high. Those count lows and highs as fewer tries
+  than there are, because cold and heat come in spells: one try per 2 lows
+  and per 2.5 highs, measured on CPC at 1,200 places (`EXTREME_SPELL` in
   `web/app/utils/itinerary.ts`).
-- **Limits:** a normal distribution; real cold nights have a slightly longer
-  tail in winter inland (cold-air pools), so the coldest nights can be a
+- **Limits:** a normal distribution; real lows have a slightly longer
+  tail in winter inland (cold-air pools), so the lowest lows can be a
   degree or two colder than the range says. CPC is sparse where stations are
   (Sahara, Amazon, Siberia's interior): its spread there is interpolated.
 

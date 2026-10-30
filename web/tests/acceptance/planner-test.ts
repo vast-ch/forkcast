@@ -39,8 +39,8 @@ module('Acceptance | planner', function (hooks) {
     const singaporeJanuary = at(0.04, 1.35, 103.8).lowSpread;
     assert.true(moscowJanuary > 5, `Moscow's January nights ±${moscowJanuary}`);
     assert.true(singaporeJanuary < 2, `Singapore's ±${singaporeJanuary}`);
-    const cold = Number.parseFloat(summary('Coldest night, likely') ?? '');
-    const average = Number.parseFloat(summary('Coldest average night') ?? '');
+    const cold = Number.parseFloat(summary('Lowest low, likely') ?? '');
+    const average = Number.parseFloat(summary('Lowest average low') ?? '');
     assert.true(cold < average, `likely ${cold} °C, on average ${average} °C`);
   });
 

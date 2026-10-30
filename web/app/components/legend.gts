@@ -57,9 +57,7 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   }
 
   get tempLabel() {
-    return this.planner.tempMetric === 'high'
-      ? 'Average day high'
-      : 'Average night low';
+    return this.planner.tempMetric === 'high' ? 'Average high' : 'Average low';
   }
 
   get rainLabel() {

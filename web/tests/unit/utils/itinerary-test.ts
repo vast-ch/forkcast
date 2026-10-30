@@ -151,7 +151,7 @@ module('Unit | Utility | itinerary', function () {
     );
   });
 
-  test('the likely coldest night and hottest day: as likely beaten as not, counting spells', function (assert) {
+  test('the likely lowest low and highest high: as likely beaten as not, counting spells', function (assert) {
     // One night: its mean. 14 nights of 10 ± 3 °C, as 7 tries: each mild
     // with 0.25^(1/14), 1.315 spreads below the mean.
     closeTo(assert, likelyExtreme([[10, 3]], 'lowest'), 10);
@@ -162,11 +162,11 @@ module('Unit | Utility | itinerary', function () {
     // The trip: 7 nights of 10 ± 3, 5 riding days of 20 ± 4.
     closeTo(
       assert,
-      trip.likelyColdest,
+      trip.likelyLowest,
       likelyExtreme(days(7, [10, 3]), 'lowest'),
       6,
     );
-    assert.true(trip.likelyColdest < 10);
-    assert.true(trip.likelyHottest > 20);
+    assert.true(trip.likelyLowest < 10);
+    assert.true(trip.likelyHighest > 20);
   });
 });

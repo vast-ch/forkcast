@@ -114,13 +114,13 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
         {{else if this.hover.climate}}
           <p class="wt-eyebrow">{{this.weekLabel}} average · {{this.coords}}</p>
           <dl class="wt-readout mt-2">
-            <dt>Night low</dt>
+            <dt>Low</dt>
             <dd><TempPill @t={{this.hover.climate.low}} />
               <span class="wt-muted text-xs">{{fmtUsual
                   this.hover.climate.low
                   this.hover.climate.lowSpread
                 }}</span></dd>
-            <dt>Day high</dt>
+            <dt>High</dt>
             <dd><TempPill @t={{this.hover.climate.high}} />
               <span class="wt-muted text-xs">{{fmtUsual
                   this.hover.climate.high

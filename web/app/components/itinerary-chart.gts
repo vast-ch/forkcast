@@ -70,7 +70,7 @@ interface Bar {
   midX: number;
   yHigh: number;
   barH: number;
-  /** The thin line through the bar: from the usual warmest day to the usual coldest night (8 in 10), if known */
+  /** The thin line through the bar: from the usual highest high to the usual lowest low (8 in 10), if known */
   usualY?: number;
   usualEnd?: number;
   rainY: number;
