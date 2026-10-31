@@ -1,5 +1,5 @@
 import { htmlSafe } from '@ember/template';
-import { usualRange } from './climate';
+import { usualRange, windFrom } from './climate';
 import { isMissing } from './helpers';
 
 export const fmtTemp = (t: number | undefined | null): string =>
@@ -10,6 +10,25 @@ export const fmtUsual = (mean: number, spread: number): string => {
   if (isMissing(mean) || isMissing(spread)) return '';
   const [lo, hi] = usualRange(mean, spread);
   return `(${Math.round(lo)} to ${Math.round(hi)}°C)`;
+};
+
+/** Below this, km/h, an average headwind is as good as none. */
+const CALM_KMH = 1;
+
+/** An average headwind, m/s, for riders: "headwind 7 km/h", "tailwind 5 km/h". */
+export const fmtHeadwind = (mps: number): string => {
+  if (isMissing(mps)) return '–';
+  const kmh = Math.round(mps * 3.6);
+  if (Math.abs(mps * 3.6) < CALM_KMH) return 'none on average';
+  return kmh > 0 ? `headwind ${kmh} km/h` : `tailwind ${-kmh} km/h`;
+};
+
+/** The prevailing wind: "from the SW, 12 km/h". */
+export const fmtWind = (u: number, v: number): string => {
+  if (isMissing(u) || isMissing(v)) return '–';
+  const kmh = Math.hypot(u, v) * 3.6;
+  if (kmh < CALM_KMH) return 'none prevailing';
+  return `from the ${windFrom(u, v)}, ${Math.round(kmh)} km/h`;
 };
 
 export const fmtKm = (km: number): string =>

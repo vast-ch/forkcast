@@ -175,6 +175,7 @@ export default class PlannerService extends Service {
   @setting declare tempMetric: TempMetric;
   @setting declare showTemp: boolean;
   @setting declare showRain: boolean;
+  @setting declare showWind: boolean;
   @setting declare borders: boolean;
   @setting declare relief: boolean;
   @setting declare water: boolean;

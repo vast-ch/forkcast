@@ -19,6 +19,7 @@ import { MONTHS, RAIN_THRESHOLDS } from 'forkcast/utils/climate';
 import {
   css,
   fmtDate,
+  fmtHeadwind,
   fmtKm,
   fmtRainyDays,
   fmtShortDate,
@@ -39,6 +40,7 @@ type MapSetting =
   | 'climate'
   | 'showTemp'
   | 'showRain'
+  | 'showWind'
   | 'tempMetric'
   | 'rainMetric'
   | 'rainThreshold'
@@ -149,6 +151,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
       ['Average high', fmtTemp(t.avgHigh)],
       ['Highest high, likely', fmtTemp(t.likelyHighest)],
       ['Rainy riding days', fmtRainyDays(t.rainyDays, t.rainyDaysRange)],
+      ['Wind', fmtHeadwind(t.headwind)],
       ['Lowest low, likely', fmtTemp(t.likelyLowest)],
       ['Lowest average low', cold ? fmtTemp(cold.nightLow) : '–'],
       ['Lowest average low on', cold ? fmtShortDate(cold.date) : '–'],
@@ -534,6 +537,15 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 {{/each}}
               </SegmentedControl>
             </span>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <Switch
+              @label="Wind"
+              @size="sm"
+              @isSelected={{this.planner.showWind}}
+              @onChange={{fn this.setMap "showWind"}}
+            />
+            <span class="wt-muted text-xs">prevailing, while riding</span>
           </div>
           <div class="flex items-center justify-between gap-3">
             <span class="text-sm">Dates on the route</span>

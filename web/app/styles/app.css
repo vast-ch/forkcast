@@ -745,6 +745,14 @@ body {
 .wt-day.is-active .wt-day-hit {
   fill: var(--wt-pick-wash);
 }
+/* Like the map's wind arrows: white on a dark edge. */
+.wt-legend-wind {
+  font-size: 16px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 2px rgb(0 0 0 / 80%);
+}
+
 /* Through the bar: where 8 days in 10 fall, from the highest high to the lowest low. */
 .wt-temp-usual {
   stroke: var(--wt-muted);

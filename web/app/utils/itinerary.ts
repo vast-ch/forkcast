@@ -37,6 +37,8 @@ export interface TripDay {
   nightLow: number;
   /** How far single lows there stray from it (°C, a standard deviation) */
   nightLowSpread: number;
+  /** The average headwind over the day's stretch, m/s; negative is a tailwind (NaN on rest days or without wind data) */
+  headwind: number;
   /** Hours in the saddle at the average speed (0 on rest days) */
   ridingHours: number;
   /** More riding time than daylight: part of the day is ridden in the dark */
@@ -62,6 +64,31 @@ export interface Trip {
   /** Fewest and most rainy riding days in 8 trips out of 10 (see rainyDaysRange) */
   rainyDaysRange: [number, number];
   rainMm: number;
+  /** The average headwind over the riding days, by distance, m/s (negative: a tailwind) */
+  headwind: number;
+}
+
+/**
+ * The average headwind riding from `a` to `b` over `distance` km, with the
+ * same wind all along: the wind against the net direction, scaled by how
+ * much of the distance went that way. However the road winds, its pieces add
+ * up to the straight line from a to b, and a constant wind's push along them
+ * adds up the same way.
+ */
+export function headwindBetween(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+  distance: number,
+  u: number,
+  v: number,
+): number {
+  if (!(distance > 0) || Number.isNaN(u) || Number.isNaN(v)) return Number.NaN;
+  const east =
+    (b.lon - a.lon) *
+    111.32 *
+    Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
+  const north = (b.lat - a.lat) * 110.57;
+  return -(u * east + v * north) / distance;
 }
 
 export function parseDate(iso: string): Date {
@@ -122,6 +149,9 @@ export function planTrip(
       nightLowSpread: night.lowSpread,
       daylight,
       needsLights: !isRest && ridingHours > daylight,
+      headwind: isRest
+        ? Number.NaN
+        : headwindBetween(here, sleep, to - km, weather.windU, weather.windV),
     });
     km = to;
   }
@@ -159,6 +189,7 @@ export function planTrip(
       settings.rainThreshold,
     ),
     rainMm: valid.reduce((s, d) => s + d.weather.rainMm, 0),
+    headwind: averageHeadwind(riding),
   };
 }
 
@@ -170,6 +201,15 @@ export function planTrip(
  * (windows of one week to two months; heavier rain clusters less).
  */
 const SPELL_FACTOR: Record<number, number> = { 1: 2, 5: 1.6, 10: 1.5 };
+
+/** The riding days' headwind, weighted by their distance (NaN without wind data). */
+function averageHeadwind(days: TripDay[]): number {
+  const known = days.filter((d) => !Number.isNaN(d.headwind));
+  const km = known.reduce((s, d) => s + d.distance, 0);
+  return km > 0
+    ? known.reduce((s, d) => s + d.headwind * d.distance, 0) / km
+    : Number.NaN;
+}
 
 /** Share of trips below the range, and above it. */
 const RANGE_TAIL = 0.1;

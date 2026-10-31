@@ -32,6 +32,8 @@ export const DEFAULTS = {
   showTemp: true,
   /** Show the rain */
   showRain: true,
+  /** Show the prevailing wind as arrows */
+  showWind: false,
   /** Map details: country outlines, relief shading, rivers and lakes, the other routes */
   borders: true,
   relief: true,
@@ -112,6 +114,7 @@ export const PARSE: { [K in SettingKey]: Parse<(typeof DEFAULTS)[K]> } = {
   tempMetric: oneOf(['high', 'low'] as const),
   showTemp: isBoolean,
   showRain: isBoolean,
+  showWind: isBoolean,
   borders: isBoolean,
   relief: isBoolean,
   water: isBoolean,

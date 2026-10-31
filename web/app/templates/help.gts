@@ -156,6 +156,19 @@ export default class Help extends Component {
               showing their average.
             </p>
 
+            <h3>Wind</h3>
+            <p>
+              Turn on
+              <strong>Wind</strong>
+              in the map settings for arrows that point where the wind usually
+              blows in that week, between 9:00 and 17:00 when most riding is
+              done. The longer the arrow, the stronger the wind. It's the
+              prevailing wind: what's left when many days are averaged, so where
+              the wind swings about there's little or no arrow even if it's
+              often windy. That's exactly what decides whether a route is easier
+              one way or the other.
+            </p>
+
             <h3>The legend</h3>
             <p>
               The legend in the corner of the map gives the colour scale and
@@ -294,6 +307,12 @@ export default class Help extends Component {
                   it, from the usual highest high to the usual lowest low. How
                   wide it is depends on the place: a few degrees by the sea or
                   in the tropics, 15 °C and more in a continental winter.</dd></div>
+              <div><dt>Wind</dt><dd>The average headwind (or tailwind) over the
+                  day's ride: the prevailing wind in riding hours against the
+                  way you go. A winding road counts as the line from where you
+                  start to where you sleep. It's an average over many days: on a
+                  given day the wind can blow from anywhere, and it's often
+                  stronger.</dd></div>
               <div><dt>Rain</dt><dd>The chance that the day is rainy, and how
                   much rain a day brings when it rains (at least 1 mm), also in
                   the middle of the ride. That says more than an average spread
@@ -328,6 +347,9 @@ export default class Help extends Component {
                   up: how many to expect, not a promise. In brackets, the range
                   8 trips out of 10 fall in. Rain comes in spells, so some trips
                   catch a lot more and some a lot less.</dd></div>
+              <div><dt>Wind</dt><dd>The average headwind or tailwind over the
+                  whole trip, by distance. A headwind here is a tailwind the
+                  other way round: try the ⇅ button.</dd></div>
               <div><dt>Highest high, likely</dt><dd>The highest single high your
                   trip is as likely to beat as not, in a usual year. Heat comes
                   in spells, which Forkcast takes into account.</dd></div>
