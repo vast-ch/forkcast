@@ -1,5 +1,7 @@
 import { module, test } from 'qunit';
 import {
+  headwindBetween,
+  windPush,
   likelyExtreme,
   milestones,
   planTrip,
@@ -18,6 +20,9 @@ const climate: ClimateSource = {
     low: 10,
     highSpread: 4,
     lowSpread: 3,
+    windSpeed: 2,
+    windU: 2, // from the west
+    windV: 0,
     rainMm: 1,
     rainChance: 0.25,
     wetDayMm: 4,
@@ -168,5 +173,36 @@ module('Unit | Utility | itinerary', function () {
     );
     assert.true(trip.likelyLowest < 10);
     assert.true(trip.likelyHighest > 20);
+  });
+
+  test('how the wind meets the ride: against, behind, across or from all sides', function (assert) {
+    assert.strictEqual(windPush(3, 5, 0.9), 'against');
+    assert.strictEqual(windPush(-3, 5, 0.9), 'behind');
+    assert.strictEqual(windPush(0.5, 5, 0.9), 'side', 'steady, but across');
+    assert.strictEqual(
+      windPush(0.5, 5, 0.1),
+      'varied',
+      'from every side in turn',
+    );
+    assert.strictEqual(windPush(Number.NaN, 5, 0.9), undefined);
+  });
+
+  test('the headwind: the wind against the way ridden', function (assert) {
+    // East along 46°N with a west wind of 2 m/s: a tailwind, the whole way.
+    for (const d of trip.days.filter((x) => !x.isRest)) {
+      closeTo(assert, d.headwind, -2);
+      assert.strictEqual(d.windPush, 'behind');
+    }
+    assert.true(
+      trip.days.filter((x) => x.isRest).every((x) => Number.isNaN(x.headwind)),
+    );
+    closeTo(assert, trip.headwind, -2);
+    assert.strictEqual(trip.windPush, 'behind');
+    // Due north into a north wind (blowing south at 3 m/s): all of it.
+    const a = { lat: 46, lon: 7 };
+    const b = { lat: 46.9, lon: 7 };
+    closeTo(assert, headwindBetween(a, b, 99.5, 0, -3), 3);
+    // Twice the distance for the same way (a winding road): half the push.
+    closeTo(assert, headwindBetween(a, b, 199, 0, -3), 1.5);
   });
 });

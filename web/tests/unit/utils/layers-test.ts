@@ -3,6 +3,7 @@ import {
   isPlaceShown,
   rainEmojiTier,
   rainEmojiTiers,
+  windColor,
 } from 'forkcast/utils/layers';
 
 module('Unit | Utility | layers', function () {
@@ -41,5 +42,16 @@ module('Unit | Utility | layers', function () {
     // Bern: a capital of about 120,000, not the biggest Swiss town.
     assert.true(isPlaceShown('big', 7, 120_000, 5, true));
     assert.true(isPlaceShown('big', 5.5, 120_000, 5, true));
+  });
+
+  test('wind colours: white to purple', function (assert) {
+    assert.strictEqual(windColor(10), 'rgb(255 255 255)');
+    assert.strictEqual(windColor(17.5), 'rgb(216 147 255)');
+    assert.strictEqual(windColor(25), '#b026ff');
+    assert.strictEqual(
+      windColor(100),
+      '#b026ff',
+      'beyond the scale: its last colour',
+    );
   });
 });

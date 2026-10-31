@@ -1,5 +1,6 @@
 import { htmlSafe } from '@ember/template';
-import { usualRange } from './climate';
+import { STEADY, usualRange, windFrom } from './climate';
+import type { WindPush } from './itinerary';
 import { isMissing } from './helpers';
 
 export const fmtTemp = (t: number | undefined | null): string =>
@@ -10,6 +11,42 @@ export const fmtUsual = (mean: number, spread: number): string => {
   if (isMissing(mean) || isMissing(spread)) return '';
   const [lo, hi] = usualRange(mean, spread);
   return `(${Math.round(lo)} to ${Math.round(hi)}°C)`;
+};
+
+const PUSH_WORDS: Record<WindPush, string> = {
+  against: 'against you',
+  behind: 'behind you',
+  side: 'from the side',
+  varied: 'from all sides',
+};
+
+/** A day's wind: "15 km/h, against you". */
+export const fmtRideWind = (mps: number, push?: WindPush): string => {
+  if (isMissing(mps)) return '–';
+  const kmh = `${Math.round(mps * 3.6)} km/h`;
+  return push ? `${kmh}, ${PUSH_WORDS[push]}` : kmh;
+};
+
+/** The trip's wind: "14 km/h, against you", or "neither way". */
+export const fmtTripWind = (mps: number, push?: WindPush): string => {
+  if (isMissing(mps)) return '–';
+  const kmh = `${Math.round(mps * 3.6)} km/h`;
+  if (push === 'against' || push === 'behind')
+    return `${kmh}, ${PUSH_WORDS[push]}`;
+  return push ? `${kmh}, neither way` : kmh;
+};
+
+/** The wind at a spot: "15 km/h SW", or "15 km/h" when it blows from any side. */
+export const fmtWind = (
+  mps: number,
+  u: number,
+  v: number,
+  steadiness: number,
+): string => {
+  if (isMissing(mps)) return '–';
+  const kmh = `${Math.round(mps * 3.6)} km/h`;
+  // The side it blows from, as on a forecast; none when that changes daily.
+  return steadiness < STEADY ? kmh : `${kmh} ${windFrom(u, v)}`;
 };
 
 export const fmtKm = (km: number): string =>

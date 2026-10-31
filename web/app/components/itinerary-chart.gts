@@ -12,6 +12,7 @@ import {
   fmtDate,
   fmtDaylight,
   fmtDayTitle,
+  fmtRideWind,
   fmtHours,
   fmtKm,
   fmtMm,
@@ -248,7 +249,7 @@ export default class ItineraryChart extends Component<{
       return `${this.planner.weekSlot.label}: ${this.offTripNote}`;
     if (!d) return 'No day selected';
     const w = d.weather;
-    return `${this.detailTitle}, ${this.detailRoute}, low ${fmtTemp(d.nightLow)} ${fmtUsual(d.nightLow, d.nightLowSpread)}, high ${fmtTemp(w.high)} ${fmtUsual(w.high, w.highSpread)}, rain chance ${fmtPct(w.rainChance)}, daylight ${fmtDaylight(d.daylight)}`;
+    return `${this.detailTitle}, ${this.detailRoute}, low ${fmtTemp(d.nightLow)} ${fmtUsual(d.nightLow, d.nightLowSpread)}, high ${fmtTemp(w.high)} ${fmtUsual(w.high, w.highSpread)}, rain chance ${fmtPct(w.rainChance)}, wind ${fmtRideWind(w.windSpeed, d.windPush)}, daylight ${fmtDaylight(d.daylight)}`;
   }
 
   /** Arrow keys step through the days (Home and End jump to the ends). */
@@ -301,6 +302,12 @@ export default class ItineraryChart extends Component<{
             <div><dt>When it rains</dt><dd>{{fmtMm
                   this.detail.weather.wetDayMm
                 }}</dd></div>
+            {{#unless this.detail.isRest}}
+              <div><dt>Wind</dt><dd>{{fmtRideWind
+                    this.detail.weather.windSpeed
+                    this.detail.windPush
+                  }}</dd></div>
+            {{/unless}}
             <div><dt>Daylight</dt><dd>{{fmtDaylight
                   this.detail.daylight
                 }}</dd></div>
@@ -321,7 +328,7 @@ export default class ItineraryChart extends Component<{
         class="wt-scroll overflow-x-auto overflow-y-hidden"
         role="slider"
         tabindex="0"
-        aria-label="Day of the trip (expected temperatures and rain for each day)"
+        aria-label="Day of the trip (temperatures and rain for each day)"
         aria-valuemin="1"
         aria-valuemax={{@trip.days.length}}
         aria-valuenow={{if

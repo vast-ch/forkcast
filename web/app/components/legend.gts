@@ -5,7 +5,21 @@ import { on } from '@ember/modifier';
 import type PlannerService from 'forkcast/services/planner';
 import { DAYS_PER_MONTH, TEMP_STOPS } from 'forkcast/utils/climate';
 import { css } from 'forkcast/utils/format';
-import { DOT_FULL, rainEmojiTiers } from 'forkcast/utils/layers';
+import {
+  CALM_KMH,
+  DOT_FULL,
+  rainEmojiTiers,
+  WIND_STOPS,
+} from 'forkcast/utils/layers';
+
+/** The wind scale's ends and ticks, km/h: from CALM_KMH, where arrows start. */
+const WIND_MIN = CALM_KMH;
+const WIND_MAX = 27;
+const WIND_TICKS = [10, 15, 20, 25];
+
+/** What the wind arrows show (see WindLayer in wheel-map.gts), for screen readers. */
+const WIND_LABEL =
+  'Wind: arrows coloured by strength, white at 10 km/h to purple at 25; none under 10';
 
 /** The legend's sample dots, as mm in the week shown. */
 const DOT_STEPS = [
@@ -17,6 +31,21 @@ const DOT_STEPS = [
 
 export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   @service declare planner: PlannerService;
+
+  /** The wind's colours, WIND_MIN … WIND_MAX km/h (stronger ones are past its end). */
+  get windGradient() {
+    const at = (k: number) => ((k - WIND_MIN) / (WIND_MAX - WIND_MIN)) * 100;
+    const stops = WIND_STOPS.map(([k, c]) => `${c} ${at(k)}%`);
+    return `linear-gradient(to right, ${stops.join(', ')})`;
+  }
+
+  get windTicks() {
+    return WIND_TICKS.map((k, i) => ({
+      k,
+      left: ((k - WIND_MIN) / (WIND_MAX - WIND_MIN)) * 100,
+      isMinor: i > 0 && i < WIND_TICKS.length - 1,
+    }));
+  }
 
   get gradient() {
     const lo = TEMP_STOPS[0]![0];
@@ -31,12 +60,18 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
     return [-10, 0, 10, 20, 30].map((t) => ({
       t,
       left: ((t + 15) / 50) * 100,
+      isMinor: t === 0 || t === 20,
     }));
   }
 
   /** The emoji steps for the rainy-day threshold chosen. */
   get rainEmoji() {
-    return rainEmojiTiers(this.planner.rainThreshold);
+    // "2+ days": the "days" can go where space is short (see app.css).
+    return rainEmojiTiers(this.planner.rainThreshold).map((t) => ({
+      ...t,
+      count: t.label.replace(/ days$/, ''),
+      unit: t.label.endsWith(' days') ? ' days' : '',
+    }));
   }
 
   get isEmoji() {
@@ -57,7 +92,7 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   }
 
   get tempLabel() {
-    return this.planner.tempMetric === 'high' ? 'Average high' : 'Average low';
+    return this.planner.tempMetric === 'high' ? 'High' : 'Low';
   }
 
   get rainLabel() {
@@ -79,13 +114,16 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
     const parts = [
       this.planner.showTemp ? this.tempLabel : '',
       this.planner.showRain ? this.rainLabel : '',
+      this.planner.showWind ? WIND_LABEL : '',
     ].filter(Boolean);
     return `Legend: ${parts.join('; ')}. Hide the legend`;
   }
 
   /** Nothing to explain when both layers are off. */
   get hasContent() {
-    return this.planner.showTemp || this.planner.showRain;
+    return (
+      this.planner.showTemp || this.planner.showRain || this.planner.showWind
+    );
   }
 
   <template>
@@ -111,7 +149,7 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
               <span class="wt-legend-scale relative block h-4 tabular-nums">
                 {{#each this.ticks as |tick|}}
                   <span
-                    class="wt-tick"
+                    class="wt-tick {{if tick.isMinor 'wt-tick-minor'}}"
                     style={{css "left: " tick.left "%"}}
                   >{{tick.t}}<span class="wt-tick-unit">°C</span></span>
                 {{/each}}
@@ -130,7 +168,9 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
                       aria-hidden="true"
                       style={{css "font-size: " t.px "px; line-height: 1"}}
                     >{{t.emoji}}</span>
-                    {{t.label}}
+                    <span>{{t.count}}<span
+                        class="wt-legend-unit"
+                      >{{t.unit}}</span></span>
                   </span>
                 {{/each}}
               </span>
@@ -153,6 +193,24 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
                 {{/each}}
               </span>
             {{/if}}
+          {{/if}}
+          {{#if this.planner.showWind}}
+            <span class="wt-legend-wind block min-w-0" aria-hidden="true">
+              <span
+                class="wt-legend-scale wt-legend-wind-scale relative mt-0.5 block h-2.5 rounded-sm"
+                style={{css "background: " this.windGradient}}
+              ></span>
+              <span
+                class="wt-legend-scale wt-legend-wind-scale relative block h-4 tabular-nums"
+              >
+                {{#each this.windTicks as |tick|}}
+                  <span
+                    class="wt-tick {{if tick.isMinor 'wt-tick-minor'}}"
+                    style={{css "left: " tick.left "%"}}
+                  >{{tick.k}}<span class="wt-tick-unit"> km/h</span></span>
+                {{/each}}
+              </span>
+            </span>
           {{/if}}
         {{else}}
           <span

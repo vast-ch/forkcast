@@ -135,15 +135,29 @@ body {
 
 @media (max-width: 899px) {
   /* Compact legend over the map, short attribution under it. */
+  /* One line, whatever is on: shorter scales with fewer marks, no "days". */
   .wt-legend {
+    flex-wrap: nowrap !important;
     padding: 0.35rem 0.5rem !important;
-    gap: 0.25rem 0.9rem !important;
+    gap: 0.25rem 0.6rem !important;
     font-size: 10px !important;
     bottom: 1.6rem !important;
     left: 0.5rem !important;
+    max-width: calc(100% - 1rem);
   }
   .wt-legend .wt-legend-scale {
-    width: 8rem;
+    width: 5.5rem;
+  }
+  .wt-legend .wt-legend-scale.wt-legend-wind-scale {
+    width: 4.5rem;
+  }
+  /* Room for its marks' labels, which overhang the bar's ends. */
+  .wt-legend .wt-legend-wind {
+    padding: 0 1.1rem 0 0.35rem;
+  }
+  .wt-legend .wt-tick-minor,
+  .wt-legend .wt-legend-unit {
+    display: none;
   }
   /* Too narrow for five "°C": the unit only on the last mark (30°C). */
   .wt-legend .wt-tick:not(:last-child) .wt-tick-unit {
@@ -151,7 +165,10 @@ body {
   }
   .wt-legend-dots,
   .wt-legend-emoji {
-    gap: 0.45rem !important;
+    gap: 0.35rem !important;
+  }
+  .wt-legend-emoji > span {
+    gap: 0.1rem !important;
   }
   /* Draw / Import / Export: one per row, full width; three across wrap. */
   .wt-route-actions {
@@ -422,6 +439,7 @@ body {
   position: absolute;
   top: 2px;
   transform: translateX(-50%);
+  white-space: nowrap;
   color: var(--wt-muted);
 }
 .wt-dot {
@@ -745,6 +763,18 @@ body {
 .wt-day.is-active .wt-day-hit {
   fill: var(--wt-pick-wash);
 }
+/* The wind's scale: its white end needs an edge on the white legend. */
+.wt-legend .wt-legend-wind-scale {
+  width: 10rem;
+}
+.wt-legend-wind-scale.h-2\.5 {
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+}
+/* Four "km/h" don't fit: the unit only on the last mark (25 km/h). */
+.wt-legend-wind-scale .wt-tick:not(:last-child) .wt-tick-unit {
+  display: none;
+}
+
 /* Through the bar: where 8 days in 10 fall, from the highest high to the lowest low. */
 .wt-temp-usual {
   stroke: var(--wt-muted);
