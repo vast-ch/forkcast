@@ -775,7 +775,7 @@ export default class Help extends Component {
               Questions, trip stories, ideas: join the Forkcast channel on
               Discord. Scan the code with your phone, or
               <a
-                href="https://discord.com/channels/1207261390159487026/1563578804918685880"
+                href="https://discord.gg/ZjhUHZCeNr"
                 target="_blank"
                 rel="noopener noreferrer"
               >open it here</a>.

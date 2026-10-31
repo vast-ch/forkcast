@@ -20,6 +20,10 @@
 - The whole world is on the map, in 10° squares: no more clicking a continent to add it. The squares your route crosses load by themselves; any other square is outlined, and a click loads its climate, a few dozen kB. Forkcast remembers the squares you loaded, so you download only the parts of the world you ask for. The help's privacy section explains what this means for what our host can see.
 - Pop-up calendars now have a clear edge and shadow, so they stand out from the panel behind them.
 
+### Fixed
+
+- The Discord link and QR code on the About page now work for everyone, not only for people already in our Discord: they open an invite to the Forkcast channel.
+
 ## v0.13.0 - 2026-10-27
 
 ### Changed
