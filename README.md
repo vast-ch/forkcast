@@ -86,8 +86,8 @@ docker compose exec ui pnpm build                   # writes web/dist
 | `web/` | The app: Ember 7.3 (`.gts`, TypeScript), Vite + Embroider, Leaflet, Tailwind 4, Frontile. pnpm. |
 | `data/` | Python (uv) builders for the data files the app loads. |
 | `data/out/` | Built data, committed: `climate/<climate>.json` (a climate's header) and `climate/<climate>/` (its seasonal curves as byte grids: one file per 10° tile with land), for the 2011–2025 climate (`last15`) and the others (last 10 and 5 years, 2025 alone, El Niño, La Niña); the world's `countries.json` (TopoJSON), `places.json`, `water.json` and `cyclenet.json`; `routes/index.json` and one `routes/<id>.json` per route. Mounted at `/data-out` in the dev container; the app imports the files as assets, so production builds give them content-hashed names. |
-| `data/eurovelo/` | The official EuroVelo GPX tracks (gzipped, ODbL), with their licence. |
-| `data/cache/` | Downloads and BRouter responses (git-ignored). |
+| `data/eurovelo/` | The official EuroVelo GPX tracks (gzipped, ODbL), with their licence: no longer built from, kept to compare the OSM routes against until they match. |
+| `data/cache/` | Downloads (the OpenStreetMap planet, terrain heights, climate data) and BRouter responses (git-ignored). |
 | `compose.yaml` | `ui` (dev), `web` (prod, profile `prod`), `data` (builder, profile `tools`). |
 
 ## Data
@@ -95,9 +95,9 @@ docker compose exec ui pnpm build                   # writes web/dist
 How the data is downloaded and built, and how the pipeline decides what to redo, is in [data/README.md](data/README.md).
 
 - **Climate:** [ERA5-Land](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) (Copernicus Climate Change Service), 2011–2025, on a 0.25° grid (about 25 km): rain from the daily totals (rainy days over 1, 5 and 10 mm are counted), highs and lows from the average day's temperature curve calibrated against [CRU TS 4.10](https://crudata.uea.ac.uk/cru/data/hrg/) station-based daily extremes. The El Niño and La Niña climates add how those events shifted the weather over 1981–2025, from ERA5-Land and NOAA's [Oceanic Niño Index](https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php).
-- **EuroVelo routes:** the official GPX tracks from [EuroVelo.com](https://www.eurovelo.com) (ODbL, see `data/eurovelo/README.md`). Variants and spurs are resolved by taking the shortest path through the stages; holes between stages over the sea count as ferries.
+- **EuroVelo routes:** from © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors' route relations (ODbL), cut out of the planet file with osmium. Alternatives and variants are left out and spurs resolved by taking the shortest path between the route's official ends; holes over the sea count as ferries. Heights from the [Copernicus DEM GLO-90](https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM) (© DLR e.V. / Airbus, provided under COPERNICUS by the EU and ESA).
 - **Demo route:** Interlaken → Rhône valley → Spain's east coast → Málaga, routed town to town with [BRouter](https://brouter.de) (trekking profile).
-- **Cycle routes for drawing:** international bicycle routes from © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, fetched with the Overpass API; the derived file is under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
+- **Cycle routes for drawing:** international bicycle routes from © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, from the same planet file; the derived file is under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
 - **Borders, cities, rivers and lakes:** Natural Earth (public domain). The relief shading is drawn from the climate data's terrain height.
 - **Daylight:** calculated from the sun's position for each day's start and end; no data needed.
 
