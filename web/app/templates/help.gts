@@ -204,23 +204,24 @@ export default class Help extends Component<{
               <p>
                 Turn on
                 <strong>Wind</strong>
-                in the map settings for the week's wind at the hour of the riding
-                day that is usually windiest (between 9:00 and 16:00 by the sun,
-                most often the afternoon). The arrows point where the wind blows;
-                their colour is its strength, from white at 10 km/h to purple from
-                25, a wind you'd rather not ride into. Where there's no arrow,
-                it's calm (under 10 km/h), or the wind comes from a different side
-                from one day to the next. Zoomed out, one arrow sums up the area
-                around it; zoom in for more. Like the colours, arrows show on the
-                squares that are loaded.
+                in the map settings for the week's wind at the hour of the
+                riding day that is usually windiest (between 9:00 and 16:00 by
+                the sun, most often the afternoon). The arrows point where the
+                wind blows; their colour is its strength, from white at 10 km/h
+                to purple from 25, a wind you'd rather not ride into. Where
+                there's no arrow, it's calm (under 10 km/h), or the wind comes
+                from a different side from one day to the next. Zoomed out, one
+                arrow sums up the area around it; zoom in for more. Like the
+                colours, arrows show on the squares that are loaded.
               </p>
 
               <h3>The legend</h3>
               <p>
                 The legend in the corner of the map gives the colour scale, what
-                the rain emoji (or the dot sizes) mean for the week and, with Wind
-                on, the arrows' colours from 10 to 25 km/h. Click it to fold it
-                into a chip, and again to bring it back; this one works too:
+                the rain emoji (or the dot sizes) mean for the week and, with
+                Wind on, the arrows' colours from 10 to 25 km/h. Click it to
+                fold it into a chip, and again to bring it back; this one works
+                too:
               </p>
               <div class="wt-help-demo">
                 <Legend />
@@ -278,11 +279,11 @@ export default class Help extends Component<{
               <p>
                 Point at the map (tap, on a phone) to read that spot's averages
                 for the week: the low and high, the week's rain and how many of
-                its days are rainy, and the wind in the windiest riding hour, such
-                as “15 km/h SW”: its speed and the side it blows from, left out
-                where that changes from day to day. Point at your route instead to
-                see which day of your trip you'd be there, and the weather
-                expected on that date.
+                its days are rainy, and the wind in the windiest riding hour,
+                such as “15 km/h SW”: its speed and the side it blows from, left
+                out where that changes from day to day. Point at your route
+                instead to see which day of your trip you'd be there, and the
+                weather expected on that date.
               </p>
             </section>
           {{/if}}
@@ -364,10 +365,11 @@ export default class Help extends Component<{
                     degrees by the sea or in the tropics, 15 °C and more in a
                     continental winter.</dd></div>
                 <div><dt>Wind</dt><dd>How strong the wind usually is at the
-                    windiest hour of the riding day, and how it meets you over the
-                    day's stretch: against you, behind you, from the side, or from
-                    all sides (a different one from day to day). A winding road
-                    counts as the line from where you start to where you sleep.</dd></div>
+                    windiest hour of the riding day, and how it meets you over
+                    the day's stretch: against you, behind you, from the side,
+                    or from all sides (a different one from day to day). A
+                    winding road counts as the line from where you start to
+                    where you sleep.</dd></div>
                 <div><dt>Rain</dt><dd>The chance that the day is rainy, and how
                     much rain a day brings when it rains (at least 1 mm), also
                     in the middle of the ride. That says more than an average
@@ -402,19 +404,19 @@ export default class Help extends Component<{
                     up: how many to expect, not a promise. In brackets, the
                     range 8 trips out of 10 fall in. Rain comes in spells, so
                     some trips catch a lot more and some a lot less.</dd></div>
-                <div><dt>Wind</dt><dd>The riding days' wind, averaged by distance,
-                    and whether it's against you or behind you over the whole
-                    trip, or neither way. Against you one way is behind you the
-                    other way round: try the ⇅ button.</dd></div>
-                <div><dt>Highest high</dt><dd>The highest single high your trip is
-                    as likely to beat as not, in a usual year. Heat comes in
+                <div><dt>Wind</dt><dd>The riding days' wind, averaged by
+                    distance, and whether it's against you or behind you over
+                    the whole trip, or neither way. Against you one way is
+                    behind you the other way round: try the ⇅ button.</dd></div>
+                <div><dt>Highest high</dt><dd>The highest single high your trip
+                    is as likely to beat as not, in a usual year. Heat comes in
                     spells, which Forkcast takes into account.</dd></div>
                 <div><dt>Lowest low</dt><dd>The same for the lowest single low:
                     half of trips get a lower one. Pack for a few degrees below
                     it.</dd></div>
                 <div><dt>Lowest day</dt><dd>The day of the trip with the lowest
-                    average low, and that low: when to expect the cold, where the
-                    lowest low says how cold.</dd></div>
+                    average low, and that low: when to expect the cold, where
+                    the lowest low says how cold.</dd></div>
               </dl>
 
               <h3>On a phone</h3>
@@ -516,9 +518,9 @@ export default class Help extends Component<{
                     Change Service: a weather model re-run over the past and
                     continuously corrected with real observations, giving the
                     weather for every hour over all land. Forkcast uses it for
-                    rain, wind, terrain height and the shape of the temperatures:
-                    coast against hills, valley against plateau. Its big sister,
-                    ERA5, gives the wind's speed.</dd></div>
+                    rain, wind, terrain height and the shape of the
+                    temperatures: coast against hills, valley against plateau.
+                    Its big sister, ERA5, gives the wind's speed.</dd></div>
                 <div><dt>CRU TS</dt><dd>From the University of East Anglia,
                     built from thousands of weather stations. Coarser (about 50
                     km), but its highs and lows are what thermometers actually
@@ -703,10 +705,10 @@ export default class Help extends Component<{
                   {{this.years}}, and it has kept warming since, so this year is
                   likely a little warmer than shown.</li>
                 <li><strong>Wind</strong>
-                  is a typical day's: the windiest hour, averaged over many days.
-                  Single days, and above all gusts and storms, blow harder, and a
-                  sea breeze or a valley wind can be too local for the 25 km
-                  cells.</li>
+                  is a typical day's: the windiest hour, averaged over many
+                  days. Single days, and above all gusts and storms, blow
+                  harder, and a sea breeze or a valley wind can be too local for
+                  the 25 km cells.</li>
                 <li><strong>Climbing</strong>
                   comes out somewhat low, because tracks are simplified a
                   little.</li>
