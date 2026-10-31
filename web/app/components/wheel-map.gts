@@ -18,8 +18,12 @@ import {
   rainDots,
   rainMarks,
   reliefRaster,
+  windArrows,
+  windColor,
+  CALM_KMH,
   type RainMark,
   type Raster,
+  type WindArrow,
   isCapitalsOnly,
   isPlaceShown,
 } from 'forkcast/utils/layers';
@@ -27,6 +31,7 @@ import { pointAt, type Route } from 'forkcast/utils/route';
 import type ClimateGrid from 'forkcast/utils/climate';
 import {
   climateOn,
+  STEADY,
   tempSwatch,
   tileArea,
   tileId,
@@ -84,6 +89,7 @@ const PANES: [name: string, zIndex: number, isInteractive: boolean][] = [
   // Relief shading, multiplied onto the colours (see .leaflet-relief-pane).
   ['relief', 320, false],
   ['rain', 350, false],
+  ['wind', 355, false],
   ['water', 360, false],
   ['borders', 380, false],
   // The climate's squares not loaded yet: a click on one loads it.
@@ -103,6 +109,7 @@ type GroupLayer =
   | 'temp'
   | 'relief'
   | 'rain'
+  | 'wind'
   | 'water'
   | 'borders'
   | 'labels'
@@ -118,6 +125,7 @@ interface MapState {
   phase: number;
   showTemp: boolean;
   showRain: boolean;
+  showWind: boolean;
   tempMetric: TempMetric;
   rainMetric: RainMetric;
   rainThreshold: number;
@@ -168,6 +176,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
     squares?: L.LayerGroup;
     temp?: L.LayerGroup;
     rain?: L.LayerGroup;
+    wind?: L.LayerGroup;
     routes?: L.LayerGroup;
     stops?: L.LayerGroup;
     dates?: L.LayerGroup;
@@ -570,6 +579,16 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       },
     );
 
+    if (grids.length) {
+      const block = this.rainBlock(grids[0]!.step, WIND_SPACING);
+      this.layer('wind', [s.week, s.showWind, block, ...grids], (group) => {
+        if (!s.showWind) return;
+        new WindLayer(
+          grids.flatMap((g) => windArrows(g, s.phase, block)),
+        ).addTo(group);
+      });
+    }
+
     // Every other route, dashed: the presets and your own routes. Click one to pick it. The Routes toggle hides them (the
     // selected route always shows).
     const selectedId = s.route?.id;
@@ -782,6 +801,76 @@ class EmojiLayer extends L.GridLayer {
   }
 }
 
+/** Pixels between wind arrows. */
+const WIND_SPACING = 44;
+
+/** An arrow's length and its head, px: the same for every wind; its colour is the strength. */
+const ARROW = 11;
+const HEAD = 6;
+
+/**
+ * The windiest riding hour's wind as arrows, pointing where it blows and
+ * coloured by its speed (windColor), drawn into map tiles like the rain emoji, at the same size in pixels at
+ * every zoom.
+ */
+class WindLayer extends L.GridLayer {
+  constructor(readonly arrows: WindArrow[]) {
+    super({ pane: 'wind', updateWhenZooming: false });
+  }
+
+  createTile(coords: L.Coords): HTMLCanvasElement {
+    const size = this.getTileSize();
+    const tile = document.createElement('canvas');
+    const ratio = window.devicePixelRatio || 1;
+    tile.width = size.x * ratio;
+    tile.height = size.y * ratio;
+    const ctx = tile.getContext('2d')!;
+    ctx.scale(ratio, ratio);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const map = this._map;
+    const origin = coords.scaleBy(size);
+    const margin = 20;
+    for (const a of this.arrows) {
+      const steady = Math.hypot(a.u, a.v);
+      // Calm, or from a different side every day: no wind to point at.
+      if (!(a.speed * 3.6 >= CALM_KMH) || !(a.steadiness >= STEADY)) continue;
+      const p = map.project([a.lat, a.lon], coords.z).subtract(origin);
+      if (
+        p.x < -margin ||
+        p.y < -margin ||
+        p.x > size.x + margin ||
+        p.y > size.y + margin
+      )
+        continue;
+      // Screen y grows southwards; the arrow is centred on its point.
+      const dx = a.u / steady;
+      const dy = -a.v / steady;
+      const tip = [p.x + (dx * ARROW) / 2, p.y + (dy * ARROW) / 2] as const;
+      ctx.beginPath();
+      ctx.moveTo(p.x - (dx * ARROW) / 2, p.y - (dy * ARROW) / 2);
+      ctx.lineTo(...tip);
+      ctx.moveTo(
+        tip[0] - HEAD * (dx - dy * 0.6),
+        tip[1] - HEAD * (dy + dx * 0.6),
+      );
+      ctx.lineTo(...tip);
+      ctx.lineTo(
+        tip[0] - HEAD * (dx + dy * 0.6),
+        tip[1] - HEAD * (dy - dx * 0.6),
+      );
+      // A dark edge keeps the colour readable on the light ones.
+      ctx.strokeStyle = 'rgb(0 0 0 / 0.6)';
+      ctx.lineWidth = 5.5;
+      ctx.stroke();
+      ctx.strokeStyle = windColor(a.speed * 3.6);
+      ctx.lineWidth = 3.25;
+      ctx.stroke();
+    }
+    return tile;
+  }
+}
+
 /** A [lon, lat] pair from the data files as Leaflet's [lat, lng]. */
 const lonLat = ([lon, lat]: [number, number]): [number, number] => [lat, lon];
 
@@ -819,6 +908,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
       phase: p.weekSlot.phase,
       showTemp: p.showTemp,
       showRain: p.showRain,
+      showWind: p.showWind,
       tempMetric: p.tempMetric,
       rainMetric: p.rainMetric,
       rainThreshold: p.rainThreshold,

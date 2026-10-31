@@ -13,12 +13,22 @@ grid (regridded by the CDS) for the world without Antarctica.
   `reanalysis-era5-land-monthly-means` (product "by hour of day"), one file per
   year (cache/era5land/t2m-hourly-<year>.nc, 12 months × 24 hours). The daily
   maximum and minimum are derived from it in era5land.py.
+- wind: the same, for the 10 m wind's east and north components
+  (cache/era5land/wind-hourly-<year>.nc), for which way the wind blows.
+- wind speed: the same from ERA5 (`reanalysis-era5-single-levels-monthly-means`,
+  same 0.25° grid), for the 10 m wind speed: the mean of each hour's speed,
+  which ERA5-Land lacks. Averaging the components instead lets winds from
+  different sides cancel (cache/era5land/wspd-hourly-<year>.nc).
+- dewpoint: the same, for the 2 m dewpoint (cache/era5land/d2m-hourly-<year>.nc),
+  for how humid the afternoon is (heat stress).
+- snow: monthly means of snow cover, % of the cell
+  (cache/era5land/snow-<year>.nc), for snow on high passes.
 
 - orography: ERA5-Land's surface geopotential (its model terrain) at 0.1°,
   published by ECMWF (cache/era5land/orography-0.1.nc, 52 MB, no key needed).
   Used to store each cell's mean height, for the altitude correction.
 
-Usage: uv run python -m forkcast_data download era5land-rain|era5land-temperature|orography [--fresh]
+Usage: uv run python -m forkcast_data download era5land-rain|era5land-temperature|era5land-wind|era5-wind-speed|era5land-dewpoint|era5land-snow|orography [--fresh]
 """
 
 from __future__ import annotations
@@ -81,6 +91,22 @@ def temperature_file(year: int) -> Path:
     return DIR / f"t2m-hourly-{year}.nc"
 
 
+def wind_file(year: int) -> Path:
+    return DIR / f"wind-hourly-{year}.nc"
+
+
+def wind_speed_file(year: int) -> Path:
+    return DIR / f"wspd-hourly-{year}.nc"
+
+
+def dewpoint_file(year: int) -> Path:
+    return DIR / f"d2m-hourly-{year}.nc"
+
+
+def snow_file(year: int) -> Path:
+    return DIR / f"snow-{year}.nc"
+
+
 def rain(years: range, fresh: bool = False) -> None:
     for y in years:
         req = {
@@ -111,11 +137,12 @@ def rain(years: range, fresh: bool = False) -> None:
     log("  " + ensure(rain_last_day(last), _cds("reanalysis-era5-land", req), _check_times(1), fresh))
 
 
-def temperature(years: range, fresh: bool = False) -> None:
+def _by_hour(years: range, variables: list[str], file, fresh: bool, dataset: str = "reanalysis-era5-land-monthly-means") -> None:
+    """Monthly means for each hour of the day, one file per year (12 months × 24 hours)."""
     for y in years:
         req = {
             "product_type": ["monthly_averaged_reanalysis_by_hour_of_day"],
-            "variable": ["2m_temperature"],
+            "variable": variables,
             "year": [str(y)],
             "month": MONTHS,
             "time": HOURS,
@@ -124,15 +151,39 @@ def temperature(years: range, fresh: bool = False) -> None:
             "data_format": "netcdf",
             "download_format": "unarchived",
         }
-        log(
-            "  "
-            + ensure(
-                temperature_file(y),
-                _cds("reanalysis-era5-land-monthly-means", req),
-                _check_times(12 * 24),
-                fresh,
-            )
-        )
+        log("  " + ensure(file(y), _cds(dataset, req), _check_times(12 * 24), fresh))
+
+
+def temperature(years: range, fresh: bool = False) -> None:
+    _by_hour(years, ["2m_temperature"], temperature_file, fresh)
+
+
+def wind(years: range, fresh: bool = False) -> None:
+    _by_hour(years, ["10m_u_component_of_wind", "10m_v_component_of_wind"], wind_file, fresh)
+
+
+def wind_speed(years: range, fresh: bool = False) -> None:
+    _by_hour(years, ["10m_wind_speed"], wind_speed_file, fresh, "reanalysis-era5-single-levels-monthly-means")
+
+
+def dewpoint(years: range, fresh: bool = False) -> None:
+    _by_hour(years, ["2m_dewpoint_temperature"], dewpoint_file, fresh)
+
+
+def snow(years: range, fresh: bool = False) -> None:
+    for y in years:
+        req = {
+            "product_type": ["monthly_averaged_reanalysis"],
+            "variable": ["snow_cover"],
+            "year": [str(y)],
+            "month": MONTHS,
+            "time": ["00:00"],
+            "area": AREA,
+            "grid": GRID,
+            "data_format": "netcdf",
+            "download_format": "unarchived",
+        }
+        log("  " + ensure(snow_file(y), _cds("reanalysis-era5-land-monthly-means", req), _check_times(12), fresh))
 
 
 OROGRAPHY_URL = "https://confluence.ecmwf.int/download/attachments/140385202/geo_1279l4_0.1x0.1.grib2_v4_unpack.nc"

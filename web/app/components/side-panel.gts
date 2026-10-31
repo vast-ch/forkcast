@@ -22,6 +22,7 @@ import {
   fmtKm,
   fmtRainyDays,
   fmtShortDate,
+  fmtTripWind,
   fmtTemp,
 } from 'forkcast/utils/format';
 import { errorMessage } from 'forkcast/utils/helpers';
@@ -39,6 +40,7 @@ type MapSetting =
   | 'climate'
   | 'showTemp'
   | 'showRain'
+  | 'showWind'
   | 'tempMetric'
   | 'rainMetric'
   | 'rainThreshold'
@@ -146,12 +148,15 @@ export default class SidePanel extends Component<SidePanelSignature> {
       ['Arrive', fmtDate(t.end)],
       ['Riding days', t.ridingDays],
       ['Rest days', t.restDays],
-      ['Average high', fmtTemp(t.avgHigh)],
-      ['Highest high, likely', fmtTemp(t.likelyHighest)],
+      ['High', fmtTemp(t.avgHigh)],
+      ['Highest high', fmtTemp(t.likelyHighest)],
       ['Rainy riding days', fmtRainyDays(t.rainyDays, t.rainyDaysRange)],
-      ['Lowest low, likely', fmtTemp(t.likelyLowest)],
-      ['Lowest average low', cold ? fmtTemp(cold.nightLow) : '–'],
-      ['Lowest average low on', cold ? fmtShortDate(cold.date) : '–'],
+      ['Wind', fmtTripWind(t.windSpeed, t.windPush)],
+      ['Lowest low', fmtTemp(t.likelyLowest)],
+      [
+        'Lowest day',
+        cold ? `${fmtShortDate(cold.date)}, ${fmtTemp(cold.nightLow)}` : '–',
+      ],
     ].map(([label, value]) => ({ label, value }));
   }
 
@@ -534,6 +539,14 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 {{/each}}
               </SegmentedControl>
             </span>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <Switch
+              @label="Wind"
+              @size="sm"
+              @isSelected={{this.planner.showWind}}
+              @onChange={{fn this.setMap "showWind"}}
+            />
           </div>
           <div class="flex items-center justify-between gap-3">
             <span class="text-sm">Dates on the route</span>

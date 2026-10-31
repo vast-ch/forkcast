@@ -283,16 +283,62 @@ export function rainMarks(
   });
 }
 
+export interface WindArrow {
+  lat: number;
+  lon: number;
+  /** The wind in the strongest riding hour: its speed, m/s */
+  speed: number;
+  /** Its mean wind vector, m/s toward the east and the north */
+  u: number;
+  v: number;
+  /** How steady it is, its cells' windSteadiness averaged: 0 … 1 */
+  steadiness: number;
+}
+
+/** The strongest riding hour's wind, one arrow per block of cells (their average). */
+export function windArrows(
+  grid: ClimateGrid,
+  /** Position in the year, 0 … 1 */
+  phase: number,
+  block = 1,
+): WindArrow[] {
+  const comp = (name: 'wspd' | 'u10' | 'v10') =>
+    blocks(grid, block, (r, c) => grid.cellAt(name, phase, r, c), false);
+  const u = comp('u10');
+  const v = comp('v10');
+  // Each cell's own steadiness, averaged: the block's mean vector would
+  // shrink wherever neighbouring winds blow different ways.
+  const steadiness = blocks(
+    grid,
+    block,
+    (r, c) =>
+      Math.hypot(
+        grid.cellAt('u10', phase, r, c),
+        grid.cellAt('v10', phase, r, c),
+      ) / grid.cellAt('wspd', phase, r, c),
+    false,
+  );
+  return comp('wspd').map((s, i) => ({
+    lat: s.lat,
+    lon: s.lon,
+    speed: s.val,
+    u: u[i]!.val,
+    v: v[i]!.val,
+    steadiness: steadiness[i]!.val,
+  }));
+}
+
 /**
  * The average of `value` over block × block cells, at the centre of each
  * block in the grid's own area. Blocks are aligned to the worldwide grid, not
  * to this tile's corner, so neighbouring tiles merge cells into the same
- * pattern.
+ * pattern. Only positive averages unless `positiveOnly` is false.
  */
 function blocks(
   grid: ClimateGrid,
   block: number,
   value: (row: number, col: number) => number,
+  positiveOnly = true,
 ): { lat: number; lon: number; val: number }[] {
   const out: { lat: number; lon: number; val: number }[] = [];
   const rowStart = -(Math.round((90 - grid.lat0) / grid.step) % block);
@@ -317,7 +363,7 @@ function blocks(
       // Skip mostly-sea blocks so coasts don't sprout dots offshore.
       if (n === 0 || n < (block * block) / 3) continue;
       const val = sum / n;
-      if (val <= 0) continue;
+      if (positiveOnly && val <= 0) continue;
       const lat = grid.lat0 - (r0 + (block - 1) / 2) * grid.step;
       const lonC = grid.lon0 + (c0 + (block - 1) / 2) * grid.step;
       if (!grid.owns(lat, lonC)) continue;
@@ -355,4 +401,39 @@ export function isPlaceShown(
   if (isCapital) return true;
   if (isCapitalsOnly(zoom)) return false;
   return limit === 'big' ? pop >= BIG_CITY : rank <= TOP_CITIES;
+}
+
+/** Below this, km/h, the map draws no wind. */
+export const CALM_KMH = 10;
+
+/**
+ * Colours for wind speeds, km/h: white from CALM_KMH to a bright purple from
+ * 25 km/h. The windiest hour, averaged over a month's days, rarely tops that:
+ * 99% of Europe's land is under 24 km/h, 97% under 20.
+ */
+export const WIND_STOPS: [number, string][] = [
+  [CALM_KMH, '#ffffff'],
+  [25, '#b026ff'],
+];
+
+/** The colour of a wind of `kmh`, along WIND_STOPS (stronger: its last colour). */
+export function windColor(kmh: number): string {
+  const rgb = (hex: string) => {
+    const n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+  const last = WIND_STOPS[WIND_STOPS.length - 1]!;
+  if (!(kmh < last[0])) return last[1];
+  for (let i = 1; i < WIND_STOPS.length; i++) {
+    const [k1, c1] = WIND_STOPS[i]!;
+    if (kmh <= k1) {
+      const [k0, c0] = WIND_STOPS[i - 1]!;
+      const f = Math.max(0, (kmh - k0) / (k1 - k0));
+      const a = rgb(c0);
+      const b = rgb(c1);
+      const [r, g, bl] = a.map((x, j) => Math.round(x + (b[j]! - x) * f));
+      return `rgb(${r} ${g} ${bl})`;
+    }
+  }
+  return last[1];
 }

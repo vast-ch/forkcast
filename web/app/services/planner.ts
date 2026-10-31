@@ -54,9 +54,9 @@ export const DATE_CHOICES: { value: Milestones; label: string }[] = [
 ];
 /** How the climate switch names each climate (`CLIMATES`, in its order). */
 const CLIMATE_LABELS: Record<ClimateId, { label: string; title: string }> = {
-  last15: { label: '15 yrs', title: 'The average of 2011–2025' },
-  last10: { label: '10 yrs', title: 'The average of 2016–2025' },
-  last5: { label: '5 yrs', title: 'The average of 2021–2025' },
+  last15: { label: '15 yrs', title: '2011–2025' },
+  last10: { label: '10 yrs', title: '2016–2025' },
+  last5: { label: '5 yrs', title: '2021–2025' },
   last1: { label: '1 yr', title: 'Only 2025: each month as it was' },
   elnino: {
     label: 'El Niño',
@@ -175,6 +175,7 @@ export default class PlannerService extends Service {
   @setting declare tempMetric: TempMetric;
   @setting declare showTemp: boolean;
   @setting declare showRain: boolean;
+  @setting declare showWind: boolean;
   @setting declare borders: boolean;
   @setting declare relief: boolean;
   @setting declare water: boolean;
