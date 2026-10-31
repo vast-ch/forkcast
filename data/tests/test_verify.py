@@ -3,7 +3,7 @@ import csv
 import numpy as np
 import pytest
 
-from forkcast_data import pack, verify
+from forkcast_data import pack, verify, verify_days
 
 PHASES = pack.PHASES
 
@@ -74,3 +74,30 @@ def test_compare_tells_a_real_change_from_noise(tmp_path, monkeypatch, capsys):
     assert "within noise" in capsys.readouterr().out
     with pytest.raises(SystemExit, match="No run 'zzz'"):
         verify.compare("zzz")
+
+
+# The app's formulas, ported to measure them: pinned to the app's own tests' values
+# (web/tests/unit/utils/itinerary-test.ts), so the two can't drift apart unnoticed.
+
+
+def test_likely_extreme_matches_the_app():
+    assert verify_days.likely_extreme([(10, 3)], "lowest") == pytest.approx(10, abs=0.01)
+    assert verify_days.likely_extreme([(10, 3)] * 14, "lowest") == pytest.approx(6.06, abs=0.01)
+    assert verify_days.likely_extreme([(20, 4)] * 10, "highest") == pytest.approx(23.99, abs=0.01)
+    assert np.isnan(verify_days.likely_extreme([(10, float("nan"))], "lowest"))
+
+
+def test_rainy_days_range_matches_the_app():
+    low, high = verify_days.rainy_days_range([0.3] * 30, 1)
+    assert low <= 5 and high >= 13
+    low10, high10 = verify_days.rainy_days_range([0.3] * 30, 10)
+    assert high10 - low10 < high - low
+    assert verify_days.rainy_days_range([], 1) == (0, 0)
+    assert verify_days.rainy_days_range([0, 0, 0], 1) == (0, 0)
+    assert verify_days.rainy_days_range([1, 1], 5) == (2, 2)
+    assert verify_days.rainy_days_range([0.5], 1) == (0, 1)
+
+
+def test_phases_start_each_year_at_0():
+    d = np.array(["2024-01-01", "2024-07-02", "2025-01-01"], dtype="datetime64[D]")
+    assert np.allclose(verify_days.phases(d), [0, 183 / 366, 0])

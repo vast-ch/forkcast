@@ -44,8 +44,9 @@ from pathlib import Path
 
 import numpy as np
 
+from . import cpc, pack, pipeline, variants, verify_days
 from . import era5land as e
-from . import pack, pipeline, variants
+from . import era5land_download as dl
 from .pipeline import OUT, STAMPS, Stamp, code_hash, log
 
 DIR = OUT / "verify"
@@ -68,7 +69,8 @@ def outputs() -> list[Path]:
 def inputs() -> list[Path]:
     years = range(variants.HISTORY[0], variants.HISTORY[1] + 1)
     grids = [e.grid_file(x) for x in ("bin", "json")] + [variants.grid_file(v, x) for v in variants.VARIANTS for x in ("bin", "json")]
-    return grids + [variants.year_file(y) for y in years]
+    days = cpc.files(verify_days.YEARS) + [dl.rain_file(y) for y in verify_days.YEARS]
+    return grids + [variants.year_file(y) for y in years] + days
 
 
 def _weights(lat: np.ndarray, cols: int) -> np.ndarray:
@@ -208,6 +210,125 @@ def enso(base: variants.BaseGrid) -> list[dict]:
     return rows
 
 
+PLACES = {  # (lat, lon), for the year-to-year swings the help names
+    "Kraków": (50.06, 19.94),
+    "Valencia": (39.47, -0.38),
+    "Interlaken": (46.69, 7.86),
+}
+PLATEAU = variants.QUIRKS["Tibetan Plateau"][0]
+
+
+def _year_stack(field: str, years: range, every: int = 1) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """(year, month, rows, cols) of one field from the extracted years, from 84° N to 60° S, every n-th cell."""
+    z = np.load(variants.year_file(years[0]))
+    keep = np.where(z["lat"] >= e.SOUTH)[0][::every]
+    lat, lon = z["lat"][keep], z["lon"][::every]
+    a = np.stack([np.load(variants.year_file(y))[field][:, keep][:, :, ::every].astype(np.float32) for y in years])
+    return a, lat, lon
+
+
+def _cell(lat: np.ndarray, lon: np.ndarray, at: tuple[float, float]) -> tuple[int, int]:
+    return int(np.abs(lat - at[0]).argmin()), int(np.abs(lon - at[1]).argmin())
+
+
+def yearly(app: range) -> list[dict]:
+    """How much a month's average swings from year to year over the app's years: Europe's typical swing, and at named places."""
+    rows = []
+    tmx, lat, lon = _year_stack("tmx", app)
+    sd = np.nanstd(tmx, axis=0, ddof=1)  # (month, rows, cols)
+    eu = _mask(variants.AREAS["Europe"], lat, lon)
+    med = np.array([np.nanmedian(sd[m][eu]) for m in range(12)])
+    common = {"metric": "yearly", "climate": "", "field": "tmx", "area": "Europe", "unit": "°C"}
+    rows += [common | {"stat": "median sd, least month", "value": float(med.min())}, common | {"stat": "median sd, most month", "value": float(med.max())}]
+    for name in ("Kraków", "Valencia"):
+        r, c = _cell(lat, lon, PLACES[name])
+        rows.append({"metric": "yearly", "climate": "", "field": "tmx", "area": name, "stat": "sd Jan", "value": float(sd[0, r, c]), "unit": "°C"})
+    del tmx
+    pre, lat, lon = _year_stack("pre", app)
+    r, c = _cell(lat, lon, PLACES["Interlaken"])
+    jan = pre[:, 0, r, c]
+    rows += [
+        {"metric": "yearly", "climate": "", "field": "pre", "area": "Interlaken", "stat": "mean Jan", "value": float(jan.mean()), "unit": "mm"},
+        {"metric": "yearly", "climate": "", "field": "pre", "area": "Interlaken", "stat": "sd Jan", "value": float(jan.std(ddof=1)), "unit": "mm"},
+    ]
+    sd = np.nanstd(pre, axis=0, ddof=1) / np.nanmean(pre, axis=0)
+    wet = np.nanmean(pre, axis=0) >= 20  # months with some rain: a relative swing of a near-dry month says little
+    rows.append({"metric": "yearly", "climate": "", "field": "pre", "area": "Europe", "stat": "median relative sd", "value": float(np.nanmedian(sd[:, eu][wet[:, eu]])), "unit": "share"})
+    return rows
+
+
+def trend() -> list[dict]:
+    """The warming: the trend of the year's average high, 1981–2025, with its 95 % interval; and the Tibetan Plateau's jump."""
+    years = range(variants.HISTORY[0], variants.HISTORY[1] + 1)
+    tmx, lat, lon = _year_stack("tmx", years, EVERY)
+    w = _weights(lat, len(lon))
+    rows = []
+    t = np.array(years, dtype=float)
+    for area, box in AREAS.items():
+        at = _mask(box, lat, lon)
+        annual = tmx.mean(axis=1)  # (year, rows, cols)
+        ok = np.isfinite(annual[0]) & at
+        series = np.array([np.sum(a[ok] * w[ok]) / np.sum(w[ok]) for a in annual])
+        tt = t - t.mean()
+        slope = float(np.sum(tt * (series - series.mean())) / np.sum(tt * tt))
+        resid = series - series.mean() - slope * tt
+        se = float(np.sqrt(np.sum(resid**2) / (len(t) - 2) / np.sum(tt * tt)))
+        common = {"metric": "trend", "climate": "", "field": "tmx", "area": area, "unit": "°C"}
+        rows += [
+            common | {"stat": "per decade", "value": slope * 10},
+            common | {"stat": "per decade lo95", "value": (slope - 1.96 * se) * 10},
+            common | {"stat": "per decade hi95", "value": (slope + 1.96 * se) * 10},
+        ]
+    del tmx
+    tmn, lat, lon = _year_stack("tmn", range(2011, 2026), EVERY)
+    x0, y0, x1, y1 = PLATEAU
+    at = _mask((x0, y0, x1, y1), lat, lon)
+    jan = tmn[:, 0][:, at]  # (year, cells)
+    jump = np.nanmean(jan[10:], axis=0) - np.nanmean(jan[:10], axis=0)  # per cell
+    common = {"metric": "quirk", "climate": "", "field": "tmn", "area": "Tibetan Plateau", "unit": "°C"}
+    rows += [
+        common | {"stat": "Jan 2021–25 minus 2011–20", "value": float(np.nanmean(jump))},
+        common | {"stat": "Jan 2021–25 minus 2011–20, largest cell", "value": float(np.nanmax(jump))},
+    ]
+    return rows
+
+
+def calibration(base: variants.BaseGrid, app: range) -> list[dict]:
+    """How far the CRU calibration moves ERA5-Land's highs and lows (warmest and coldest hour of the average day), Europe's average by month."""
+    rows = []
+    lat, lon = _grid_axes(base.header)
+    w = _weights(lat, len(lon))
+    eu = _mask(variants.AREAS["Europe"], lat, lon)
+    for field in ("tmx", "tmn"):
+        raw, _, _ = _year_stack(field, app)
+        d = base.field(field) - raw.mean(axis=0)  # (month, rows, cols)
+        del raw
+        means = []
+        for m in range(12):
+            ok = np.isfinite(d[m]) & eu
+            means.append(float(np.sum(d[m][ok] * w[ok]) / np.sum(w[ok])))
+        common = {"metric": "calibration", "climate": "last15", "field": field, "area": "Europe", "unit": "°C"}
+        rows += [common | {"stat": "least month", "value": min(means)}, common | {"stat": "most month", "value": max(means)}]
+    return rows
+
+
+def sizes() -> list[dict]:
+    """What a visitor downloads: the climate's 10° tiles."""
+    import gzip
+
+    files = sorted((pack.DIR / "last15").glob("*.bin"))
+    raw = np.array([f.stat().st_size for f in files])
+    gz = np.array([len(gzip.compress(f.read_bytes(), 6)) for f in files])
+    common = {"metric": "size", "climate": "last15", "field": "tiles", "area": "World"}
+    return [
+        common | {"stat": "count", "value": float(len(files)), "unit": "tiles"},
+        common | {"stat": "median kB", "value": float(np.median(raw)) / 1000, "unit": "kB"},
+        common | {"stat": "median kB gzipped", "value": float(np.median(gz)) / 1000, "unit": "kB"},
+        common | {"stat": "largest kB gzipped", "value": float(gz.max()) / 1000, "unit": "kB"},
+        common | {"stat": "all MB", "value": float(raw.sum()) / 1e6, "unit": "MB"},
+    ]
+
+
 def _variant(v: str) -> dict[str, np.ndarray]:
     h = json.loads(variants.grid_file(v, "json").read_text())
     n = len(h["vars"]) * 12 * h["rows"] * h["cols"]
@@ -230,16 +351,27 @@ def _round(v: float) -> float:
 
 
 def build(fresh: bool = False) -> None:
-    code = code_hash(sys.modules[__name__], pack, e, variants, pipeline)
+    code = code_hash(sys.modules[__name__], verify_days, pack, e, variants, pipeline)
     stamp = Stamp("verify", inputs(), outputs(), code, {"backtest": [BACKTEST[0], BACKTEST[-1]]})
     if not fresh and stamp.up_to_date():
         log("  measurements are up to date")
         return
     if missing := stamp.missing_inputs():
-        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build years, build variants")
+        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: download cpc era5land-rain, build climate, build years, build variants, build pack")
     base = variants.BaseGrid()
     rows = []
-    for name, step in (("curve", lambda: curve(base)), ("backtest", backtest), ("enso", lambda: enso(base))):
+    app = range(2011, 2026)
+    steps = (
+        ("curve", lambda: curve(base)),
+        ("backtest", backtest),
+        ("enso", lambda: enso(base)),
+        ("yearly", lambda: yearly(app)),
+        ("trend", trend),
+        ("calibration", lambda: calibration(base, app)),
+        ("sizes", sizes),
+        ("days and trips", lambda: verify_days.measure(base)),
+    )
+    for name, step in steps:
         t0 = time.time()
         rows += step()
         log(f"  {name} measured in {time.time() - t0:.0f} s")

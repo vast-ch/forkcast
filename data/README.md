@@ -218,8 +218,8 @@ app's first version used it alone; now it calibrates ERA5-Land.
   days in 10 fall (mean ± 1.28 standard deviations), and the trip's likely
   lowest low and highest high. Those count lows and highs as fewer tries
   than there are, because cold and heat come in spells: one try per 2 lows
-  and per 2.5 highs, measured on CPC at 1,200 places (`EXTREME_SPELL` in
-  `web/app/utils/itinerary.ts`).
+  and per 2.5 highs (`EXTREME_SPELL` in `web/app/utils/itinerary.ts`);
+  `build verify` measures how well that holds (see "Measuring the data").
 - **Limits:** a normal distribution; real lows have a slightly longer
   tail in winter inland (cold-air pools), so the lowest lows can be a
   degree or two colder than the range says. CPC is sparse where stations are
@@ -373,7 +373,7 @@ docker compose --profile tools run --rm --entrypoint uv data run python -m forkc
 
 ## Measuring the data
 
-`build verify` (`forkcast_data/verify.py`, ~15 s) measures how well the data
+`build verify` (`forkcast_data/verify.py`, ~3 min) measures how well the data
 holds up, on the data itself: our guess against what really happened, never a
 number typed in by hand. The help's Nerd mode shows the latest run, so its
 precision statements change when the data or the code does.
@@ -400,6 +400,27 @@ precision statements change when the data or the code does.
   (`variants.KNOWN`): the mean change and the sign expected.
 - **shift:** how far each climate moves the year's average high, Europe and
   the world.
+- **Against single days** (`forkcast_data/verify_days.py`, ~3 min): at 1,000
+  random land places over the world and 300 in Europe (drawn by area, where
+  CPC has stations), the app's curves as the app gets them, for every day of
+  2011–2025 and 20 random trips of 7–60 days per place:
+  - **range:** the share of CPC's station days below and above the usual
+    range (10% each if right), and how much warmer the stations' days are
+    than our average (bias); also for winter in the Alps (`winter-bias`).
+  - **extremes:** the share of real trips beating the likely lowest low and
+    highest high (50% if right), and the same with every day as its own try.
+  - **rainy:** the share of real trips (ERA5-Land's daily rain) below and
+    above the rainy-day range at 1, 5 and 10 mm, and real minus expected.
+
+  Places are the sample unit (a place's days share its weather; random
+  places are far apart), with 95% bootstrap intervals over them.
+  `likely_extreme` and `rainy_days_range` are the app's formulas, ported;
+  `tests/test_verify.py` pins them to the app's tests' values.
+- **yearly, trend, quirk, calibration:** the year-to-year swing of a month
+  (Europe, Kraków, Valencia, Interlaken), the warming trend of the average
+  high 1981–2025 with its interval, the Tibetan Plateau's jump from 2021,
+  and how far the CRU calibration moves Europe's highs and lows.
+- **size:** the default climate's tiles, as a visitor downloads them.
 
 Every value is weighted by cell area, over land.
 

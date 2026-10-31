@@ -1,7 +1,7 @@
 {
  "run": {
   "date": "2026-10-31",
-  "code": "c6296c6e48bd",
+  "code": "07ffbbeb223d",
   "grids": "791bde74e57e+714c920dc700"
  },
  "backtest": [
@@ -2411,6 +2411,1338 @@
    "stat": "mean",
    "value": -0.001563,
    "unit": "°C"
+  },
+  {
+   "metric": "yearly",
+   "climate": "",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "median sd, least month",
+   "value": 1.344,
+   "unit": "°C"
+  },
+  {
+   "metric": "yearly",
+   "climate": "",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "median sd, most month",
+   "value": 2.605,
+   "unit": "°C"
+  },
+  {
+   "metric": "yearly",
+   "climate": "",
+   "field": "tmx",
+   "area": "Kraków",
+   "stat": "sd Jan",
+   "value": 2.21,
+   "unit": "°C"
+  },
+  {
+   "metric": "yearly",
+   "climate": "",
+   "field": "tmx",
+   "area": "Valencia",
+   "stat": "sd Jan",
+   "value": 1.164,
+   "unit": "°C"
+  },
+  {
+   "metric": "yearly",
+   "climate": "",
+   "field": "pre",
+   "area": "Interlaken",
+   "stat": "mean Jan",
+   "value": 136.8,
+   "unit": "mm"
+  },
+  {
+   "metric": "yearly",
+   "climate": "",
+   "field": "pre",
+   "area": "Interlaken",
+   "stat": "sd Jan",
+   "value": 62.42,
+   "unit": "mm"
+  },
+  {
+   "metric": "yearly",
+   "climate": "",
+   "field": "pre",
+   "area": "Europe",
+   "stat": "median relative sd",
+   "value": 0.4502,
+   "unit": "share"
+  },
+  {
+   "metric": "trend",
+   "climate": "",
+   "field": "tmx",
+   "area": "World",
+   "stat": "per decade",
+   "value": 0.3516,
+   "unit": "°C"
+  },
+  {
+   "metric": "trend",
+   "climate": "",
+   "field": "tmx",
+   "area": "World",
+   "stat": "per decade lo95",
+   "value": 0.3039,
+   "unit": "°C"
+  },
+  {
+   "metric": "trend",
+   "climate": "",
+   "field": "tmx",
+   "area": "World",
+   "stat": "per decade hi95",
+   "value": 0.3993,
+   "unit": "°C"
+  },
+  {
+   "metric": "trend",
+   "climate": "",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "per decade",
+   "value": 0.481,
+   "unit": "°C"
+  },
+  {
+   "metric": "trend",
+   "climate": "",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "per decade lo95",
+   "value": 0.4064,
+   "unit": "°C"
+  },
+  {
+   "metric": "trend",
+   "climate": "",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "per decade hi95",
+   "value": 0.5557,
+   "unit": "°C"
+  },
+  {
+   "metric": "quirk",
+   "climate": "",
+   "field": "tmn",
+   "area": "Tibetan Plateau",
+   "stat": "Jan 2021–25 minus 2011–20",
+   "value": 2.242,
+   "unit": "°C"
+  },
+  {
+   "metric": "quirk",
+   "climate": "",
+   "field": "tmn",
+   "area": "Tibetan Plateau",
+   "stat": "Jan 2021–25 minus 2011–20, largest cell",
+   "value": 9.456,
+   "unit": "°C"
+  },
+  {
+   "metric": "calibration",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "least month",
+   "value": 1.143,
+   "unit": "°C"
+  },
+  {
+   "metric": "calibration",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "most month",
+   "value": 1.5,
+   "unit": "°C"
+  },
+  {
+   "metric": "calibration",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "least month",
+   "value": -1.083,
+   "unit": "°C"
+  },
+  {
+   "metric": "calibration",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "most month",
+   "value": -0.1982,
+   "unit": "°C"
+  },
+  {
+   "metric": "size",
+   "climate": "last15",
+   "field": "tiles",
+   "area": "World",
+   "stat": "count",
+   "value": 317.0,
+   "unit": "tiles"
+  },
+  {
+   "metric": "size",
+   "climate": "last15",
+   "field": "tiles",
+   "area": "World",
+   "stat": "median kB",
+   "value": 82.37,
+   "unit": "kB"
+  },
+  {
+   "metric": "size",
+   "climate": "last15",
+   "field": "tiles",
+   "area": "World",
+   "stat": "median kB gzipped",
+   "value": 21.4,
+   "unit": "kB"
+  },
+  {
+   "metric": "size",
+   "climate": "last15",
+   "field": "tiles",
+   "area": "World",
+   "stat": "largest kB gzipped",
+   "value": 56.62,
+   "unit": "kB"
+  },
+  {
+   "metric": "size",
+   "climate": "last15",
+   "field": "tiles",
+   "area": "World",
+   "stat": "all MB",
+   "value": 26.11,
+   "unit": "MB"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "below",
+   "value": 0.1175,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "below lo95",
+   "value": 0.1125,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "below hi95",
+   "value": 0.1229,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "above",
+   "value": 0.1248,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "above lo95",
+   "value": 0.117,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "above hi95",
+   "value": 0.1324,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "bias",
+   "value": 0.07576,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "bias lo95",
+   "value": -0.01784,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "bias hi95",
+   "value": 0.1699,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "below",
+   "value": 0.07702,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "below lo95",
+   "value": 0.07247,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "below hi95",
+   "value": 0.08191,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "above",
+   "value": 0.1786,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "above lo95",
+   "value": 0.1694,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "above hi95",
+   "value": 0.1879,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "bias",
+   "value": 0.8222,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "bias lo95",
+   "value": 0.737,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "bias hi95",
+   "value": 0.9098,
+   "unit": "°C"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "beaten",
+   "value": 0.3524,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "beaten lo95",
+   "value": 0.3386,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "beaten hi95",
+   "value": 0.3664,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "beaten",
+   "value": 0.4846,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "beaten lo95",
+   "value": 0.469,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "beaten hi95",
+   "value": 0.5004,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "beaten, every day a try",
+   "value": 0.2357,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "beaten, every day a try lo95",
+   "value": 0.225,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "World",
+   "stat": "beaten, every day a try hi95",
+   "value": 0.2472,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "beaten, every day a try",
+   "value": 0.2782,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "beaten, every day a try lo95",
+   "value": 0.2644,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "World",
+   "stat": "beaten, every day a try hi95",
+   "value": 0.2923,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "below",
+   "value": 0.06565,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "below lo95",
+   "value": 0.0617,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "below hi95",
+   "value": 0.06965,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "above",
+   "value": 0.07835,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "above lo95",
+   "value": 0.07405,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "above hi95",
+   "value": 0.08265,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "real minus expected",
+   "value": -0.02146,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "real minus expected lo95",
+   "value": -0.06973,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "World",
+   "stat": "real minus expected hi95",
+   "value": 0.02419,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "below",
+   "value": 0.04435,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "below lo95",
+   "value": 0.0408,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "below hi95",
+   "value": 0.04805,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "above",
+   "value": 0.0749,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "above lo95",
+   "value": 0.071,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "above hi95",
+   "value": 0.07885,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "real minus expected",
+   "value": -0.03038,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "real minus expected lo95",
+   "value": -0.06487,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "World",
+   "stat": "real minus expected hi95",
+   "value": 0.004368,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "below",
+   "value": 0.02335,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "below lo95",
+   "value": 0.02075,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "below hi95",
+   "value": 0.0259,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "above",
+   "value": 0.0574,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "above lo95",
+   "value": 0.05405,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "above hi95",
+   "value": 0.0611,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "real minus expected",
+   "value": -0.03266,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "real minus expected lo95",
+   "value": -0.05695,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "World",
+   "stat": "real minus expected hi95",
+   "value": -0.007743,
+   "unit": "days"
+  },
+  {
+   "metric": "sample",
+   "climate": "",
+   "field": "",
+   "area": "World",
+   "stat": "places",
+   "value": 1000.0,
+   "unit": "places"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "below",
+   "value": 0.09752,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "below lo95",
+   "value": 0.09231,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "below hi95",
+   "value": 0.1026,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "above",
+   "value": 0.1303,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "above lo95",
+   "value": 0.1209,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "above hi95",
+   "value": 0.141,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "bias",
+   "value": 0.2633,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "bias lo95",
+   "value": 0.1213,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "bias hi95",
+   "value": 0.4032,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "below",
+   "value": 0.08795,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "below lo95",
+   "value": 0.08163,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "below hi95",
+   "value": 0.09471,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "above",
+   "value": 0.1489,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "above lo95",
+   "value": 0.1372,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "above hi95",
+   "value": 0.1621,
+   "unit": "share"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "bias",
+   "value": 0.5956,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "bias lo95",
+   "value": 0.4718,
+   "unit": "°C"
+  },
+  {
+   "metric": "range",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "bias hi95",
+   "value": 0.718,
+   "unit": "°C"
+  },
+  {
+   "metric": "winter-bias",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Alps",
+   "stat": "bias",
+   "value": 0.3561,
+   "unit": "°C"
+  },
+  {
+   "metric": "winter-bias",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Alps",
+   "stat": "bias lo95",
+   "value": -0.8676,
+   "unit": "°C"
+  },
+  {
+   "metric": "winter-bias",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Alps",
+   "stat": "bias hi95",
+   "value": 1.836,
+   "unit": "°C"
+  },
+  {
+   "metric": "winter-bias",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Alps",
+   "stat": "bias",
+   "value": 0.5512,
+   "unit": "°C"
+  },
+  {
+   "metric": "winter-bias",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Alps",
+   "stat": "bias lo95",
+   "value": -0.2613,
+   "unit": "°C"
+  },
+  {
+   "metric": "winter-bias",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Alps",
+   "stat": "bias hi95",
+   "value": 1.369,
+   "unit": "°C"
+  },
+  {
+   "metric": "sample",
+   "climate": "",
+   "field": "",
+   "area": "Alps",
+   "stat": "places",
+   "value": 13.0,
+   "unit": "places"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "beaten",
+   "value": 0.4045,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "beaten lo95",
+   "value": 0.3803,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "beaten hi95",
+   "value": 0.43,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "beaten",
+   "value": 0.5632,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "beaten lo95",
+   "value": 0.5418,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "beaten hi95",
+   "value": 0.5852,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "beaten, every day a try",
+   "value": 0.2673,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "beaten, every day a try lo95",
+   "value": 0.2467,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmn",
+   "area": "Europe",
+   "stat": "beaten, every day a try hi95",
+   "value": 0.2872,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "beaten, every day a try",
+   "value": 0.3363,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "beaten, every day a try lo95",
+   "value": 0.314,
+   "unit": "share"
+  },
+  {
+   "metric": "extremes",
+   "climate": "last15",
+   "field": "tmx",
+   "area": "Europe",
+   "stat": "beaten, every day a try hi95",
+   "value": 0.359,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "below",
+   "value": 0.06617,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "below lo95",
+   "value": 0.058,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "below hi95",
+   "value": 0.0745,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "above",
+   "value": 0.08117,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "above lo95",
+   "value": 0.07383,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "above hi95",
+   "value": 0.08817,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "real minus expected",
+   "value": 0.03864,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "real minus expected lo95",
+   "value": -0.0444,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r1",
+   "area": "Europe",
+   "stat": "real minus expected hi95",
+   "value": 0.1248,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "below",
+   "value": 0.0355,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "below lo95",
+   "value": 0.02967,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "below hi95",
+   "value": 0.04117,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "above",
+   "value": 0.06683,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "above lo95",
+   "value": 0.05983,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "above hi95",
+   "value": 0.07417,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "real minus expected",
+   "value": 0.01534,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "real minus expected lo95",
+   "value": -0.04413,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r5",
+   "area": "Europe",
+   "stat": "real minus expected hi95",
+   "value": 0.0736,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "below",
+   "value": 0.01167,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "below lo95",
+   "value": 0.008167,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "below hi95",
+   "value": 0.0155,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "above",
+   "value": 0.04867,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "above lo95",
+   "value": 0.04283,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "above hi95",
+   "value": 0.0545,
+   "unit": "share"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "real minus expected",
+   "value": -0.002423,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "real minus expected lo95",
+   "value": -0.03287,
+   "unit": "days"
+  },
+  {
+   "metric": "rainy",
+   "climate": "last15",
+   "field": "r10",
+   "area": "Europe",
+   "stat": "real minus expected hi95",
+   "value": 0.02931,
+   "unit": "days"
+  },
+  {
+   "metric": "sample",
+   "climate": "",
+   "field": "",
+   "area": "Europe",
+   "stat": "places",
+   "value": 300.0,
+   "unit": "places"
+  },
+  {
+   "metric": "sample",
+   "climate": "",
+   "field": "",
+   "area": "",
+   "stat": "trips per place",
+   "value": 20.0,
+   "unit": "trips"
   }
  ]
 }
