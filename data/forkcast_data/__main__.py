@@ -20,6 +20,7 @@ Downloads (into cache/):
     details               Natural Earth places, rivers and lakes
     osm                   the OpenStreetMap planet (about 96 GB; every route comes from it)
     dem                   Copernicus GLO-90 terrain heights for the routes' area (about 5 GB)
+    eurovelo-legs         BRouter legs where the EuroVelo routes' mapping has holes (builds bicycle first)
     oni                   NOAA's Oceanic Niño Index (which months were El Niño or La Niña)
     ghcnd                 NOAA GHCN-Daily: weather stations' own daily records, 2011–2025 (~2.6 GB; for verify)
 
@@ -94,6 +95,7 @@ DOWNLOADS = {
     "details": lambda a: details.download(a.fresh),
     "osm": lambda a: osm.download(a.fresh),
     "dem": lambda a: dem.download(a.fresh),
+    "eurovelo-legs": lambda a: routes.download_eurovelo(a.fresh),
     "oni": lambda a: variants.download(a.fresh),
     "ghcnd": lambda a: ghcnd.download(a.fresh),
 }
@@ -142,6 +144,7 @@ def status(a) -> None:
         "details": [details.DIR / n for n in details.SOURCES],
         "osm": [osm.PLANET],
         "dem": dem.files(),
+        "eurovelo-legs": [routes.EUROVELO_LEGS],
         "oni": [variants.ONI_FILE],
         "ghcnd": ghcnd.files(),
     }
