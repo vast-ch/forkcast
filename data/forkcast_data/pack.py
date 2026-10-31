@@ -22,7 +22,7 @@ with its neighbours). One byte per value
 [row][col] as in the monthly grid. Terms are the mean,
 then cos and sin of each wave; a layer stores as many as its encoding lists
 (7, or 3 for the spread of single days' highs and lows from cpc.py, added to
-every climate). Each term has its own encoding, value =
+every climate). The wind's components (wind.py) come last, each climate's own. Each term has its own encoding, value =
 byte / scale + offset (or (byte / scale)² for "sqrt"); rain's waves are
 "relative": a share of the cell's mean rain, so dry places keep their
 precision.
@@ -39,7 +39,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import cpc, pipeline, variants
+from . import cpc, pipeline, variants, wind
 from . import era5land as e
 from .pipeline import OUT, Stamp, code_hash, log
 
@@ -75,6 +75,12 @@ _SPREAD = [
     {"kind": "linear", "scale": 16, "offset": 0},  # 0 … 15.9 °C (Siberia's winter nights reach 15)
     *[{"kind": "linear", "scale": 20, "offset": -6.35}] * 2,  # ±6.35 °C (high plateaus swing 5 °C and more)
 ]
+# The strongest riding hour's wind (wind.py), m/s: east and north components
+# ±12 m/s in 0.1 m/s steps, mean and waves alike (Patagonia's westerlies
+# average 9 m/s, and a monsoon's windiest hour reverses by more); its speed
+# 0 … 20 m/s.
+_WIND = [{"kind": "linear", "scale": 10.6, "offset": -12}] * TERMS
+_SPEED = [{"kind": "linear", "scale": 12.7, "offset": 0}, *_WIND[1:]]
 # Mean highs run from about −25 °C (Greenland's ice) to +39 °C, mean lows from −35 to +28 °C.
 ENCODING = {
     "tmx": _temp(-28),
@@ -85,6 +91,9 @@ ENCODING = {
     "r10": _DAYS,
     "tmxsd": _SPREAD,
     "tmnsd": _SPREAD,
+    "wspd": _SPEED,
+    "u10": _WIND,
+    "v10": _WIND,
 }
 
 
@@ -135,14 +144,17 @@ def decode(name: str, b: np.ndarray) -> np.ndarray:
     return out
 
 
-def spread(land: np.ndarray) -> dict[str, np.ndarray]:
-    """The spread layers' coefficients (TERMS, rows, cols) on land, NaN elsewhere."""
-    z = np.load(cpc.OUT)
+def extras(climate: str, land: np.ndarray) -> dict[str, np.ndarray]:
+    """The layers built outside the monthly grid, as coefficients (TERMS, rows, cols) on land, NaN elsewhere:
+    the spread of single days (the same in every climate: how far days stray hardly depends on the years)
+    and the climate's own wind."""
     out = {}
-    for name in cpc.LAYERS.values():
-        c = fit(z[name], False).astype(np.float32)
-        c[:, ~land] = np.nan
-        out[name] = c
+    for path, names in ((cpc.OUT, cpc.LAYERS.values()), (wind.grid_file(climate), wind.LAYERS)):
+        z = np.load(path)
+        for name in names:
+            c = fit(z[name], False).astype(np.float32)
+            c[:, ~land] = np.nan
+            out[name] = c
     return out
 
 
@@ -169,7 +181,7 @@ def outputs() -> list[Path]:
 
 
 def inputs() -> list[Path]:
-    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")] + [cpc.OUT]
+    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")] + [cpc.OUT] + [wind.grid_file(c) for c in CLIMATES]
 
 
 def curves(monthly: bytes, header: dict) -> tuple[dict[str, np.ndarray], np.ndarray]:
@@ -222,8 +234,8 @@ def pack(climate: str) -> None:
     header = json.loads(_source(climate, "json").read_text())
     coef, static = curves(_source(climate, "bin").read_bytes(), header)
     land = ~np.isnan(coef["tmx"][0])
-    coef |= spread(land)  # the same in every climate: how far days stray hardly depends on the years
-    names = [*header["vars"], *cpc.LAYERS.values()]
+    coef |= extras(climate, land)
+    names = [*header["vars"], *cpc.LAYERS.values(), *wind.LAYERS]
     enc = {name: encode(name, c) for name, c in coef.items()}  # (its terms, rows, cols) bytes
     folder = DIR / climate
     if folder.exists():
@@ -251,13 +263,13 @@ def pack(climate: str) -> None:
 
 
 def build(fresh: bool = False) -> None:
-    code = code_hash(sys.modules[__name__], e, variants, cpc, pipeline)
+    code = code_hash(sys.modules[__name__], e, variants, cpc, wind, pipeline)
     stamp = Stamp("pack", inputs(), outputs(), code)
     if not fresh and stamp.up_to_date():
         log("  packed grids are up to date")
         return
     if missing := stamp.missing_inputs():
-        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants, build spread")
+        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants, build spread, build wind")
     for climate in CLIMATES:
         pack(climate)
     stamp.done()
