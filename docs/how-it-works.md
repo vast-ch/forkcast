@@ -83,9 +83,10 @@ parameters, and how well it holds up. Those precision statements come only
 from measurements (`build verify`, see data/README.md), loaded from
 `data/out/verify/latest.json` when a nerd page needs them
 (`web/app/utils/verify.ts`, `components/help/measured.gts`), never typed into
-the page; each table says when and with which code it was measured. Tabs
-without a nerd version yet say so and show the normal one (`NERD_TABS` in
-the template). The plan is in issue #20.
+the page; each table says when and with which code it was measured. Each
+tab's nerd version is a component in `web/app/components/help/nerd/`; a
+measurement the page asks for but the data lacks shows as “not measured”,
+which the help's tests catch. The plan is in issue #20.
 
 ## Phones
 
@@ -249,10 +250,11 @@ Under the map, one column per day: the day number on top, a bar from the low to 
   the value the trip's lowest low (highest high on a riding day) is as likely
   to beat as not, each low (high) normal with its mean and spread. Lows are
   not independent tries, since cold comes in spells: counted as one try per 2
-  lows and per 2.5 highs (`EXTREME_SPELL`), measured on CPC's 2011–2025 days
-  at 1,200 places for trips of 7–60 days. With every low counted, the real
-  lowest low came out below the estimate in only 21–32% of trips; with
-  these, 47–51% (the highest high above it 40–58%).
+  lows and per 2.5 highs (`EXTREME_SPELL`), chosen on CPC's 2011–2025 days.
+  How often real trips beat it, with spells and with every day counted, is
+  measured by `build verify` (data/README.md, "Measuring the data") and
+  shown in the help's Nerd mode. The first measurement found lows beaten in
+  fewer trips than half, because our lows run colder than CPC's stations.
 - **Lowest average low** is the lowest of the days' mean lows, and its
   date: when the cold is likeliest, while the likely lowest low says how
   cold.

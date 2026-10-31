@@ -177,10 +177,9 @@ const RANGE_TAIL = 0.1;
 /**
  * Low lows and high highs come in spells, so a trip's lows are fewer
  * independent tries at a low one than there are lows: about one in 2, and
- * one in 2.5 for hot days. Measured on NOAA CPC's daily highs and lows,
- * 2011–2025, at 1,200 random places, trips of 7 to 60 days: with these, the
- * real lowest low came out below likelyExtreme's in 47–51% of trips (the
- * highest high above it in 40–58%), against 21–32% counting every day.
+ * one in 2.5 for hot days. How often real trips beat it, with these and
+ * counting every day, is measured by the data's `build verify`
+ * (data/forkcast_data/verify_days.py) and shown in the help's Nerd mode.
  */
 const EXTREME_SPELL = { lowest: 2, highest: 2.5 } as const;
 

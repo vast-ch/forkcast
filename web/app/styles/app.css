@@ -1042,3 +1042,11 @@ body {
     overflow-x: auto;
   }
 }
+
+.wt-help-swatch {
+  display: inline-block;
+  width: 1.25rem;
+  height: 0.9rem;
+  border-radius: 0.2rem;
+  vertical-align: middle;
+}

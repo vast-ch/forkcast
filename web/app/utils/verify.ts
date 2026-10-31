@@ -39,18 +39,61 @@ export function measured(
   );
 }
 
-const DIGITS: Record<string, number> = { '°C': 2, mm: 1, days: 2 };
+/** What a measurement the data doesn't have shows as. */
+export const MISSING = 'not measured';
+
+// Shares are fractions of 1, shown as percent with one decimal.
+const DIGITS: Record<string, number> = {
+  '°C': 2,
+  mm: 1,
+  days: 2,
+  kB: 0,
+  MB: 1,
+  places: 0,
+  trips: 0,
+  tiles: 0,
+  years: 0,
+  '%': 1,
+};
 
 /** A measured value as the nerd pages show it, e.g. "1.56 °C", "−8.1 mm". */
 export function fmtMeasured(
   r: Measurement | undefined,
   signed = false,
 ): string {
-  if (!r) return '–';
+  if (!r) return MISSING;
+  if (r.unit === 'share') {
+    const pct = { ...r, value: r.value * 100, unit: '%' };
+    return fmtMeasured(pct, signed).replace(' %', '%');
+  }
   const text = r.value.toFixed(DIGITS[r.unit] ?? 2);
   // A value that rounds to nothing shows no sign: "0.00", not "−0.00".
   const isZero = Number(text) === 0;
   const n = isZero ? text.replace('-', '') : text.replace('-', '−');
   const sign = signed && r.value > 0 && !isZero ? '+' : '';
   return `${sign}${n}${r.unit ? ' ' + r.unit : ''}`;
+}
+
+type Query = [metric: string, field: string, area: string, stat: string];
+
+/** One measured value, formatted; for templates: `{{value m "range" "tmx" "World" "below"}}`. */
+export function value(m: Measurements, ...[metric, field, area, stat]: Query) {
+  return fmtMeasured(measured(m, { metric, field, area, stat }));
+}
+
+/** The same, signed (+0.48 °C). */
+export function signed(m: Measurements, ...[metric, field, area, stat]: Query) {
+  return fmtMeasured(measured(m, { metric, field, area, stat }), true);
+}
+
+/** A measured value with its 95% interval: "11.7% (11.1% to 12.3%)". */
+export function withInterval(
+  m: Measurements,
+  ...[metric, field, area, stat]: Query
+) {
+  const get = (s: string) => measured(m, { metric, field, area, stat: s });
+  const lo = get(`${stat} lo95`);
+  const hi = get(`${stat} hi95`);
+  const v = fmtMeasured(get(stat));
+  return lo && hi ? `${v} (${fmtMeasured(lo)} to ${fmtMeasured(hi)})` : v;
 }

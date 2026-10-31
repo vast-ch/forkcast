@@ -3,6 +3,7 @@ import { click, currentURL, find, visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'forkcast/tests/helpers';
 import { button } from 'forkcast/tests/helpers/find';
 import sections from 'forkcast/help-sections.json';
+import { MISSING } from 'forkcast/utils/verify';
 
 module('Acceptance | help', function (hooks) {
   setupApplicationTest(hooks);
@@ -76,15 +77,24 @@ module('Acceptance | help', function (hooks) {
     assert.dom('.wt-help-table').doesNotExist();
     await click('.wt-help-nerd [role="switch"], .wt-help-nerd input');
     assert.strictEqual(currentURL(), '/help/climates?nerd=true');
+    assert.dom('.wt-help-table').exists();
     await click('a[href="/help/sources?nerd=true"]');
     assert.strictEqual(currentURL(), '/help/sources?nerd=true');
-    assert
-      .dom('.wt-help-nerd-missing')
-      .exists('a tab without a nerd version says so');
     await click('.wt-help-nerd [role="switch"], .wt-help-nerd input');
     assert.strictEqual(currentURL(), '/help/sources');
-    assert.dom('.wt-help-nerd-missing').doesNotExist();
+    assert.dom('.wt-help-table').doesNotExist();
   });
+
+  for (const s of sections) {
+    test(`/help/${s.id} has a nerd version, every measurement found`, async function (assert) {
+      await visit(`/help/${s.id}?nerd=true`);
+      const text = find('.wt-help')?.textContent ?? '';
+      assert.true(text.length > 500, 'it has content');
+      // A measurement the page asks for but the data doesn't have says so.
+      assert.false(text.includes(MISSING), 'every measurement is found');
+      assert.false(text.includes("couldn't be loaded"), 'they loaded');
+    });
+  }
 
   test('the nerd Climates tab shows the measurements, with intervals', async function (assert) {
     await visit('/help/climates?nerd=true');
