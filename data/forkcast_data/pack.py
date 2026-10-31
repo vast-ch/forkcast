@@ -39,7 +39,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import cpc, pipeline, variants, wind
+from . import cpc, pipeline, variants, warming, wind
 from . import era5land as e
 from .pipeline import OUT, Stamp, code_hash, log
 
@@ -181,7 +181,7 @@ def outputs() -> list[Path]:
 
 
 def inputs() -> list[Path]:
-    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")] + [cpc.OUT] + [wind.grid_file(c) for c in CLIMATES]
+    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")] + [cpc.OUT, warming.OUT] + [wind.grid_file(c) for c in CLIMATES]
 
 
 def curves(monthly: bytes, header: dict) -> tuple[dict[str, np.ndarray], np.ndarray]:
@@ -235,6 +235,11 @@ def pack(climate: str) -> None:
     coef, static = curves(_source(climate, "bin").read_bytes(), header)
     land = ~np.isnan(coef["tmx"][0])
     coef |= extras(climate, land)
+    # Brought forward to the year after the period by the long-term warming (warming.py).
+    rates = np.load(warming.OUT)
+    years = warming.shift_years(climate, tuple(header["years"]))
+    for f in warming.FIELDS:
+        coef[f][0] += rates[f] * years
     names = [*header["vars"], *cpc.LAYERS.values(), *wind.LAYERS]
     enc = {name: encode(name, c) for name, c in coef.items()}  # (its terms, rows, cols) bytes
     folder = DIR / climate
@@ -255,6 +260,7 @@ def pack(climate: str) -> None:
         "tile": TILE,
         "size": round(TILE / header["step"]) + 1,
         "tiles": sorted(ids),
+        "warming": {"to": header["years"][1] + 1, "years": years},
         "encoding": {n: ENCODING[n] for n in names} | {s: e.ENCODING[s] for s in header.get("static", [])},
     }
     _write(header_file(climate), json.dumps(meta, separators=(",", ":")).encode())
@@ -263,13 +269,13 @@ def pack(climate: str) -> None:
 
 
 def build(fresh: bool = False) -> None:
-    code = code_hash(sys.modules[__name__], e, variants, cpc, wind, pipeline)
+    code = code_hash(sys.modules[__name__], e, variants, cpc, warming, wind, pipeline)
     stamp = Stamp("pack", inputs(), outputs(), code)
     if not fresh and stamp.up_to_date():
         log("  packed grids are up to date")
         return
     if missing := stamp.missing_inputs():
-        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants, build spread, build wind")
+        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants, build spread, build wind, build warming")
     for climate in CLIMATES:
         pack(climate)
     stamp.done()

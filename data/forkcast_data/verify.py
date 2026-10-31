@@ -44,7 +44,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import cpc, pack, pipeline, variants, verify_days
+from . import cpc, ghcnd, pack, pipeline, variants, verify_days, verify_stations, warming
 from . import era5land as e
 from . import era5land_download as dl
 from .pipeline import OUT, STAMPS, Stamp, code_hash, log
@@ -69,7 +69,7 @@ def outputs() -> list[Path]:
 def inputs() -> list[Path]:
     years = range(variants.HISTORY[0], variants.HISTORY[1] + 1)
     grids = [e.grid_file(x) for x in ("bin", "json")] + [variants.grid_file(v, x) for v in variants.VARIANTS for x in ("bin", "json")]
-    days = cpc.files(verify_days.YEARS) + [dl.rain_file(y) for y in verify_days.YEARS]
+    days = [warming.OUT, ghcnd.OUT] + cpc.files(verify_days.YEARS) + [dl.rain_file(y) for y in verify_days.YEARS]
     return grids + [variants.year_file(y) for y in years] + days
 
 
@@ -149,6 +149,29 @@ def interval(per_year: np.ndarray, seed: int = 1) -> tuple[float, float]:
     return float(lo), float(hi)
 
 
+def per_year_mean(err: np.ndarray, at: np.ndarray, w: np.ndarray) -> np.ndarray:
+    """Each target year's mean (signed) error, like per_year_mae: (target,). Below 0, the forecast was too low."""
+    ww = np.where(at, w, 0.0)
+    ok = np.isfinite(err)
+    return np.sum(np.where(ok, err, 0) * ww, axis=(1, 2, 3)) / np.sum(np.where(ok, 1.0, 0) * ww, axis=(1, 2, 3))
+
+
+def _forecast_errors(field: str, a: np.ndarray, years: list[int], targets: list[int]):
+    """(climate, forecast minus real (target, month, rows, cols)) for each climate as the app makes it, and 15
+    years as plainly averaged. Highs and lows are brought forward by the warming rate (warming.py), measured
+    only on the years before each target."""
+    shifted = field in warming.FIELDS
+    rates = {}
+    if shifted:
+        annual = a.mean(axis=1)  # (year, rows, cols)
+        rates = {i: warming.rate(annual[:i], years[:i]) for i in targets}
+    for climate, n in WINDOWS.items():
+        ahead = (n + 1) / 2 if shifted and n > 1 else 0.0  # from the window's middle to the target; 1 yr as it was
+        yield climate, np.stack([a[i - n : i].mean(axis=0) + (rates[i] * ahead if ahead else 0) - a[i] for i in targets])
+    if shifted:
+        yield "last15 unshifted", np.stack([a[i - 15 : i].mean(axis=0) - a[i] for i in targets])
+
+
 def backtest() -> list[dict]:
     """Each climate as a forecast of the following year, per target year, so the
     spread between years gives each average an interval. Years are the sample:
@@ -166,14 +189,20 @@ def backtest() -> list[dict]:
         targets = [years.index(t) for t in BACKTEST]
         for area, box in AREAS.items():
             at = _mask(box, lat, lon)
-            per = {}
-            for climate, n in WINDOWS.items():
-                err = np.stack([a[i - n : i].mean(axis=0) - a[i] for i in targets])  # (target, month, rows, cols)
+            per, bias = {}, {}
+            for climate, err in _forecast_errors(field, a, years, targets):
                 per[climate] = per_year_mae(err, at, w)
+                bias[climate] = per_year_mean(err, at, w)
             for climate, v in per.items():
                 common = {"metric": "backtest", "climate": climate, "field": field, "area": area, "unit": unit}
                 lo, hi = interval(v)
                 rows += [common | {"stat": "mae", "value": float(v.mean())}, common | {"stat": "mae lo95", "value": lo}, common | {"stat": "mae hi95", "value": hi}]
+                lo, hi = interval(bias[climate])
+                rows += [
+                    common | {"stat": "bias", "value": float(bias[climate].mean())},
+                    common | {"stat": "bias lo95", "value": lo},
+                    common | {"stat": "bias hi95", "value": hi},
+                ]
                 if climate != "last15":
                     d = v - per["last15"]  # paired by year: the same weather tested both ways
                     lo, hi = interval(d)
@@ -351,13 +380,13 @@ def _round(v: float) -> float:
 
 
 def build(fresh: bool = False) -> None:
-    code = code_hash(sys.modules[__name__], verify_days, pack, e, variants, pipeline)
+    code = code_hash(sys.modules[__name__], verify_days, verify_stations, warming, pack, e, variants, pipeline)
     stamp = Stamp("verify", inputs(), outputs(), code, {"backtest": [BACKTEST[0], BACKTEST[-1]]})
     if not fresh and stamp.up_to_date():
         log("  measurements are up to date")
         return
     if missing := stamp.missing_inputs():
-        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: download cpc era5land-rain, build climate, build years, build variants, build pack")
+        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: download cpc era5land-rain ghcnd, build stations, build climate, build years, build variants, build pack")
     base = variants.BaseGrid()
     rows = []
     app = range(2011, 2026)
@@ -370,6 +399,7 @@ def build(fresh: bool = False) -> None:
         ("calibration", lambda: calibration(base, app)),
         ("sizes", sizes),
         ("days and trips", lambda: verify_days.measure(base)),
+        ("stations", lambda: verify_stations.measure(base)),
     )
     for name, step in steps:
         t0 = time.time()

@@ -21,6 +21,7 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     details               Natural Earth places, rivers and lakes
     cyclenet              OpenStreetMap international cycle routes via Overpass
     oni                   NOAA's Oceanic Niño Index (which months were El Niño or La Niña)
+    ghcnd                 NOAA GHCN-Daily: weather stations' own daily records, 2011–2025 (~2.6 GB; for verify)
 
 Builds (into out/, except the CRU climatology which is an intermediate in cache/):
     borders    the world's country outlines
@@ -32,8 +33,10 @@ Builds (into out/, except the CRU climatology which is an intermediate in cache/
     spread     how far single days' highs and lows stray from the average, from CPC (intermediate)
     years      each year's monthly fields, 1981–2025 (intermediate)
     variants   grids of the other climates: last 10 and 5 years, El Niño, La Niña (intermediate)
+    warming    the long-term warming rate each climate is brought forward by (intermediate)
     wind       each climate's prevailing wind in riding hours (intermediate)
     pack       every climate as the app's seasonal curves, in 10° tiles
+    stations   the stations verify tests against, from GHCN-Daily (intermediate)
     verify     how well the data holds up: curve fit, backtest, ENSO checks (for the help's Nerd mode)
 
 See data/README.md for how skipping, checking and --fresh work.
@@ -45,7 +48,23 @@ import argparse
 import sys
 import time
 
-from . import basemap, cpc, cru, cyclenet, details, era5land, era5land_download, eurovelo, pack, routes, variants, verify, wind
+from . import (
+    basemap,
+    cpc,
+    cru,
+    cyclenet,
+    details,
+    era5land,
+    era5land_download,
+    eurovelo,
+    ghcnd,
+    pack,
+    routes,
+    variants,
+    verify,
+    warming,
+    wind,
+)
 from .pipeline import STAMPS, is_verified, log
 
 YEARS = (2011, 2025)
@@ -74,6 +93,7 @@ DOWNLOADS = {
     "details": lambda a: details.download(a.fresh),
     "cyclenet": lambda a: cyclenet.download(a.fresh),
     "oni": lambda a: variants.download(a.fresh),
+    "ghcnd": lambda a: ghcnd.download(a.fresh),
 }
 
 # In dependency order: routes need the borders.
@@ -87,7 +107,9 @@ BUILDS = {
     "years": lambda a: variants.extract(_history(a), a.fresh),
     "variants": lambda a: variants.build((a.y0, a.y1), a.fresh),
     "wind": lambda a: wind.build((a.y0, a.y1), a.fresh),
+    "warming": lambda a: warming.build(a.fresh),
     "pack": lambda a: pack.build(a.fresh),
+    "stations": lambda a: ghcnd.build(a.fresh),
     "verify": lambda a: verify.build(a.fresh),
     "cyclenet": lambda a: cyclenet.build(a.fresh),
 }
@@ -118,6 +140,7 @@ def status(a) -> None:
         "details": [details.DIR / n for n in details.SOURCES],
         "cyclenet": cyclenet.files(),
         "oni": [variants.ONI_FILE],
+        "ghcnd": ghcnd.files(),
     }
     log("downloads (verified / present / expected)")
     for name, files in groups.items():
