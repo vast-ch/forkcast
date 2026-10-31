@@ -3,6 +3,7 @@ import { click, currentURL, find, visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'forkcast/tests/helpers';
 import { button } from 'forkcast/tests/helpers/find';
 import sections from 'forkcast/help-sections.json';
+import { MISSING } from 'forkcast/utils/verify';
 
 module('Acceptance | help', function (hooks) {
   setupApplicationTest(hooks);
@@ -66,5 +67,61 @@ module('Acceptance | help', function (hooks) {
     assert.dom('img.wt-help-qr').hasAttribute('src', '/discord-qr.svg');
     await click('#about a[href="/help/sharing"]');
     assert.strictEqual(currentURL(), '/help/sharing');
+  });
+
+  test('Nerd mode is off by default, switches on by a click and stays on across tabs', async function (assert) {
+    await visit('/help/climates');
+    assert
+      .dom('.wt-help-nerd [role="switch"], .wt-help-nerd input')
+      .isNotChecked();
+    assert.dom('.wt-help-table').doesNotExist();
+    await click('.wt-help-nerd [role="switch"], .wt-help-nerd input');
+    assert.strictEqual(currentURL(), '/help/climates?nerd=true');
+    assert.dom('.wt-help-table').exists();
+    await click('a[href="/help/sources?nerd=true"]');
+    assert.strictEqual(currentURL(), '/help/sources?nerd=true');
+    await click('.wt-help-nerd [role="switch"], .wt-help-nerd input');
+    assert.strictEqual(currentURL(), '/help/sources');
+    assert.dom('.wt-help-table').doesNotExist();
+  });
+
+  for (const s of sections) {
+    test(`/help/${s.id} has a nerd version, every measurement found`, async function (assert) {
+      await visit(`/help/${s.id}?nerd=true`);
+      const text = find('.wt-help')?.textContent ?? '';
+      assert.true(text.length > 500, 'it has content');
+      // A measurement the page asks for but the data doesn't have says so.
+      assert.false(text.includes(MISSING), 'every measurement is found');
+      assert.false(text.includes("couldn't be loaded"), 'they loaded');
+    });
+  }
+
+  test('the nerd Climates tab shows the measurements, with intervals', async function (assert) {
+    await visit('/help/climates?nerd=true');
+    assert.dom('.wt-help-nerd-missing').doesNotExist();
+    assert.dom('.wt-help-table').exists({ count: 6 });
+    // The backtest's rows are the four windows; each cell has its interval.
+    const rows = [...document.querySelectorAll('.wt-help-table')]
+      .find((t) =>
+        t.querySelector('caption')?.textContent?.startsWith('Europe: a month'),
+      )!
+      .querySelectorAll('tbody tr');
+    assert.deepEqual(
+      [...rows].map((r) => r.querySelector('th')?.textContent?.trim()),
+      ['15 yrs', '10 yrs', '5 yrs', '1 yr'],
+    );
+    assert.dom('td small', rows[0]).hasText(/^\d+\.\d+ °C to \d+\.\d+ °C$/);
+    // Against 15 yrs, a single year is worse at everything.
+    const versus = [...document.querySelectorAll('.wt-help-table')].find((t) =>
+      t.querySelector('caption')?.textContent?.startsWith('Europe: the error'),
+    )!;
+    const oneYear = [...versus.querySelectorAll('tbody tr')].find(
+      (r) => r.querySelector('th')?.textContent?.trim() === '1 yr',
+    )!;
+    assert.deepEqual(
+      [...oneYear.querySelectorAll('td')].map((td) => td.dataset['verdict']),
+      ['worse', 'worse', 'worse', 'worse'],
+    );
+    assert.dom('.wt-help-measured-at').includesText('Measured on');
   });
 });

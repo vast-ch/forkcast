@@ -5,6 +5,7 @@
     python -m forkcast_data build <output>          one build step
     python -m forkcast_data <command> ... --fresh   redo everything the command covers, ignoring what is there
     python -m forkcast_data status                  what is downloaded and what is up to date
+    python -m forkcast_data compare [baseline]      the latest measurements (build verify) against a baseline run
 
 Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     cru                   CRU TS 4.10 monthly grids (calibrates highs and lows)
@@ -30,6 +31,7 @@ Builds (into out/, except the CRU climatology which is an intermediate in cache/
     years      each year's monthly fields, 1981–2025 (intermediate)
     variants   grids of the other climates: last 10 and 5 years, El Niño, La Niña (intermediate)
     pack       every climate as the app's seasonal curves, in 10° tiles
+    verify     how well the data holds up: curve fit, backtest, ENSO checks (for the help's Nerd mode)
 
 See data/README.md for how skipping, checking and --fresh work.
 """
@@ -40,7 +42,7 @@ import argparse
 import sys
 import time
 
-from . import basemap, cpc, cru, cyclenet, details, era5land, era5land_download, eurovelo, pack, routes, variants
+from . import basemap, cpc, cru, cyclenet, details, era5land, era5land_download, eurovelo, pack, routes, variants, verify
 from .pipeline import STAMPS, is_verified, log
 
 YEARS = (2011, 2025)
@@ -80,6 +82,7 @@ BUILDS = {
     "years": lambda a: variants.extract(_history(a), a.fresh),
     "variants": lambda a: variants.build((a.y0, a.y1), a.fresh),
     "pack": lambda a: pack.build(a.fresh),
+    "verify": lambda a: verify.build(a.fresh),
     "cyclenet": lambda a: cyclenet.build(a.fresh),
 }
 
@@ -121,7 +124,7 @@ def status(a) -> None:
 
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="python -m forkcast_data", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["all", "download", "build", "status"])
+    ap.add_argument("command", choices=["all", "download", "build", "status", "compare"])
     ap.add_argument("what", nargs="*", help="steps for download/build (default: all of that kind)")
     ap.add_argument("--fresh", action="store_true", help="redo everything the command covers")
     ap.add_argument("--from", dest="y0", type=int, default=YEARS[0], help="first year of the climate period")
@@ -130,6 +133,9 @@ def main(argv=None) -> None:
 
     if a.command == "status":
         status(a)
+        return
+    if a.command == "compare":
+        verify.compare(a.what[0] if a.what else None)
         return
     plan = []
     if a.command in ("all", "download"):

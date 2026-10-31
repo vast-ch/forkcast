@@ -4,6 +4,7 @@
 
 ### Added
 
+- Nerd mode for the help: a switch at the top shows, on every page, how each number is made and how well it holds up, measured against what the weather really did: does the usual range really hold 8 days in 10, do half of real trips beat the likely lowest low, which climate would have planned a trip best over 30 years, how much a month swings from year to year, and more. Nothing in it is a guess: each figure comes from tests run on the data, with how sure it is.
 - Choose the climate: the map and your trip can also use only the last 10 or 5 years (to see how much warmer it has become), or a year with El Niño or La Niña. Forecasters see those coming months ahead, so if your trip falls in one, you can plan for what it tends to bring: a drier spring in eastern Australia, a milder winter in western Canada and more. The help's new Climates page explains each and where they matter (in Europe, El Niño and La Niña hardly change anything).
 - A one-year climate, “1 yr”: see your trip in 2025, a real year, each month as it actually was, rather than the average. Spain's record-hot June is in it, and every unusually wet or dry month. One year is one roll of the dice, so it shows what can happen rather than what to expect.
 - Each day's high and low now come with their usual range, in brackets, such as “(9 to 20°C)”: where 8 days in 10 fall, measured from weather stations for that place and time of year. The day chart shows it as a thin line through each day's bar. A coast in summer barely varies; a continental winter can swing 15°C.
