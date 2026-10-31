@@ -46,6 +46,7 @@ work after `data`).
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
 | `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `last1`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
 | `pack` | `cache/grids/` (with `spread.npz`) | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land, for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
+| `verify` | `cache/grids/`, `cache/variants/` | `out/verify/history.csv` (every run's measurements, appended, never rewritten) and `out/verify/latest.json` (the last run, which the help's Nerd mode shows); see "Measuring the data" |
 | `cyclenet` | `cache/cyclenet/icn/` | `out/cyclenet.json`: the ways of every route, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches it only when the rider draws with snapping on. |
 
 `all` runs every download, then every build, in the order of these tables.
@@ -369,6 +370,60 @@ Indian Ocean Dipole months (downloading NOAA's Dipole Mode Index first) into
 docker compose --profile tools run --rm --entrypoint uv data run python -m forkcast_data.variants_research          # analyse
 docker compose --profile tools run --rm --entrypoint uv data run python -m forkcast_data.variants_research checks
 ```
+
+## Measuring the data
+
+`build verify` (`forkcast_data/verify.py`, ~15 s) measures how well the data
+holds up, on the data itself: our guess against what really happened, never a
+number typed in by hand. The help's Nerd mode shows the latest run, so its
+precision statements change when the data or the code does.
+
+- **curve:** the seasonal curves (fitted, then packed into bytes as the app
+  gets them) against the monthly grids they come from: each month's average
+  of the curve vs the month, as mean absolute, RMS and 95th-percentile error.
+  This covers every land cell, so nothing is left to chance: any change is real.
+- **backtest:** each climate (the last 15, 10, 5 years, or just the last one)
+  made of the years before a target year, against that year's real months,
+  for every target from 1996 to 2025: 30 years, all the data allows (ERA5-Land
+  starts in 1981 and 15 years need 15 before their target). It runs at 1°,
+  every 4th cell each way, which is plenty for an average.
+  - **The sample is the years**, not the cells: neighbouring cells and months
+    share their weather, so millions of cell-months would overstate the
+    certainty, while one year says little about the next. Each average has a
+    95% interval from resampling the years (2,000 bootstrap draws).
+  - **Climates are compared paired**, year by year against 15 years: the same
+    weather tests both, which resolves far smaller differences than two
+    separate intervals would. The difference gets its own interval, and the
+    share of years the climate did worse. An interval that spans 0 means no
+    measured difference.
+- **enso:** the El Niño and La Niña corrections where the effect is well known
+  (`variants.KNOWN`): the mean change and the sign expected.
+- **shift:** how far each climate moves the year's average high, Europe and
+  the world.
+
+Every value is weighted by cell area, over land.
+
+**History:** each run appends its rows to `history.csv` with the date, the
+`code_hash()` of the modules it measured with (`code`), and the code of the
+`climate` and `variants` builds that made the grids (`grids`). The container
+has no git, so the commit is whichever one adds the rows. Commit `out/verify/`
+along with the change that moved the numbers.
+
+**Comparing against a baseline:** to see whether a change made the
+predictions better:
+
+```sh
+docker compose --profile tools run --rm data build verify      # measure the new state (appends a run)
+docker compose --profile tools run --rm data compare           # the latest run against the first one
+docker compose --profile tools run --rm data compare <code>    # … or against a given run (its code or date)
+```
+
+`compare` lists every measurement that changed and calls it better, worse or
+moved. A backtest change counts only when it's larger than half the
+baseline's 95% interval; smaller than that, 30 years can't tell it from
+chance, and it says "within noise". This is conservative: two runs of the same
+years are paired, so a smaller change can still be real, but this check won't
+claim it.
 
 ## Licences and attribution
 
