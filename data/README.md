@@ -35,6 +35,7 @@ work after `data`).
 | `ghcnd` | NOAA GHCN-Daily: the station list and every station's daily records, one file per year, 2011–2025 | ~2.6 GB | Public domain. Weather stations' own highs, lows and rain, the truth `verify` measures against (see "Measuring the data"). |
 | `osm` | The OpenStreetMap planet, `cache/osm/planet.osm.pbf`, from planet.openstreetmap.org (redirected to a mirror) | ~96 GB | ODbL, © OpenStreetMap contributors. The single source of the EuroVelo routes and the cycle network. The dated file that "latest" names is pinned in `planet.osm.pbf.source`, so an interrupted download resumes the same file (HTTP range), even days later; checked against the planet's MD5. `--fresh` takes the newest planet. A few hours at the mirror's speed. |
 | `dem` | Copernicus GLO-90 terrain heights (about 90 m), one GeoTIFF per 1° square with land, 34–72°N, 32°W–45°E | ~5 GB, 1,700 files | © DLR / Airbus, provided under COPERNICUS by the EU and ESA (free licence). OSM has no heights; the EuroVelo routes take theirs from it. |
+| `eurovelo-legs` | The stretches of the EuroVelo routes that OSM leaves unmapped, routed with BRouter (see "EuroVelo routes"); builds `bicycle` first, since it needs it to find them | ~50 legs | brouter.de, one request at a time with a pause. |
 
 ### Builds (into `out/`, committed)
 
@@ -84,16 +85,32 @@ Each EuroVelo route is a tree of relations in OpenStreetMap: a superroute
 `ref=EV<n>` with a part per country, stages below them, then ways. Some
 countries hang their part under a national route instead, so the route's
 relations are every relation with that ref that isn't inside another one.
-Members with a role such as `alternative`, `variant` or `excursion` are left
-out.
+The ref may be one of several (`EV7/BI1`), and some international parts
+carry only the name ("EuroVelo 2"), so those count too. Members with a role
+such as `alternative`, `variant` or `excursion` are left out.
 
 What is left still has spurs, both banks of a river and holes, so the ways
 form a graph and the route is the shortest path through it between its
-official ends (pinned in `CATALOG`, with via points for the loop, EV10).
-Pieces that don't touch are bridged between their loose ends: within 1 km
-simply joined, otherwise as a ferry over the sea or an unmapped stretch over
-land, costed higher than riding so the path takes one only where the mapping
-really has a gap. OSM has no heights: they come from the Copernicus terrain
+official ends (pinned in `CATALOG`, with via points for the loops, EV10 and
+EV12). Ways mapped as ferry lines (`route=ferry`) are ferries. Pieces that
+don't touch are bridged between their loose ends: within 1 km simply joined,
+otherwise as a ferry over the sea (most of the line at sea) or an unmapped
+stretch over land, costed higher than riding so the path takes one only
+where the mapping really has a gap. A straight gap over 25 km costs ten
+times more again: without that, the first build crossed whole seas in a
+straight line (Roscoff to Calais, Denmark to Santiago, Trondheim to
+Scotland), cheaper than riding round, and came out at 12–65% of the
+official length for six routes.
+
+Where the path still takes a gap over 3 km, and where the mapping stops
+short of an official end (EV4 at the Polish–Ukrainian border, 670 km
+short of Kyiv; EV2 in Dublin and in Belarus), that stretch is routed with
+BRouter's touring-bike profile, which also runs on OpenStreetMap: the
+`eurovelo-legs` download lists them (`cache/brouter/eurovelo-legs.json`) and
+caches each answer like the hand-made routes' legs. Sea gaps are only asked
+up to 60 km, and stay a ferry if the road round is over 2.5 times the
+crossing. Where BRouter finds no route, its answer is kept as an error and
+the straight gap stays. OSM has no heights: they come from the Copernicus terrain
 model every 50 m, averaged over 250 m against its noise. Points are kept
 where they matter for the line (30 m) or for the climbing (5 m).
 
