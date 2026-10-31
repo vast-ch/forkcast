@@ -190,8 +190,10 @@ Under the map, one column per day: the day number on top, a bar from the low to 
   picks the grids: the 2011–2025 average, the last 10 or 5 years, 2025 alone,
   El Niño or La Niña. They share one format, so everything below works the same on each.
   `app/services/atlas.ts` loads each tile of each climate once and keeps it,
-  so switching back is instant. How they're made: `data/README.md`, "Climate
-  variants".
+  so switching back is instant. Every one but 2025 alone has its highs and
+  lows brought forward to 2026 for the warming, at pack time, so the app
+  needs nothing for it. How they're made: `data/README.md`, "Climate
+  variants" and "The warming".
 - **Between grid cells:** bilinear interpolation of the four surrounding cell
   centres. A point near the coast uses only land cells; just off the coast it
   falls back to the nearest land cell.
@@ -219,7 +221,7 @@ Under the map, one column per day: the day number on top, a bar from the low to 
   daily ERA5-Land rain with more harmonics look sharper, but measured on
   years left out of the fit they predict worse, not better (data/README.md,
   "Seasonal curves, packed at build").
-- **Altitude:** when a point's height is known, high and low are shifted by the month's lapse rate (4.4–6.8 °C per 1,000 m, smaller in winter) for the difference between the point and the cell's mean height. A constant 6.5 °C/km over-warmed winter valleys; see data/README.md for the measured comparison.
+- **Altitude:** when a point's height is known, the high is shifted by the month's lapse rate (4.4–6.8 °C per 1,000 m, smaller in winter) for the difference between the point and the cell's mean height, and the low by 3.0 °C per 1,000 m all year: at night cold air drains into valleys, and weather stations worldwide show the lows changing about half as much with height. A constant 6.5 °C/km over-warmed winter valleys; see data/README.md ("Altitude") for the measured comparison.
 - **Rainy days:** read from the counted layers (≥ 1, 5, 10 mm), whose
   curves are the share of days that rainy: the chance that a day is rainy.
 - **Rain when it rains:** the day's mean rain divided by the share of days with at least

@@ -5,6 +5,7 @@ import {
   EnsoTable,
   ShiftTable,
   VersusTable,
+  WarmingTable,
   backtestFrom,
   backtestTo,
   backtestYears,
@@ -26,7 +27,30 @@ const NerdClimates: TOC<{ Args: { years: string } }> = <template>
       The average of each month over
       {{@years}}
       from ERA5-Land, highs and lows calibrated against CRU TS station data (see
-      Data).
+      Data), then brought forward for the warming.
+    </p>
+
+    <h3>The warming</h3>
+    <p>
+      An average of past years describes their middle year: 15 yrs is centred on
+      2018. So every climate's highs and lows are brought forward to the year
+      after its period, 2026, by
+    </p>
+    <ul>
+      <li><strong>the rate:</strong>
+        each cell's straight-line trend of the year's average high (low) over
+        1981–2025, averaged over 21° × 21° of land around it;</li>
+      <li><strong>times the years ahead:</strong>
+        from the middle of the climate's years to 2026 (8 for 15 yrs and El Niño
+        and La Niña, 5.5 for 10 yrs, 3 for 5 yrs). 1 yr is the real 2025, and
+        stays as it was.</li>
+    </ul>
+    <p>
+      Why so broad: a single cell's trend is too noisy to use. Backtested
+      (below), each cell's own trend made the forecasts worse than no
+      correction; the broad one made them better. Rain isn't brought forward, as
+      its trends didn't help. The correction is applied when the curves are
+      packed, so it adds nothing to the download.
     </p>
 
     <h3>10 yrs, 5 yrs, 1 yr</h3>
@@ -101,10 +125,10 @@ const NerdClimates: TOC<{ Args: { years: string } }> = <template>
         <li><strong>The truth is the real year,</strong>
           not 15 yrs: every climate is scored against what then happened. 15 yrs
           is only the column the others are set against. The warming is in the
-          test too: 1996–2025 warmed steadily, so an average of past years
-          always lags behind, the more years the more (15 yrs by about 7 years
-          of warming), and each tested year charges it for that. Fewer years lag
-          less but are noisier; the tables show which wins.</li>
+          test too: 1996–2025 warmed steadily, so a plain average of past years
+          lags behind, 15 yrs by 8 years of warming. Each climate is brought
+          forward, from the years before the tested one only; fewer years lag
+          less to start with but are noisier. The tables show which wins.</li>
         <li><strong>Telling two climates apart:</strong>
           the climates are compared year by year (the same weather tests both),
           which is far more precise than comparing their two intervals. Only
@@ -114,6 +138,12 @@ const NerdClimates: TOC<{ Args: { years: string } }> = <template>
           the test uses the uncalibrated monthly values, the same for every
           climate, so it compares the choice of years, not the calibration.</li>
       </ul>
+      <p>
+        The warming correction is tested the same way, each year's rate from the
+        years before it only:
+      </p>
+      <WarmingTable @measurements={{m}} @area="Europe" />
+      <WarmingTable @measurements={{m}} @area="World" />
       <BacktestTable @measurements={{m}} @area="Europe" />
       <VersusTable @measurements={{m}} @area="Europe" />
       <BacktestTable @measurements={{m}} @area="World" />

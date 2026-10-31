@@ -56,11 +56,17 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
     return this.hover?.onRoute;
   }
 
-  /** How much the temperatures were shifted for the route's height, if noticeably. */
+  /** How much the high and low were shifted for the route's height, if noticeably. */
   get altitudeNote() {
-    const shift = this.route?.weather?.altitudeShift ?? 0;
-    if (Math.abs(shift) < 0.5) return '';
-    return `${shift > 0 ? '+' : '−'}${Math.abs(shift).toFixed(1)}°C`;
+    const w = this.route?.weather;
+    const high = w?.highAltitudeShift ?? 0;
+    const low = w?.lowAltitudeShift ?? 0;
+    if (Math.abs(high) < 0.5 && Math.abs(low) < 0.5) return '';
+    const fmt = (s: number) => {
+      const r = Math.round(s * 10) / 10;
+      return `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r).toFixed(1)}°C`;
+    };
+    return `high ${fmt(high)}, low ${fmt(low)}`;
   }
 
   get dayTitle() {

@@ -134,7 +134,8 @@ module('Acceptance | planner', function (hooks) {
     const usual = june();
     await click(button('1 yr'));
     assert.strictEqual(currentURL(), '/?climate=last1');
-    assert.true(june() > usual + 2, `${june()} °C against ${usual} °C`);
+    // Above 15 yrs even brought forward for the warming.
+    assert.true(june() > usual + 1.5, `${june()} °C against ${usual} °C`);
   });
 
   test('the climate switch fills its row, and scrolls sideways on a narrow panel', async function (assert) {

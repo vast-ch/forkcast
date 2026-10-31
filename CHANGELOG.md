@@ -22,6 +22,8 @@
 - The whole world is on the map, in 10° squares: no more clicking a continent to add it. The squares your route crosses load by themselves; any other square is outlined, and a click loads its climate, a few dozen kB. Forkcast remembers the squares you loaded, so you download only the parts of the world you ask for. The help's privacy section explains what this means for what our host can see.
 - Pop-up calendars now have a clear edge and shadow, so they stand out from the panel behind them.
 - On phones the map's legend stays on one line with temperature, rain and wind all on: shorter scales with fewer marks (−10, 10, 30 °C; 10 and 25 km/h) and “2+” for “2+ days”.
+- Lows in valleys and on slopes are closer to what you'll meet. Your route's lows were corrected for height at the same rate as the highs, but on calm nights cold air drains downhill, and weather stations around the world show lows changing only about half as much with height. A valley night now comes out a little colder, a hillside's a little milder, and pointing at the route shows the correction for the high and the low separately.
+- Highs and lows now allow for the warming: an average of the last 15 years describes 2018, its middle year, not the year you ride, so it ran a few tenths of a degree too cold. Each climate is now brought forward to 2026 at the rate each region has warmed since 1981. Tested on every year from 1996 to 2025, each forecast only from the years before it, this left them about a tenth of a degree too cold instead of four tenths, and closer in 8 or 9 years out of 10 in Europe. Rain stays as it was: its trends didn't help. “1 yr” stays the real 2025.
 
 ### Fixed
 

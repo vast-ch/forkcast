@@ -1,14 +1,36 @@
 import type { TOC } from '@ember/component/template-only';
 import Measured from 'forkcast/components/help/measured';
 import AltitudeDemo from 'forkcast/components/help/altitude-demo';
-import { LAPSE_RATES } from 'forkcast/utils/climate';
-import { signed, value } from 'forkcast/utils/verify';
+import { LAPSE_RATES, LOW_LAPSE_RATE } from 'forkcast/utils/climate';
+import { signed, value, withInterval } from 'forkcast/utils/verify';
 
 const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
 const LAPSE = LAPSE_RATES.map((r, i) => ({
   month: MONTHS[i],
+  stat: `month ${i + 1}`,
   perKm: (r * 1000).toFixed(1),
 }));
+const LOW_PER_KM = (LOW_LAPSE_RATE * 1000).toFixed(1);
+
+const STATION_BIAS = [
+  { field: 'tmx', label: 'Highs', how: '' },
+  {
+    field: 'tmx',
+    label: 'Highs, no altitude correction',
+    how: ', no altitude correction',
+  },
+  { field: 'tmn', label: 'Lows', how: '' },
+  {
+    field: 'tmn',
+    label: 'Lows at the highs’ rate',
+    how: ", lows at the highs' rate",
+  },
+  {
+    field: 'tmn',
+    label: 'Lows, no altitude correction',
+    how: ', no altitude correction',
+  },
+].map((b) => ({ ...b, bias: `bias${b.how}`, abs: `abs bias${b.how}` }));
 
 const CURVE = [
   { field: 'tmx', label: 'Highs' },
@@ -72,17 +94,93 @@ const NerdData: TOC<{ Args: { years: string } }> = <template>
 
     <h3>Altitude</h3>
     <p>
-      On a route, highs and lows get −Γ × (point's height − cell's mean height),
-      with Γ the month's lapse rate across the Alps (Rolland 2003), blended
-      between mid-months, in °C per 1,000 m:
+      On a route, highs get −Γ × (point's height − cell's mean height), with Γ
+      the month's lapse rate across the Alps (Rolland 2003), blended between
+      mid-months; lows get the same with Γ =
+      {{LOW_PER_KM}}
+      all year, in °C per 1,000 m:
     </p>
-    <table class="wt-help-table">
-      <thead><tr>{{#each LAPSE as |l|}}<th
+    <Measured as |m|>
+      <table class="wt-help-table">
+        <thead><tr><th scope="col"></th>{{#each LAPSE as |l|}}<th
+                scope="col"
+              >{{l.month}}</th>{{/each}}</tr></thead>
+        <tbody>
+          <tr><th scope="row">Highs, the app</th>{{#each LAPSE as |l|}}<td
+              >{{l.perKm}}</td>{{/each}}</tr>
+          <tr><th scope="row">Highs, stations</th>{{#each LAPSE as |l|}}<td
+              >{{value
+                  m
+                  "lapse"
+                  "tmx"
+                  "World stations"
+                  l.stat
+                }}</td>{{/each}}</tr>
+          <tr><th scope="row">Lows, stations</th>{{#each LAPSE as |l|}}<td
+              >{{value
+                  m
+                  "lapse"
+                  "tmn"
+                  "World stations"
+                  l.stat
+                }}</td>{{/each}}</tr>
+        </tbody>
+      </table>
+      <p>
+        The stations' rows are measured: at each of
+        {{value m "sample" "" "World stations" "places"}}
+        weather stations (NOAA GHCN-Daily, at most 2 per 2° square so dense
+        networks don't outvote the rest, each with highs, lows and rain on at
+        least 80% of the days of 2011–2025), how much colder its average is than
+        its cells', per metre it sits above them, by least squares over the
+        stations at least 100 m off. Highs follow the Alps' rates. Lows don't:
+        on calm nights cold air drains downhill, so a valley station is colder,
+        and a slope station milder, than the daytime rate says. The lows' rate
+        is the stations' fit, rounded, on a random half of them ({{value
+          m
+          "lapse"
+          "tmn"
+          "World stations, fold 0"
+          "year"
+        }}); on the other half ({{value
+          m
+          "sample"
+          ""
+          "World stations, fold 1"
+          "places"
+        }}) it brings
+        {{withInterval m "lapse-test" "tmn" "World" "closer"}}
+        of stations' average low closer, by
+        {{withInterval m "lapse-test" "tmn" "World" "abs bias change"}}
+        on average (in Europe
+        {{withInterval m "lapse-test" "tmn" "Europe" "abs bias change"}}, too
+        few stations to be sure there alone).
+      </p>
+      <table class="wt-help-table">
+        <caption>Each station's average over 2011–2025 minus ours at its place
+          and height: on average, and how far off typically</caption>
+        <thead><tr><th scope="col"></th><th scope="col">Europe, average</th><th
               scope="col"
-            >{{l.month}}</th>{{/each}}</tr></thead>
-      <tbody><tr>{{#each LAPSE as |l|}}<td
-            >{{l.perKm}}</td>{{/each}}</tr></tbody>
-    </table>
+            >Europe, typically</th><th scope="col">World, average</th><th
+              scope="col"
+            >World, typically</th></tr></thead>
+        <tbody>
+          {{#each STATION_BIAS as |b|}}
+            <tr><th scope="row">{{b.label}}</th>
+              <td>{{withInterval m "station" b.field "Europe" b.bias}}</td>
+              <td>{{withInterval m "station" b.field "Europe" b.abs}}</td>
+              <td>{{withInterval m "station" b.field "World" b.bias}}</td>
+              <td>{{withInterval m "station" b.field "World" b.abs}}</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+      <p>
+        On average our highs and lows are within a few tenths of a degree of the
+        stations', so the calibration to CRU holds. What's left is local: a
+        station's own spot (a valley floor, a town, a shore) against 25 km of
+        land.
+      </p>
+    </Measured>
     <AltitudeDemo />
 
     <h3>What each step changes, measured</h3>

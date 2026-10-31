@@ -253,16 +253,16 @@ def measure(base: variants.BaseGrid) -> list[dict]:
     return rows
 
 
-def _range(area: str, at: dict, station: dict, rng) -> list[dict]:
+def _range(area: str, at: dict, station: dict, rng, prefix: str = "") -> list[dict]:
     rows = []
     for field, sd in (("tmx", "tmxsd"), ("tmn", "tmnsd")):
         mean, spread, real = at[field], at[sd], station[field]
         ok = np.isfinite(real) & np.isfinite(mean) & np.isfinite(spread)
         below = np.where(ok, real < mean - USUAL_Z * spread, np.nan)
         above = np.where(ok, real > mean + USUAL_Z * spread, np.nan)
-        rows += _rows("range", field, area, "below", np.nanmean(below, axis=0), "share", rng)
-        rows += _rows("range", field, area, "above", np.nanmean(above, axis=0), "share", rng)
-        rows += _rows("range", field, area, "bias", np.nanmean(np.where(ok, real - mean, np.nan), axis=0), "°C", rng)
+        rows += _rows(prefix + "range", field, area, "below", np.nanmean(below, axis=0), "share", rng)
+        rows += _rows(prefix + "range", field, area, "above", np.nanmean(above, axis=0), "share", rng)
+        rows += _rows(prefix + "range", field, area, "bias", np.nanmean(np.where(ok, real - mean, np.nan), axis=0), "°C", rng)
     return rows
 
 
@@ -281,7 +281,7 @@ def _bias_alps(area: str, at: dict, station: dict, plat: np.ndarray, plon: np.nd
     return rows
 
 
-def _trips(area: str, at: dict, station: dict, rain: np.ndarray, n_days: int, rng) -> list[dict]:
+def _trips(area: str, at: dict, station: dict, rain: np.ndarray, n_days: int, rng, prefix: str = "") -> list[dict]:
     plan = trips(n_days, at["tmx"].shape[1], rng)
     n = at["tmx"].shape[1]
     lows = {k: np.full(n, 0.0) for k in ("spell", "every")}
@@ -313,10 +313,10 @@ def _trips(area: str, at: dict, station: dict, rain: np.ndarray, n_days: int, rn
     rows = []
     with np.errstate(invalid="ignore"):
         for k, label in (("spell", "beaten"), ("every", "beaten, every day a try")):
-            rows += _rows("extremes", "tmn", area, label, lows[k] / counted, "share", rng)
-            rows += _rows("extremes", "tmx", area, label, highs[k] / counted, "share", rng)
+            rows += _rows(prefix + "extremes", "tmn", area, label, lows[k] / counted, "share", rng)
+            rows += _rows(prefix + "extremes", "tmx", area, label, highs[k] / counted, "share", rng)
         for t, s in rainy.items():
-            rows += _rows("rainy", f"r{t}", area, "below", s["below"] / s["n"], "share", rng)
-            rows += _rows("rainy", f"r{t}", area, "above", s["above"] / s["n"], "share", rng)
-            rows += _rows("rainy", f"r{t}", area, "real minus expected", s["diff"] / s["n"], "days", rng)
+            rows += _rows(prefix + "rainy", f"r{t}", area, "below", s["below"] / s["n"], "share", rng)
+            rows += _rows(prefix + "rainy", f"r{t}", area, "above", s["above"] / s["n"], "share", rng)
+            rows += _rows(prefix + "rainy", f"r{t}", area, "real minus expected", s["diff"] / s["n"], "days", rng)
     return rows

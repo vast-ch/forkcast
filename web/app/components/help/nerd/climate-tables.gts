@@ -30,10 +30,16 @@ function stat(
   return measured(m, { metric: 'backtest', climate, field, area, stat: name });
 }
 
+/** The plain 15-year average, kept in the backtest to measure the warming correction (WarmingTable). */
+const UNSHIFTED = 'last15 unshifted';
+
 const climatesIn = (m: Measurements, area: string) => [
   ...new Set(
     m.results
-      .filter((r) => r.metric === 'backtest' && r.area === area)
+      .filter(
+        (r) =>
+          r.metric === 'backtest' && r.area === area && r.climate !== UNSHIFTED,
+      )
       .map((r) => r.climate),
   ),
 ];
@@ -92,6 +98,39 @@ function versus(m: Measurements, area: string) {
         };
       }),
     }));
+}
+
+/** 15 yrs brought forward for the warming against the plain average, highs and lows. */
+function warming(m: Measurements, area: string) {
+  return FIELDS.slice(0, 2).map((f) => {
+    const get = (c: string, name: string) => stat(m, c, f.id, area, name);
+    const ci = (c: string, name: string) => {
+      const [v, lo, hi] = [name, `${name} lo95`, `${name} hi95`].map((n) =>
+        get(c, n),
+      );
+      return {
+        text: fmtMeasured(v, name === 'bias'),
+        range:
+          lo && hi
+            ? `${fmtMeasured(lo, name === 'bias')} to ${fmtMeasured(hi, name === 'bias')}`
+            : '',
+      };
+    };
+    const worse = get(UNSHIFTED, 'worse years');
+    return {
+      label: f.label,
+      cells: [
+        ci('last15', 'bias'),
+        ci(UNSHIFTED, 'bias'),
+        ci('last15', 'mae'),
+        ci(UNSHIFTED, 'mae'),
+        {
+          text: worse ? fmtMeasured({ ...worse, value: 1 - worse.value }) : '',
+          range: '',
+        },
+      ],
+    };
+  });
 }
 
 /** The first and last year the climates were tested on. */
@@ -158,6 +197,30 @@ export const BacktestTable: TOC<{
       </tr></thead>
     <tbody>
       {{#each (backtest @measurements @area) as |row|}}
+        <tr><th scope="row">{{row.label}}</th>
+          {{#each row.cells as |c|}}
+            <td>{{c.text}}<small>{{c.range}}</small></td>
+          {{/each}}
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</template>;
+
+/** What bringing 15 yrs forward for the warming changes, tested on the following years. */
+export const WarmingTable: TOC<{
+  Args: { measurements: Measurements; area: string };
+}> = <template>
+  <table class="wt-help-table">
+    <caption>{{@area}}: 15 yrs brought forward, and the plain average, as a
+      forecast of the following year (an average error below 0 is too cold)</caption>
+    <thead><tr><th scope="col"></th><th scope="col">Average error</th><th
+          scope="col"
+        >Plain average</th><th scope="col">Typical error</th><th
+          scope="col"
+        >Plain average</th><th scope="col">Years closer</th></tr></thead>
+    <tbody>
+      {{#each (warming @measurements @area) as |row|}}
         <tr><th scope="row">{{row.label}}</th>
           {{#each row.cells as |c|}}
             <td>{{c.text}}<small>{{c.range}}</small></td>

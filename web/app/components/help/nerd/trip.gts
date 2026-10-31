@@ -157,8 +157,9 @@ const NerdTrip: TOC<object> = <template>
       <p>
         Counting every day as its own try would put the likely extreme too far
         out, so too few trips beat it; counting spells brings it close. What
-        remains off follows the averages: where our lows run colder than the
-        stations', fewer trips beat the likely lowest low.
+        remains off follows the averages: CPC's lows run warmer than ours, so
+        against CPC fewer trips beat the likely lowest low. Against the stations
+        themselves (below), they come out close to half.
       </p>
 
       <table class="wt-help-table">
@@ -200,9 +201,138 @@ const NerdTrip: TOC<object> = <template>
         range is wider than it needs to be (the counts are whole days, so a
         range can't always cut at exactly 10%).
       </p>
+
+      <h3>At weather stations</h3>
+      <p>
+        CPC and ERA5-Land are grids, made from stations; a grid against a grid
+        compares datasets. So the same tests run at
+        {{value m "sample" "" "World stations" "places"}}
+        weather stations' own records (NOAA GHCN-Daily, of which
+        {{value m "sample" "" "Europe stations" "places"}}
+        in Europe), each with our value at its place and height, as the app
+        works it out on a route. The spreads are still CPC's, measured on its
+        grid.
+      </p>
+      <table class="wt-help-table">
+        <caption>Station days outside the usual range (10% each side if right),
+          and trips beating the likely extremes (50% if right)</caption>
+        <thead><tr><th scope="col"></th><th scope="col">Europe</th><th
+              scope="col"
+            >World</th></tr></thead>
+        <tbody>
+          {{#each STATION_TESTS as |t|}}
+            <tr><th scope="row">{{t.label}}</th>
+              <td>{{withInterval m t.metric t.field "Europe" t.stat}}</td>
+              <td>{{withInterval m t.metric t.field "World" t.stat}}</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+      <table class="wt-help-table">
+        <caption>Real trips outside the rainy-day range at stations (10% each
+          side if right), and the real count minus the expected one</caption>
+        <thead><tr><th scope="col"></th><th scope="col">Fewer</th><th
+              scope="col"
+            >More</th><th scope="col">Real minus expected</th></tr></thead>
+        <tbody>
+          {{#each RAIN as |r|}}
+            <tr><th scope="row">{{r.label}}, Europe</th>
+              <td>{{withInterval
+                  m
+                  "station-rainy"
+                  r.field
+                  "Europe"
+                  "below"
+                }}</td>
+              <td>{{withInterval
+                  m
+                  "station-rainy"
+                  r.field
+                  "Europe"
+                  "above"
+                }}</td>
+              <td>{{withInterval
+                  m
+                  "station-rainy"
+                  r.field
+                  "Europe"
+                  "real minus expected"
+                }}</td></tr>
+          {{/each}}
+          {{#each RAIN as |r|}}
+            <tr><th scope="row">{{r.label}}, world</th>
+              <td>{{withInterval
+                  m
+                  "station-rainy"
+                  r.field
+                  "World"
+                  "below"
+                }}</td>
+              <td>{{withInterval
+                  m
+                  "station-rainy"
+                  r.field
+                  "World"
+                  "above"
+                }}</td>
+              <td>{{withInterval
+                  m
+                  "station-rainy"
+                  r.field
+                  "World"
+                  "real minus expected"
+                }}</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+      <p>
+        A station gets fewer days with 1 mm than its 25 km cell: one rain gauge
+        misses the showers that fall elsewhere in the cell, and ERA5-Land, like
+        most models, drizzles a little too often. At 10 mm the two agree. A
+        day's ride crosses tens of kilometres, so what it meets lies between a
+        point and a cell; Forkcast keeps the cell's count.
+      </p>
     </Measured>
   </section>
 </template>;
+
+const STATION_TESTS = [
+  {
+    metric: 'station-range',
+    field: 'tmx',
+    stat: 'below',
+    label: 'Highs below the range',
+  },
+  {
+    metric: 'station-range',
+    field: 'tmx',
+    stat: 'above',
+    label: 'Highs above the range',
+  },
+  {
+    metric: 'station-range',
+    field: 'tmn',
+    stat: 'below',
+    label: 'Lows below the range',
+  },
+  {
+    metric: 'station-range',
+    field: 'tmn',
+    stat: 'above',
+    label: 'Lows above the range',
+  },
+  {
+    metric: 'station-extremes',
+    field: 'tmn',
+    stat: 'beaten',
+    label: 'Lowest low beaten',
+  },
+  {
+    metric: 'station-extremes',
+    field: 'tmx',
+    stat: 'beaten',
+    label: 'Highest high beaten',
+  },
+];
 
 const RAIN = [
   { field: 'r1', label: '1 mm' },

@@ -39,7 +39,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import cpc, pipeline, variants, wind
+from . import cpc, pipeline, variants, warming, wind
 from . import era5land as e
 from .pipeline import OUT, Stamp, code_hash, log
 
@@ -144,18 +144,25 @@ def decode(name: str, b: np.ndarray) -> np.ndarray:
     return out
 
 
-def extras(climate: str, land: np.ndarray) -> dict[str, np.ndarray]:
-    """The layers built outside the monthly grid, as coefficients (TERMS, rows, cols) on land, NaN elsewhere:
-    the spread of single days (the same in every climate: how far days stray hardly depends on the years)
-    and the climate's own wind."""
+def _layers(path: Path, names, land: np.ndarray) -> dict[str, np.ndarray]:
+    """Monthly layers from an .npz as coefficients (TERMS, rows, cols) on land, NaN elsewhere."""
+    z = np.load(path)
     out = {}
-    for path, names in ((cpc.OUT, cpc.LAYERS.values()), (wind.grid_file(climate), wind.LAYERS)):
-        z = np.load(path)
-        for name in names:
-            c = fit(z[name], False).astype(np.float32)
-            c[:, ~land] = np.nan
-            out[name] = c
+    for name in names:
+        c = fit(z[name], False).astype(np.float32)
+        c[:, ~land] = np.nan
+        out[name] = c
     return out
+
+
+def spread(land: np.ndarray) -> dict[str, np.ndarray]:
+    """The spread of single days, the same in every climate: how far days stray hardly depends on the years."""
+    return _layers(cpc.OUT, cpc.LAYERS.values(), land)
+
+
+def extras(climate: str, land: np.ndarray) -> dict[str, np.ndarray]:
+    """The layers built outside the monthly grid: the spread of single days and the climate's own wind."""
+    return spread(land) | _layers(wind.grid_file(climate), wind.LAYERS, land)
 
 
 TILE = 10  # degrees; tiles start at multiples of it
@@ -181,7 +188,7 @@ def outputs() -> list[Path]:
 
 
 def inputs() -> list[Path]:
-    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")] + [cpc.OUT] + [wind.grid_file(c) for c in CLIMATES]
+    return [_source(c, x) for c in CLIMATES for x in ("bin", "json")] + [cpc.OUT, warming.OUT] + [wind.grid_file(c) for c in CLIMATES]
 
 
 def curves(monthly: bytes, header: dict) -> tuple[dict[str, np.ndarray], np.ndarray]:
@@ -235,6 +242,11 @@ def pack(climate: str) -> None:
     coef, static = curves(_source(climate, "bin").read_bytes(), header)
     land = ~np.isnan(coef["tmx"][0])
     coef |= extras(climate, land)
+    # Brought forward to the year after the period by the long-term warming (warming.py).
+    rates = np.load(warming.OUT)
+    years = warming.shift_years(climate, tuple(header["years"]))
+    for f in warming.FIELDS:
+        coef[f][0] += rates[f] * years
     names = [*header["vars"], *cpc.LAYERS.values(), *wind.LAYERS]
     enc = {name: encode(name, c) for name, c in coef.items()}  # (its terms, rows, cols) bytes
     folder = DIR / climate
@@ -255,6 +267,7 @@ def pack(climate: str) -> None:
         "tile": TILE,
         "size": round(TILE / header["step"]) + 1,
         "tiles": sorted(ids),
+        "warming": {"to": header["years"][1] + 1, "years": years},
         "encoding": {n: ENCODING[n] for n in names} | {s: e.ENCODING[s] for s in header.get("static", [])},
     }
     _write(header_file(climate), json.dumps(meta, separators=(",", ":")).encode())
@@ -263,13 +276,13 @@ def pack(climate: str) -> None:
 
 
 def build(fresh: bool = False) -> None:
-    code = code_hash(sys.modules[__name__], e, variants, cpc, wind, pipeline)
+    code = code_hash(sys.modules[__name__], e, variants, cpc, warming, wind, pipeline)
     stamp = Stamp("pack", inputs(), outputs(), code)
     if not fresh and stamp.up_to_date():
         log("  packed grids are up to date")
         return
     if missing := stamp.missing_inputs():
-        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants, build spread, build wind")
+        raise SystemExit(f"Missing {missing[0].relative_to(pipeline.ROOT)}. Run: build climate, build variants, build spread, build wind, build warming")
     for climate in CLIMATES:
         pack(climate)
     stamp.done()

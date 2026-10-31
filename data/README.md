@@ -33,6 +33,7 @@ work after `data`).
 | `era5land-wind` | ERA5-Land monthly means of the 10 m wind (east and north components) for each hour of the day, one file per year, 2011–2025 | ~5.7 GB | CDS key needed. About 7 min a year. For the wind's direction (see "Wind"). |
 | `era5-wind-speed` | ERA5 monthly means of the 10 m wind speed for each hour of the day, one file per year, 2011–2025 | ~3 GB | CDS key needed. For the wind's strength (see "Wind"). |
 | `cpc` | NOAA CPC Global Unified Temperature: daily highs and lows from weather stations, 0.5°, one file per year and kind, 2011–2025 | 2.4 GB | Public domain (NOAA PSL). How far single days stray from the average (see "How far single days stray"). About 1 min a file. |
+| `ghcnd` | NOAA GHCN-Daily: the station list and every station's daily records, one file per year, 2011–2025 | ~2.6 GB | Public domain. Weather stations' own highs, lows and rain, the truth `verify` measures against (see "Measuring the data"). |
 | `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API: first an index of every route (id, version, box), then each route's ways by id, 10 routes per query, cached per route and version in `cache/cyclenet/icn/` | a few hundred routes | ODbL, © OpenStreetMap contributors. Rotates through public Overpass servers, waits when asked (429), backs off; a route that keeps failing is skipped and listed, and the next run fetches just those. `--fresh` refreshes the index; changed routes are refetched by version. |
 
 ### Builds (into `out/`, committed)
@@ -48,8 +49,10 @@ work after `data`).
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
 | `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `last1`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
 | `wind` | `cache/era5land/wind-hourly-*.nc`, `cache/era5land/wspd-hourly-*.nc` | `cache/wind/<year>.npz` (each year's windiest riding hour per month: speed and vector, one stamp per year, ~10 s each), then `cache/grids/wind-<climate>.npz` per climate (intermediate) |
-| `pack` | `cache/grids/` (with `spread.npz` and `wind-<climate>.npz`) | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land, for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
-| `verify` | `cache/grids/`, `cache/variants/` | `out/verify/history.csv` (every run's measurements, appended, never rewritten) and `out/verify/latest.json` (the last run, which the help's Nerd mode shows); see "Measuring the data" |
+| `warming` | `cache/variants/`, `cache/grids/climate.json` | `cache/grids/warming.npz`: how fast highs and lows have warmed, °C per year, per cell (intermediate; see "The warming") |
+| `stations` | `cache/ghcnd/` | `cache/ghcnd/stations.npz`: the stations with highs, lows and rain on ≥ 80% of the days of 2011–2025, at most 2 per 2° box, each in fold 0 or 1 at random (intermediate, ~25 min) |
+| `pack` | `cache/grids/` (with `spread.npz`, `wind-<climate>.npz` and `warming.npz`) | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land, for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
+| `verify` | `cache/grids/`, `cache/variants/`, `cache/cpc/`, `cache/ghcnd/stations.npz` | `out/verify/history.csv` (every run's measurements, appended, never rewritten) and `out/verify/latest.json` (the last run, which the help's Nerd mode shows); see "Measuring the data" |
 | `cyclenet` | `cache/cyclenet/icn/` | `out/cyclenet.json`: the ways of every route, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches it only when the rider draws with snapping on. |
 
 `all` runs every download, then every build, in the order of these tables.
@@ -281,8 +284,9 @@ app's first version used it alone; now it calibrates ERA5-Land.
   terrain (the `orography` download, 52 MB, published by ECMWF), averaged to
   0.25°.
 - **Where it is applied:** in the app, not here. Route points know their
-  height (from the GPX or BRouter tracks), so the app shifts a day's high and low by the month's lapse rate times the height difference between the route and the cell: from 4.4 °C per 1,000 m in December to 6.8 °C in June–July (seasonal rates measured across the Alps, Rolland 2003; `LAPSE_RATES` in `web/app/utils/climate.ts`). The map itself shows cell averages.
-- **Limits, measured:** against published town climates (2011–2025 data, corrected to town height) summer highs are within about 1 °C (Madrid 33.6 vs 33, Seville 37.0 vs 36, Interlaken 24.8 vs 24, Bergen 18.0 vs 19). Winter in Alpine valleys stays 2–3 °C too mild (Interlaken January high 6 vs 3) and nights more: cold-air pooling and fog are local effects neither the grid nor a lapse rate captures. A constant 6.5 °C/km made winter worse, which is why the rate is seasonal.
+  height (from the GPX or BRouter tracks), so the app shifts a day's high by the month's lapse rate times the height difference between the route and the cell: from 4.4 °C per 1,000 m in December to 6.8 °C in June–July (seasonal rates measured across the Alps, Rolland 2003; `LAPSE_RATES` in `web/app/utils/climate.ts`), and its low by 3.0 °C per 1,000 m all year (`LOW_LAPSE_RATE`). The map itself shows cell averages.
+- **Why lows get their own rate:** at 1,517 weather stations (GHCN-Daily, `verify_stations.py`), the highs' rate the stations show follows the Alps' (4.8–8.2 °C/km by month), but the lows' is 2.5–3.8: on calm nights cold air drains downhill, so a valley is colder and a slope milder than the daytime rate says. 3.0 is the fit on fold 0, rounded; on fold 1 (803 stations) it brings 59% of stations' average low closer than the highs' rate did, by 0.07 °C on average (0.04–0.10); in Europe alone 0.06 (−0.13 to +0.01), too few stations to be sure there. A month-by-month rate for lows did no better than one number. Fitting new rates for highs gained nothing.
+- **Limits, measured:** against published town climates (2011–2025 data, corrected to town height) summer highs are within about 1 °C (Madrid 33.6 vs 33, Seville 37.0 vs 36, Interlaken 24.8 vs 24, Bergen 18.0 vs 19). Winter in Alpine valleys stays 2–3 °C too mild (Interlaken January high 6 vs 3) and nights more: cold-air pooling and fog are local effects neither the grid nor a lapse rate captures. A constant 6.5 °C/km made winter worse, which is why the highs' rate is seasonal.
 
 ### Size and format
 
@@ -344,6 +348,30 @@ layer instead of the 12 months, so the app reads the curves directly:
 enough to include most of the warming so far. A full 30-year climate normal
 would be steadier but about 0.3 °C too cold for today in Europe. Change it
 with `--from` / `--to`.
+
+### The warming
+
+An average of past years describes their middle year (2011–2025: 2018), and
+a trip next year meets a warmer world. Backtested over 1996–2025, each year
+forecast from the years before it only, the plain 15-year average came out
+too cold: in Europe by 0.41 °C for highs and 0.37 °C for lows, over the
+world by 0.30 and 0.27.
+
+- **What fixes it** (`forkcast_data/warming.py`): each cell's straight-line
+  trend of the year's average high (low) over 1981–2025, averaged over 21° ×
+  21° of land, times the years from the middle of the climate's years to the
+  year after its period (2026): 8 for `last15`, `elnino` and `lanina`, 5.5
+  for `last10`, 3 for `last5`. `last1` is a real year and stays as it was.
+- **What doesn't:** each cell's own trend (too noisy: forecasts got worse
+  than with no correction), and correcting rain (no gain).
+- **Measured:** the typical error of a month drops by 0.028 °C for highs in
+  Europe (0.013–0.042), closer in 80% of years, and 0.034 for lows
+  (0.020–0.049), closer in 93%; over the world by 0.016 and 0.017 (closer in
+  67% and 73%). The bias drops to 0.06–0.10 °C. `verify`'s backtest keeps measuring it against the plain average
+  (`last15 unshifted`).
+- **Where it is applied:** at `pack`, added to each curve's mean, so the
+  published climates carry it, the header records it (`warming`), and it
+  costs no bytes.
 
 ## Climate variants
 
@@ -428,8 +456,9 @@ precision statements change when the data or the code does.
   gets them) against the monthly grids they come from: each month's average
   of the curve vs the month, as mean absolute, RMS and 95th-percentile error.
   This covers every land cell, so nothing is left to chance: any change is real.
-- **backtest:** each climate (the last 15, 10, 5 years, or just the last one)
-  made of the years before a target year, against that year's real months,
+- **backtest:** each climate (the last 15, 10, 5 years, or just the last one,
+  brought forward for the warming with the rate from the years before the
+  target, as `pack` does) made of the years before a target year, against that year's real months,
   for every target from 1996 to 2025: 30 years, all the data allows (ERA5-Land
   starts in 1981 and 15 years need 15 before their target). It runs at 1°,
   every 4th cell each way, which is plenty for an average.
@@ -442,6 +471,8 @@ precision statements change when the data or the code does.
     separate intervals would. The difference gets its own interval, and the
     share of years the climate did worse. An interval that spans 0 means no
     measured difference.
+  - **bias** is the average error with its sign (below 0: too cold), to see
+    whether a climate lags the warming.
 - **enso:** the El Niño and La Niña corrections where the effect is well known
   (`variants.KNOWN`): the mean change and the sign expected.
 - **shift:** how far each climate moves the year's average high, Europe and
@@ -462,6 +493,27 @@ precision statements change when the data or the code does.
   places are far apart), with 95% bootstrap intervals over them.
   `likely_extreme` and `rainy_days_range` are the app's formulas, ported;
   `tests/test_verify.py` pins them to the app's tests' values.
+- **Against weather stations** (`forkcast_data/verify_stations.py`, ~1 min):
+  CPC and ERA5-Land are grids, and they disagree (CPC's lows run about
+  0.8 °C warmer than CRU's, so warmer than ours), so the stations themselves
+  settle it. At the GHCN-Daily stations (`build stations`; 1,517 within the
+  grid, 352 in Europe), our value worked out as the app does on a route
+  (bilinear over the land cells around, then the altitude correction for the
+  station's height), against the station's days of 2011–2025:
+  - **station:** each station's average high and low minus ours, on average
+    and typically (mean absolute), as the app has it, without the altitude
+    correction, and for lows at the highs' rate. Our lows come out within
+    0.1 °C of the stations' on average: the CRU calibration holds, and CPC is
+    the warm one.
+  - **lapse, lapse-test:** the lapse rates the stations show (see
+    "Altitude"), and the lows' rate tested on the fold it wasn't fitted on.
+  - **station-range, station-extremes, station-rainy:** as above, at the
+    stations. A rain gauge counts fewer days of 1 mm than its 25 km cell
+    (about 2.6 fewer per trip worldwide); at 10 mm they agree.
+
+  The climate measured here is the period's own (not brought forward), as the
+  days are the period's. Stations are the sample unit, with 95% bootstrap
+  intervals over them.
 - **yearly, trend, quirk, calibration:** the year-to-year swing of a month
   (Europe, Kraków, Valencia, Interlaken), the warming trend of the average
   high 1981–2025 with its interval, the Tibetan Plateau's jump from 2021,
