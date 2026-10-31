@@ -73,6 +73,20 @@ static files). The URL is the natural home for a plan you want to share;
 browser storage is fine for anything that can't or shouldn't go there, as
 long as it stays on the device.
 
+## The help, and Nerd mode
+
+The help (`/help/<tab>`) is written for riders: what things mean, in words.
+A **Nerd mode** switch at its top (`?nerd=true`, on the help route's own
+controller, so every tab keeps it and the planner's settings don't carry it)
+swaps a tab for its full version: how each number is made, with the
+parameters, and how well it holds up. Those precision statements come only
+from measurements (`build verify`, see data/README.md), loaded from
+`data/out/verify/latest.json` when a nerd page needs them
+(`web/app/utils/verify.ts`, `components/help/measured.gts`), never typed into
+the page; each table says when and with which code it was measured. Tabs
+without a nerd version yet say so and show the normal one (`NERD_TABS` in
+the template). The plan is in issue #20.
+
 ## Phones
 
 Below 900 px wide (`web/app/services/media.ts`) the planner switches layout
@@ -288,6 +302,7 @@ Under the map, one column per day: the day number on top, a bar from the low to 
 | `web/app/services/planner.ts` | all planner state, read from and written to the URL |
 | `web/app/components/wheel-map.gts` | the Leaflet map |
 | `web/app/utils/` | climate sampling, trip planning, route geometry, map layers |
+| `web/app/controllers/help.ts`, `web/app/utils/verify.ts` | the help's Nerd mode (`?nerd=true`) and the measurements it shows |
 | `data/forkcast_data/` | the data pipeline ([data/README.md](../data/README.md)) |
 
 ## Known limits

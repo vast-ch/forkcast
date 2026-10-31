@@ -838,6 +838,17 @@ body {
   color: var(--wt-muted);
   text-wrap: balance;
 }
+.wt-help-nerd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin-top: 1rem;
+}
+.wt-help-nerd-hint {
+  font-size: 0.875rem;
+  color: var(--wt-muted);
+}
 /* The help's section tabs (Frontile TabNav): they wrap onto more lines on
    narrow screens rather than scroll sideways. */
 .wt-help-tabs {
@@ -893,13 +904,18 @@ body {
 .wt-help p {
   margin-top: 0.75rem;
 }
-.wt-help ul {
+.wt-help ul,
+.wt-help ol {
   margin-top: 0.75rem;
   padding-left: 1.2rem;
   list-style: disc;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.wt-help ol {
+  list-style: decimal;
 }
 .wt-help a {
   color: var(--wt-accent);
@@ -976,4 +992,53 @@ body {
 .wt-square-loading {
   stroke-dasharray: none;
   fill-opacity: 0.12;
+}
+
+/* Nerd mode's tables of measurements. */
+.wt-help-table {
+  width: 100%;
+  margin: 1rem 0 1.5rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.wt-help-table caption {
+  text-align: left;
+  color: var(--wt-muted);
+  padding-bottom: 0.4rem;
+}
+
+.wt-help-table th,
+.wt-help-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--wt-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.wt-help-table small {
+  display: block;
+  color: var(--wt-muted);
+}
+
+.wt-help-table [data-verdict="worse"] .wt-help-verdict {
+  color: var(--wt-warn, #c2410c);
+}
+
+.wt-help-table [data-verdict="better"] .wt-help-verdict {
+  color: var(--wt-good, #15803d);
+}
+
+.wt-help-measured-at,
+.wt-help-nerd-missing {
+  font-size: 0.8rem;
+  color: var(--wt-muted);
+}
+
+@media (width <= 40rem) {
+  .wt-help-table {
+    display: block;
+    overflow-x: auto;
+  }
 }

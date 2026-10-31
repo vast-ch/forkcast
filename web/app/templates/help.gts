@@ -3,9 +3,11 @@ import { service } from '@ember/service';
 import { LinkTo } from '@ember/routing';
 import { pageTitle } from 'ember-page-title';
 import { TabNav } from 'frontile/navigation';
+import { Switch } from 'frontile/forms';
 import type RouterService from '@ember/routing/router-service';
 import SECTIONS from 'forkcast/help-sections.json';
 import type AtlasService from 'forkcast/services/atlas';
+import type HelpController from 'forkcast/controllers/help';
 import Logo from 'forkcast/components/logo';
 import Legend from 'forkcast/components/legend';
 import { RAIN_THRESHOLDS } from 'forkcast/utils/climate';
@@ -14,8 +16,23 @@ import TempScale from 'forkcast/components/help/temp-scale';
 import DaylightDemo from 'forkcast/components/help/daylight-demo';
 import AltitudeDemo from 'forkcast/components/help/altitude-demo';
 import StartDemo from 'forkcast/components/help/start-demo';
+import Measured from 'forkcast/components/help/measured';
+import {
+  BacktestTable,
+  EnsoTable,
+  ShiftTable,
+  VersusTable,
+  backtestFrom,
+  backtestTo,
+  backtestYears,
+} from 'forkcast/components/help/climate-measurements';
 
-export default class Help extends Component {
+/** The tabs written for Nerd mode so far; the others show their normal version. */
+const NERD_TABS = ['climates'];
+
+export default class Help extends Component<{
+  Args: { controller: HelpController };
+}> {
   @service declare atlas: AtlasService;
   @service declare router: RouterService;
 
@@ -40,6 +57,23 @@ export default class Help extends Component {
   }
 
   shows = (id: string) => this.section === id;
+
+  /**
+   * Nerd mode: every tab's full detail (how each number is made, and how well
+   * it holds up) instead of the plain version for riders.
+   */
+  get isNerd() {
+    return this.args.controller.nerd;
+  }
+
+  /** Nerd mode is on but this tab has only its normal version yet. */
+  get isNerdMissing() {
+    return this.isNerd && !NERD_TABS.includes(this.section);
+  }
+
+  setNerd = (on: boolean) => {
+    this.args.controller.nerd = on;
+  };
 
   /** The rain emoji's steps for each rainy-day threshold, as the map uses them. */
   rainSteps = RAIN_THRESHOLDS.map((mm) => ({
@@ -74,6 +108,19 @@ export default class Help extends Component {
         <p class="wt-help-lede">What the weather usually does along your bike
           route, day by day: how to read it, where the numbers come from, and
           how far to trust them.</p>
+        <div class="wt-help-nerd">
+          <Switch
+            @label="Nerd mode"
+            @size="sm"
+            @isSelected={{this.isNerd}}
+            @onChange={{this.setNerd}}
+          />
+          <span class="wt-help-nerd-hint">{{if
+              this.isNerd
+              "How each number is made, and how well it holds up."
+              "Switch on for the formulas and the measurements."
+            }}</span>
+        </div>
       </header>
 
       <TabNav
@@ -93,6 +140,10 @@ export default class Help extends Component {
       </TabNav>
 
       <article class="wt-help">
+        {{#if this.isNerdMissing}}
+          <p class="wt-help-nerd-missing">This tab has no nerd version yet, so
+            here's the normal one.</p>
+        {{/if}}
         {{#if (this.shows "map")}}
           <section id="map">
             <h2>The map</h2>
@@ -486,67 +537,180 @@ export default class Help extends Component {
         {{/if}}
 
         {{#if (this.shows "climates")}}
-          <section id="climates">
-            <h2>Climates</h2>
-            <p>
-              Forkcast doesn't forecast the weather. It shows what the weather
-              is usually like: the average of past years. “Climate”, in the Map
-              settings, picks which years.
-            </p>
+          {{#if this.isNerd}}
+            <section id="climates">
+              <h2>Climates</h2>
+              <p>
+                Each climate is a grid of monthly values (highs, lows, rain,
+                rainy days at 1, 5 and 10 mm) on 0.25° cells, turned into
+                seasonal curves for the app (see Data). 15 yrs is the base;
+                every other climate is 15 yrs plus a correction, so where
+                nothing changes it is the same, byte for byte.
+              </p>
 
-            <h3>15 yrs</h3>
-            <p>
-              Made from
-              {{this.years}}. Enough years that one unusually hot, cold or wet
-              year doesn't throw things off, and recent enough to show today's
-              warmer climate. Of the choices, it's the one that would have
-              predicted past years best, so it's what Forkcast starts with.
-            </p>
+              <h3>15 yrs</h3>
+              <p>
+                The average of each month over
+                {{this.years}}
+                from ERA5-Land, highs and lows calibrated against CRU TS station
+                data (see Data).
+              </p>
 
-            <h3>10 yrs, 5 yrs</h3>
-            <p>
-              Made from only the most recent years. They come out a little
-              warmer, by about 0.2–0.5 °C, because the climate keeps warming.
-              But the fewer the years, the more a single odd year shows,
-              especially in the rain. Good for seeing how things are changing;
-              for planning, 15 yrs is the safer choice.
-            </p>
+              <h3>10 yrs, 5 yrs, 1 yr</h3>
+              <p>
+                The correction is the window's average minus the average of
+                {{this.years}}, both measured on the same ERA5-Land months:
+              </p>
+              <ul>
+                <li><strong>Highs and lows:</strong>
+                  the difference in °C is added.</li>
+                <li><strong>Rain:</strong>
+                  multiplied by the ratio of the two averages, between 0.5 and 2
+                  (for 1 yr, between 0 and 10, as a real month can be dry or
+                  soaked); months with under 1 mm keep their rain.</li>
+                <li><strong>Rainy days:</strong>
+                  the difference in days is added, kept within the month, and
+                  days over 10 mm never outnumber days over 5 mm, nor those days
+                  over 1 mm.</li>
+              </ul>
 
-            <h3>1 yr</h3>
-            <p>
-              Only the most recent year, 2025, each month as it really was:
-              Spain's record-hot June is there, and so is every wet or dry month
-              of the year. Ride your trip through it to see how a real year can
-              differ from the average, for better or worse. One year is just one
-              roll of the dice, so don't plan by it alone. Each place still
-              shows its monthly averages for 2025, so a single hot week or storm
-              within a month is smoothed out.
-            </p>
+              <h3>El Niño and La Niña</h3>
+              <ol>
+                <li><strong>Which months:</strong>
+                  from NOAA's Oceanic Niño Index, a month is El Niño (La Niña)
+                  when it lies in a run of at least 5 overlapping three-month
+                  seasons at +0.5 °C or more (−0.5 °C or less), over 1981–2025.</li>
+                <li><strong>Departures:</strong>
+                  for each cell and month of the year, each year's value minus
+                  that cell's straight-line trend over 1981–2025, so recent
+                  warming isn't mistaken for El Niño just because recent years
+                  had more of them.</li>
+                <li><strong>The correction:</strong>
+                  the average departure over the event's months, kept only where
+                  it beats chance: the same average over 100 random sets of as
+                  many years is worked out, and the correction is kept in full
+                  where it's larger than 90% of them, fading to nothing at 75%.
+                  A month seen in fewer than 2 events gets none. Then it's
+                  smoothed over 3 × 3 cells and applied as above.</li>
+                <li><strong>Checks:</strong>
+                  the build stops if a well-known effect comes out the wrong way
+                  round, if an area's average high moves implausibly, or if any
+                  cell's highs or lows move by more than 6 °C (15 °C for 1 yr;
+                  the Tibetan Plateau, with a known flaw in the data, has its
+                  own limit).</li>
+              </ol>
 
-            <h3>El Niño and La Niña</h3>
-            <p>
-              Every few years the tropical Pacific runs warmer than usual (El
-              Niño) or cooler (La Niña), and that shifts the weather in many
-              parts of the world. Weather services announce them months ahead
-              (look for an “ENSO outlook”). If one is expected during your trip,
-              pick it to see what it usually changes.
-            </p>
-            <ul>
-              <li><strong>Where it matters:</strong>
-                Australia, northern South America, southern Africa and parts of
-                North America. El Niño, for example, brings a drier spring to
-                eastern Australia and a milder winter to western Canada; La Niña
-                mostly the opposite.</li>
-              <li><strong>Europe:</strong>
-                hardly at all. The map barely changes there.</li>
-              <li><strong>How it's done:</strong>
-                we looked at how the weather differed during the El Niños and La
-                Niñas since 1981, and added that difference to 15 yrs. Where the
-                difference could just be chance, nothing changes.</li>
-              <li><strong>A tendency, not a promise:</strong>
-                one El Niño year can still turn out quite unlike another.</li>
-            </ul>
-          </section>
+              <Measured as |m|>
+                <EnsoTable @measurements={{m}} />
+
+                <h3>How far each climate moves the highs</h3>
+                <ShiftTable @measurements={{m}} />
+
+                <h3>Which climate plans best</h3>
+                <p>
+                  Our guess against what then happened: for each year from
+                  {{backtestFrom m}}
+                  to
+                  {{backtestTo m}}
+                  ({{backtestYears m}}
+                  years), each climate is made of the years before it (the last
+                  15, 10 or 5, or just the last one) and compared with that
+                  year's real months, in every land cell.
+                </p>
+                <ul>
+                  <li><strong>Why these years:</strong>
+                    the data starts in 1981 and 15 yrs needs 15 years before the
+                    year it's tested on, so 1996 is the first; 2025 the last
+                    there is.</li>
+                  <li><strong>The sample is the years.</strong>
+                    Neighbouring cells and months share their weather, so
+                    counting millions of cell-months would make the results look
+                    far more certain than they are. One year's weather says
+                    little about the next, so the years are close to
+                    independent.</li>
+                  <li><strong>How precise:</strong>
+                    each error comes with a 95% interval, from resampling the
+                    years 2,000 times (bootstrap): the narrower, the more
+                    certain.</li>
+                  <li><strong>Telling two climates apart:</strong>
+                    the climates are compared year by year (the same weather
+                    tests both), which is far more precise than comparing their
+                    two intervals. Only where the interval of the difference
+                    leaves out 0 is one better or worse.</li>
+                  <li><strong>Raw ERA5-Land:</strong>
+                    the test uses the uncalibrated monthly values, the same for
+                    every climate, so it compares the choice of years, not the
+                    calibration.</li>
+                </ul>
+                <BacktestTable @measurements={{m}} @area="Europe" />
+                <VersusTable @measurements={{m}} @area="Europe" />
+                <BacktestTable @measurements={{m}} @area="World" />
+                <VersusTable @measurements={{m}} @area="World" />
+              </Measured>
+            </section>
+          {{else}}
+            <section id="climates">
+              <h2>Climates</h2>
+              <p>
+                Forkcast doesn't forecast the weather. It shows what the weather
+                is usually like: the average of past years. “Climate”, in the
+                Map settings, picks which years.
+              </p>
+
+              <h3>15 yrs</h3>
+              <p>
+                Made from
+                {{this.years}}. Enough years that one unusually hot, cold or wet
+                year doesn't throw things off, and recent enough to show today's
+                warmer climate. Of the choices, it's the one that would have
+                predicted past years best, so it's what Forkcast starts with.
+              </p>
+
+              <h3>10 yrs, 5 yrs</h3>
+              <p>
+                Made from only the most recent years. They come out a little
+                warmer, by about 0.2–0.5 °C, because the climate keeps warming.
+                But the fewer the years, the more a single odd year shows,
+                especially in the rain. Good for seeing how things are changing;
+                for planning, 15 yrs is the safer choice.
+              </p>
+
+              <h3>1 yr</h3>
+              <p>
+                Only the most recent year, 2025, each month as it really was:
+                Spain's record-hot June is there, and so is every wet or dry
+                month of the year. Ride your trip through it to see how a real
+                year can differ from the average, for better or worse. One year
+                is just one roll of the dice, so don't plan by it alone. Each
+                place still shows its monthly averages for 2025, so a single hot
+                week or storm within a month is smoothed out.
+              </p>
+
+              <h3>El Niño and La Niña</h3>
+              <p>
+                Every few years the tropical Pacific runs warmer than usual (El
+                Niño) or cooler (La Niña), and that shifts the weather in many
+                parts of the world. Weather services announce them months ahead
+                (look for an “ENSO outlook”). If one is expected during your
+                trip, pick it to see what it usually changes.
+              </p>
+              <ul>
+                <li><strong>Where it matters:</strong>
+                  Australia, northern South America, southern Africa and parts
+                  of North America. El Niño, for example, brings a drier spring
+                  to eastern Australia and a milder winter to western Canada; La
+                  Niña mostly the opposite.</li>
+                <li><strong>Europe:</strong>
+                  hardly at all. The map barely changes there.</li>
+                <li><strong>How it's done:</strong>
+                  we looked at how the weather differed during the El Niños and
+                  La Niñas since 1981, and added that difference to 15 yrs.
+                  Where the difference could just be chance, nothing changes.</li>
+                <li><strong>A tendency, not a promise:</strong>
+                  one El Niño year can still turn out quite unlike another.</li>
+              </ul>
+            </section>
+          {{/if}}
         {{/if}}
 
         {{#if (this.shows "accuracy")}}

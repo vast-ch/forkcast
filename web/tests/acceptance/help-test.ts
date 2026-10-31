@@ -67,4 +67,51 @@ module('Acceptance | help', function (hooks) {
     await click('#about a[href="/help/sharing"]');
     assert.strictEqual(currentURL(), '/help/sharing');
   });
+
+  test('Nerd mode is off by default, switches on by a click and stays on across tabs', async function (assert) {
+    await visit('/help/climates');
+    assert
+      .dom('.wt-help-nerd [role="switch"], .wt-help-nerd input')
+      .isNotChecked();
+    assert.dom('.wt-help-table').doesNotExist();
+    await click('.wt-help-nerd [role="switch"], .wt-help-nerd input');
+    assert.strictEqual(currentURL(), '/help/climates?nerd=true');
+    await click('a[href="/help/sources?nerd=true"]');
+    assert.strictEqual(currentURL(), '/help/sources?nerd=true');
+    assert
+      .dom('.wt-help-nerd-missing')
+      .exists('a tab without a nerd version says so');
+    await click('.wt-help-nerd [role="switch"], .wt-help-nerd input');
+    assert.strictEqual(currentURL(), '/help/sources');
+    assert.dom('.wt-help-nerd-missing').doesNotExist();
+  });
+
+  test('the nerd Climates tab shows the measurements, with intervals', async function (assert) {
+    await visit('/help/climates?nerd=true');
+    assert.dom('.wt-help-nerd-missing').doesNotExist();
+    assert.dom('.wt-help-table').exists({ count: 6 });
+    // The backtest's rows are the four windows; each cell has its interval.
+    const rows = [...document.querySelectorAll('.wt-help-table')]
+      .find((t) =>
+        t.querySelector('caption')?.textContent?.startsWith('Europe: a month'),
+      )!
+      .querySelectorAll('tbody tr');
+    assert.deepEqual(
+      [...rows].map((r) => r.querySelector('th')?.textContent?.trim()),
+      ['15 yrs', '10 yrs', '5 yrs', '1 yr'],
+    );
+    assert.dom('td small', rows[0]).hasText(/^\d+\.\d+ °C to \d+\.\d+ °C$/);
+    // Against 15 yrs, a single year is worse at everything.
+    const versus = [...document.querySelectorAll('.wt-help-table')].find((t) =>
+      t.querySelector('caption')?.textContent?.startsWith('Europe: the error'),
+    )!;
+    const oneYear = [...versus.querySelectorAll('tbody tr')].find(
+      (r) => r.querySelector('th')?.textContent?.trim() === '1 yr',
+    )!;
+    assert.deepEqual(
+      [...oneYear.querySelectorAll('td')].map((td) => td.dataset['verdict']),
+      ['worse', 'worse', 'worse', 'worse'],
+    );
+    assert.dom('.wt-help-measured-at').includesText('Measured on');
+  });
 });
