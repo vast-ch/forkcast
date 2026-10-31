@@ -239,14 +239,24 @@ Under the map, one column per day: the day number on top, a bar from the low to 
   at 1,200 places for trips of 7–60 days. With every low counted, the real
   lowest low came out below the estimate in only 21–32% of trips; with
   these, 47–51% (the highest high above it 40–58%).
-- **Headwind** (`headwindBetween`): the prevailing wind in riding hours
-  (`windU`, `windV`, at the middle of the stretch, like the high) against
-  the straight line from the day's start to its night stop, divided by the
-  distance ridden. With one wind for the whole day this is exact, however the
-  road winds: its pieces add up to that line. Negative is a tailwind; rest
-  days have none. The trip's is the riding days' average by distance. The
-  map's Wind switch draws the same wind as arrows (`windArrows`, `WindLayer`
-  in `wheel-map.gts`), one per ~44 px, longer when stronger.
+- **Wind** is the windiest riding hour's (data/README.md, "Wind"), at the
+  middle of the stretch like the high: its speed (`windSpeed`) is what the
+  day shows, its mean vector (`windU`, `windV`) which way it pushes. The
+  headwind (`headwindBetween`) is that vector against the straight line from
+  the day's start to its night stop, divided by the distance ridden: with one
+  wind for the whole day this is exact, however the road winds. `windPush`
+  turns it into words: against or behind when over 40% of the speed pushes
+  along the ride, else from the side, or from all sides when the vector is
+  under 40% of the speed (`windSteadiness`, `STEADY`: the wind turns from day
+  to day). The trip's speed and headwind are the riding days' averages by
+  distance; mostly against or behind by the same 40%, else neither way on
+  average. The map's Wind switch draws arrows (`WindLayer` in `wheel-map.gts`), one
+  per ~44 px, white, a piece longer for every 5 km/h (`windArrowShape` in
+  `layers.ts`): a chevron and a tail in turn, so a lone chevron is 5–10
+  km/h, a chevron with a tail 10–15, two chevrons 15–20 and so on, the same
+  from 45 km/h. Counting pieces reads the speed, which the usual 10–20 km/h
+  needed: a length in proportion would barely differ. None where it's calm (under 5 km/h)
+  or the wind is unsteady.
 - **Lowest average low** is the lowest of the days' mean lows, and its
   date: when the cold is likeliest, while the likely lowest low says how
   cold.

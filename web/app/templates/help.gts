@@ -160,13 +160,14 @@ export default class Help extends Component {
             <p>
               Turn on
               <strong>Wind</strong>
-              in the map settings for arrows that point where the wind usually
-              blows in that week, between 9:00 and 17:00 when most riding is
-              done. The longer the arrow, the stronger the wind. It's the
-              prevailing wind: what's left when many days are averaged, so where
-              the wind swings about there's little or no arrow even if it's
-              often windy. That's exactly what decides whether a route is easier
-              one way or the other.
+              in the map settings for the wind you'll meet in the windiest hour
+              of a riding day (between 9:00 and 17:00, usually the afternoon) in
+              that week. The arrows point where the wind blows; the longer the
+              arrow, the stronger the wind: a lone chevron is 5 to 10 km/h, a
+              chevron with a tail 10 to 15, two chevrons 15 to 20, and so on, a
+              piece more every 5 km/h. Where there's no arrow, it's calm (under
+              5 km/h), or the wind comes from a different side from one day to
+              the next.
             </p>
 
             <h3>The legend</h3>
@@ -307,12 +308,11 @@ export default class Help extends Component {
                   it, from the usual highest high to the usual lowest low. How
                   wide it is depends on the place: a few degrees by the sea or
                   in the tropics, 15 °C and more in a continental winter.</dd></div>
-              <div><dt>Wind</dt><dd>The average headwind (or tailwind) over the
-                  day's ride: the prevailing wind in riding hours against the
-                  way you go. A winding road counts as the line from where you
-                  start to where you sleep. It's an average over many days: on a
-                  given day the wind can blow from anywhere, and it's often
-                  stronger.</dd></div>
+              <div><dt>Wind</dt><dd>How strong the wind usually is in the
+                  windiest hour of the day's ride, and how it meets you: against
+                  you, behind you, from the side, or from all sides (a different
+                  one from day to day). A winding road counts as the line from
+                  where you start to where you sleep.</dd></div>
               <div><dt>Rain</dt><dd>The chance that the day is rainy, and how
                   much rain a day brings when it rains (at least 1 mm), also in
                   the middle of the ride. That says more than an average spread
@@ -342,23 +342,24 @@ export default class Help extends Component {
             <dl class="wt-help-defs">
               <div><dt>Days</dt><dd>The whole trip, riding and rest days, and
                   the arrival date.</dd></div>
-              <div><dt>Average high</dt><dd>Over riding days only.</dd></div>
+              <div><dt>High</dt><dd>The average high over the riding days.</dd></div>
               <div><dt>Rainy riding days</dt><dd>The day-by-day chances added
                   up: how many to expect, not a promise. In brackets, the range
                   8 trips out of 10 fall in. Rain comes in spells, so some trips
                   catch a lot more and some a lot less.</dd></div>
-              <div><dt>Wind</dt><dd>The average headwind or tailwind over the
-                  whole trip, by distance. A headwind here is a tailwind the
-                  other way round: try the ⇅ button.</dd></div>
-              <div><dt>Highest high, likely</dt><dd>The highest single high your
-                  trip is as likely to beat as not, in a usual year. Heat comes
-                  in spells, which Forkcast takes into account.</dd></div>
-              <div><dt>Lowest low, likely</dt><dd>The same for the lowest single
-                  low: half of trips get a lower one. Pack for a few degrees
-                  below it.</dd></div>
-              <div><dt>Lowest average low</dt><dd>The lowest average low of the
-                  trip, and its date: when to expect the cold, where the likely
-                  lowest low is how cold.</dd></div>
+              <div><dt>Wind</dt><dd>The riding days' wind, and whether it's
+                  against you or behind you over the whole trip, or neither.
+                  Against you one way is behind you the other way round: try the
+                  ⇅ button.</dd></div>
+              <div><dt>Highest high</dt><dd>The highest single high your trip is
+                  as likely to beat as not, in a usual year. Heat comes in
+                  spells, which Forkcast takes into account.</dd></div>
+              <div><dt>Lowest low</dt><dd>The same for the lowest single low:
+                  half of trips get a lower one. Pack for a few degrees below
+                  it.</dd></div>
+              <div><dt>Lowest day</dt><dd>The day of the trip with the lowest
+                  average low, and that low: when to expect the cold, where the
+                  lowest low says how cold.</dd></div>
             </dl>
 
             <h3>On a phone</h3>
@@ -452,8 +453,9 @@ export default class Help extends Component {
                   Change Service: a weather model re-run over the past and
                   continuously corrected with real observations, giving the
                   weather for every hour over all land. Forkcast uses it for
-                  rain, terrain height and the shape of the temperatures: coast
-                  against hills, valley against plateau.</dd></div>
+                  rain, wind, terrain height and the shape of the temperatures:
+                  coast against hills, valley against plateau. Its big sister,
+                  ERA5, gives the wind's speed.</dd></div>
               <div><dt>CRU TS</dt><dd>From the University of East Anglia, built
                   from thousands of weather stations. Coarser (about 50 km), but
                   its highs and lows are what thermometers actually recorded, so
@@ -678,8 +680,14 @@ export default class Help extends Component {
                   target="_blank"
                   rel="noopener noreferrer"
                 >ERA5-Land</a>, Copernicus Climate Change Service (C3S) Climate
-                Data Store, ECMWF: daily rain, hourly temperature and terrain
-                height. Calibrated with
+                Data Store, ECMWF: daily rain, hourly temperature and wind, and
+                terrain height;
+                <a
+                  href="https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >ERA5</a>
+                for the wind speed. Calibrated with
                 <a
                   href="https://crudata.uea.ac.uk/cru/data/hrg/"
                   target="_blank"

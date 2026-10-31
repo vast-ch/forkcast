@@ -418,6 +418,13 @@ body {
 .wt-legend-scale {
   width: 15rem;
 }
+.wt-tick-label {
+  color: var(--wt-muted);
+}
+/* Five arrows: the unit only on the last (25 km/h). */
+.wt-legend-arrow:not(:last-child) .wt-tick-unit {
+  display: none;
+}
 .wt-tick {
   position: absolute;
   top: 2px;
@@ -747,10 +754,16 @@ body {
 }
 /* Like the map's wind arrows: white on a dark edge. */
 .wt-legend-wind {
-  font-size: 16px;
-  line-height: 1;
-  color: #fff;
-  text-shadow: 0 0 2px rgb(0 0 0 / 80%);
+  flex: none;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.wt-legend-wind .wt-legend-wind-edge {
+  stroke: rgb(0 0 0 / 0.6);
+  stroke-width: 4.5;
 }
 
 /* Through the bar: where 8 days in 10 fall, from the highest high to the lowest low. */

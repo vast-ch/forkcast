@@ -30,7 +30,8 @@ work after `data`).
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
 | `details` | Natural Earth populated places (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
 | `oni` | NOAA's Oceanic Niño Index, monthly since 1950 | 10 kB | Decides which months were El Niño or La Niña. |
-| `era5land-wind` | ERA5-Land monthly means of the 10 m wind (east and north components) for each hour of the day, one file per year, 2011–2025 | ~5.7 GB | CDS key needed. About 7 min a year. For headwinds (see "Wind"). |
+| `era5land-wind` | ERA5-Land monthly means of the 10 m wind (east and north components) for each hour of the day, one file per year, 2011–2025 | ~5.7 GB | CDS key needed. About 7 min a year. For the wind's direction (see "Wind"). |
+| `era5-wind-speed` | ERA5 monthly means of the 10 m wind speed for each hour of the day, one file per year, 2011–2025 | ~3 GB | CDS key needed. For the wind's strength (see "Wind"). |
 | `cpc` | NOAA CPC Global Unified Temperature: daily highs and lows from weather stations, 0.5°, one file per year and kind, 2011–2025 | 2.4 GB | Public domain (NOAA PSL). How far single days stray from the average (see "How far single days stray"). About 1 min a file. |
 | `cyclenet` | OpenStreetMap international bicycle route relations (network `icn`: in Europe essentially EuroVelo, elsewhere little) from the Overpass API: first an index of every route (id, version, box), then each route's ways by id, 10 routes per query, cached per route and version in `cache/cyclenet/icn/` | a few hundred routes | ODbL, © OpenStreetMap contributors. Rotates through public Overpass servers, waits when asked (429), backs off; a route that keeps failing is skipped and listed, and the next run fetches just those. `--fresh` refreshes the index; changed routes are refetched by version. |
 
@@ -46,7 +47,7 @@ work after `data`).
 | `spread` | `cache/cpc/`, `cache/grids/climate.json` | `cache/grids/spread.npz`: per month and 0.25° cell, how far single days' highs and lows stray from the average (a standard deviation, °C; intermediate, ~8 min) |
 | `years` | ERA5-Land rain and temperature, 1981–2025 | `cache/variants/<year>.npz`, each year's monthly fields (intermediate) |
 | `variants` | `cache/variants/`, `cache/grids/climate.*` | `cache/grids/climate-<variant>.bin` + `.json` for `last10`, `last5`, `last1`, `elnino`, `lanina`, monthly (intermediate; see "Climate variants") |
-| `wind` | `cache/era5land/wind-hourly-*.nc` | `cache/wind/<year>.npz` (each year's monthly wind in riding hours, one stamp per year, ~10 s each), then `cache/grids/wind-<climate>.npz` per climate (intermediate) |
+| `wind` | `cache/era5land/wind-hourly-*.nc`, `cache/era5land/wspd-hourly-*.nc` | `cache/wind/<year>.npz` (each year's windiest riding hour per month: speed and vector, one stamp per year, ~10 s each), then `cache/grids/wind-<climate>.npz` per climate (intermediate) |
 | `pack` | `cache/grids/` (with `spread.npz` and `wind-<climate>.npz`) | `out/climate/<climate>.json` (the header: encoding, tile size, which tiles exist) and `out/climate/<climate>/`: `<lat>_<lon>.bin` per 10° tile with land, for `last15` and each variant: the app's seasonal curves (see "Seasonal curves, packed at build") |
 | `cyclenet` | `cache/cyclenet/icn/` | `out/cyclenet.json`: the ways of every route, each once, joined end to end into long lines, simplified to about 300 m. Routes not downloaded yet are reported, not fatal. The app fetches it only when the rider draws with snapping on. |
 
@@ -233,32 +234,38 @@ app's first version used it alone; now it calibrates ERA5-Land.
   long climb.
 - **What we download:** ERA5-Land's 10 m wind, its east (u) and north (v)
   components, as monthly means for each hour of the day (`era5land-wind`):
-  the same fast dataset as the temperatures.
-- **What we keep** (`wind` build, `forkcast_data/wind.py`): per month the mean
-  wind over the hours people ride, 9:00 to 17:00 local solar time (from each
-  cell's longitude), averaged over the climate's years. Wind is calmer at
-  night and strongest in the afternoon, so a 24-hour mean would understate
-  it.
-- **A mean vector, on purpose:** the monthly means average the components, so
-  a wind that blows east half the days and west the other half averages to
-  nothing. That is exactly what an average headwind needs: against a fixed
-  direction, the mean of the push is the push of the mean wind. It does not
-  say how windy a place feels, so the app only speaks of the prevailing wind
-  and the average head- or tailwind.
+  the same fast dataset as the temperatures. And ERA5's 10 m wind speed the
+  same way (`era5-wind-speed`, same 0.25° grid): the mean of each hour's
+  speed, which ERA5-Land doesn't offer.
+- **What we keep** (`wind` build, `forkcast_data/wind.py`): per month the
+  windiest of the hours people ride, 9:00 to 17:00 local solar time (from
+  each cell's longitude, usually mid-afternoon): its mean speed, and its mean
+  wind vector for the direction. Averaged over the climate's years.
+- **Why the speed, and the windiest hour:** averaging the components lets
+  winds from different sides cancel: a summer afternoon that blows from a new
+  side every day averages to 2 km/h, though riders meet 15. Averaging over
+  all riding hours would also dilute the windy afternoon with the calm
+  morning. The speed is what a rider feels; the vector of the same hour says
+  which way it pushes, and its length against the speed how steadily (1:
+  always from the same side; near 0: from every side in turn). The real
+  average of each day's strongest hour would need every hourly wind for 15
+  years (hundreds of GB); the windiest hour of the average day is a little
+  lower, but close.
 - **Per climate:** 2011–2025 and the last 10, 5 and 1 years each average
   their own years; El Niño and La Niña use 2011–2025 (their corrections are
   for temperature and rain).
-- **Stored:** two more 7-term seasonal curves per cell (`u10`, `v10`), in
-  0.06 m/s steps for the mean, 0.05 m/s for the waves. Monsoons reverse
+- **Stored:** three more 7-term seasonal curves per cell (`wspd`, `u10`,
+  `v10`), the components ±12 m/s in 0.1 m/s steps, the speed 0–20 m/s in 0.08 m/s steps. Monsoons reverse
   through the year, so the shorter waves are needed (with only the yearly
   wave, 0.7 m/s RMS off the monthly values; with all three, 0.4).
 - **Checked:** Amsterdam south-westerly, the Rhône valley northerly (the
   Mistral), the Canary Islands north-easterly (the trade winds), Mumbai
   south-westerly in July (the monsoon) and north-easterly in January.
-- **In the app:** a day's average headwind is the wind at the middle of the
-  day's stretch against the straight line from its start to its end, divided
-  by the distance ridden: a winding road's pieces add up to that line, and
-  the push of a steady wind adds up the same way.
+- **In the app:** a day shows the windiest hour's speed at the middle of its
+  stretch, and whether it's against the rider, behind, from the side or from
+  all sides: its vector against the straight line from the day's start to
+  its end, divided by the distance ridden (a winding road's pieces add up to
+  that line, and the push of a steady wind adds up the same way).
 - **Limits:** 10 m over open ground; valleys, forests and towns are calmer,
   coasts and passes windier. Local winds that come and go within days (a
   sea breeze, a föhn) average out unless they are a regular feature.
@@ -427,7 +434,7 @@ licences" and the map's attribution line) whenever the data is published:
 - **CRU TS** (Open Database License, as linked from the CRU TS download
   page): credit the Climatic Research Unit, University of East Anglia; the
   climatology derived from it stays under the ODbL.
-- **ERA5-Land wind**: covered by the Copernicus notice above.
+- **ERA5-Land and ERA5 wind**: covered by the Copernicus notice above.
 - **NOAA CPC Global Unified Temperature** (public domain): "CPC Global
   Unified Temperature data provided by the NOAA PSL, Boulder, Colorado, USA,
   from their website at https://psl.noaa.gov".

@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type PlannerService from 'forkcast/services/planner';
 import TempPill from 'forkcast/components/temp-pill';
+import { windSteadiness } from 'forkcast/utils/climate';
 import { isMissing } from 'forkcast/utils/helpers';
 import {
   fmtDaylight,
@@ -11,7 +12,7 @@ import {
   fmtMm,
   fmtPct,
   fmtUsual,
-  fmtHeadwind,
+  fmtRideWind,
   fmtWind,
 } from 'forkcast/utils/format';
 
@@ -100,7 +101,10 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
                 <dd>{{fmtMm this.route.weather.wetDayMm}} a day</dd>
                 {{#unless this.route.day.isRest}}
                   <dt>Wind</dt>
-                  <dd>{{fmtHeadwind this.route.day.headwind}}</dd>
+                  <dd>{{fmtRideWind
+                      this.route.day.weather.windSpeed
+                      this.route.day.windPush
+                    }}</dd>
                 {{/unless}}
                 <dt>Riding time</dt>
                 <dd>{{fmtHours this.route.day.ridingHours}}{{#if
@@ -122,7 +126,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <p class="wt-muted mt-1">Beyond the end of the planned days.</p>
           {{/if}}
         {{else if this.hover.climate}}
-          <p class="wt-eyebrow">{{this.weekLabel}} average · {{this.coords}}</p>
+          <p class="wt-eyebrow">{{this.weekLabel}} · {{this.coords}}</p>
           <dl class="wt-readout mt-2">
             <dt>Low</dt>
             <dd><TempPill @t={{this.hover.climate.low}} />
@@ -144,8 +148,10 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             <dd>{{fmtMm this.hover.climate.wetDayMm}} a day</dd>
             <dt>Wind</dt>
             <dd>{{fmtWind
+                this.hover.climate.windSpeed
                 this.hover.climate.windU
                 this.hover.climate.windV
+                (windSteadiness this.hover.climate)
               }}</dd>
           </dl>
         {{else if this.isSquareLoading}}
@@ -160,7 +166,7 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
             area).</p>
         {{/if}}
       {{else}}
-        <p class="wt-eyebrow">{{this.weekLabel}} average</p>
+        <p class="wt-eyebrow">{{this.weekLabel}}</p>
         <p class="wt-muted mt-1">Point at the map for the climate (click an
           outlined square to load it), or at the route for the weather on that
           day of your trip.</p>

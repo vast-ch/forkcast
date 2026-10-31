@@ -19,6 +19,7 @@ import {
   rainMarks,
   reliefRaster,
   windArrows,
+  windArrowShape,
   type RainMark,
   type Raster,
   type WindArrow,
@@ -29,6 +30,7 @@ import { pointAt, type Route } from 'forkcast/utils/route';
 import type ClimateGrid from 'forkcast/utils/climate';
 import {
   climateOn,
+  STEADY,
   tempSwatch,
   tileArea,
   tileId,
@@ -801,12 +803,10 @@ class EmojiLayer extends L.GridLayer {
 /** Pixels between wind arrows. */
 const WIND_SPACING = 44;
 
-/** An arrow's length, px, for a wind of `mps`: longer the stronger, within limits. */
-const arrowLength = (mps: number) => Math.min(32, 8 + 4 * mps);
-
 /**
- * The prevailing wind as arrows, pointing where it blows, drawn into map
- * tiles like the rain emoji, at the same size in pixels at every zoom.
+ * The windiest riding hour's wind as arrows, pointing where it blows and
+ * a piece longer for every 5 km/h (windArrowShape), drawn into map tiles like the rain emoji, at the same size in pixels at
+ * every zoom.
  */
 class WindLayer extends L.GridLayer {
   constructor(readonly arrows: WindArrow[]) {
@@ -827,8 +827,10 @@ class WindLayer extends L.GridLayer {
     const origin = coords.scaleBy(size);
     const margin = 20;
     for (const a of this.arrows) {
-      const speed = Math.hypot(a.u, a.v);
-      if (!(speed > 0.3)) continue; // calm on average: nothing to point
+      const steady = Math.hypot(a.u, a.v);
+      // Calm (windArrowShape draws nothing), or from a different side every
+      // day: no wind to point at.
+      if (!(a.speed >= 0) || !(a.steadiness >= STEADY)) continue;
       const p = map.project([a.lat, a.lon], coords.z).subtract(origin);
       if (
         p.x < -margin ||
@@ -837,35 +839,26 @@ class WindLayer extends L.GridLayer {
         p.y > size.y + margin
       )
         continue;
-      // Screen y grows southwards.
-      const dx = a.u / speed;
-      const dy = -a.v / speed;
-      const half = arrowLength(speed) / 2;
-      const tip = [p.x + dx * half, p.y + dy * half] as const;
-      const tail = [p.x - dx * half, p.y - dy * half] as const;
-      const head = Math.min(7, half);
-      const path = () => {
-        ctx.beginPath();
-        ctx.moveTo(...tail);
-        ctx.lineTo(...tip);
-        ctx.moveTo(
-          tip[0] - head * (dx - dy * 0.6),
-          tip[1] - head * (dy + dx * 0.6),
-        );
-        ctx.lineTo(...tip);
-        ctx.lineTo(
-          tip[0] - head * (dx + dy * 0.6),
-          tip[1] - head * (dy - dx * 0.6),
-        );
-      };
-      // A dark edge under a white line keeps it readable on any colour.
-      path();
-      ctx.strokeStyle = 'rgb(0 0 0 / 0.55)';
-      ctx.lineWidth = 3.5;
+      // Screen y grows southwards; the arrow is centred on its point.
+      const dx = a.u / steady;
+      const dy = -a.v / steady;
+      const at = ([x, y]: [number, number]): [number, number] => [
+        p.x + x * dx - y * dy,
+        p.y + x * dy + y * dx,
+      ];
+      ctx.beginPath();
+      for (const line of windArrowShape(a.speed * 3.6)) {
+        line.forEach((pt, i) => {
+          if (i) ctx.lineTo(...at(pt));
+          else ctx.moveTo(...at(pt));
+        });
+      }
+      // A dark edge keeps the white readable on the light colours.
+      ctx.strokeStyle = 'rgb(0 0 0 / 0.6)';
+      ctx.lineWidth = 4.5;
       ctx.stroke();
-      path();
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
     }
     return tile;

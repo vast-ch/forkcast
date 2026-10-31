@@ -5,11 +5,21 @@ import { on } from '@ember/modifier';
 import type PlannerService from 'forkcast/services/planner';
 import { DAYS_PER_MONTH, TEMP_STOPS } from 'forkcast/utils/climate';
 import { css } from 'forkcast/utils/format';
-import { DOT_FULL, rainEmojiTiers } from 'forkcast/utils/layers';
+import {
+  DOT_FULL,
+  rainEmojiTiers,
+  windArrowExtent,
+  windArrowPath,
+  windArrowShape,
+} from 'forkcast/utils/layers';
 
 /** The legend's sample dots, as mm in the week shown. */
-/** What the arrows show (see WindLayer in wheel-map.gts). */
-const WIND_LABEL = 'Prevailing wind while riding, longer when stronger';
+/** The legend's sample winds, km/h: one more piece each (see windArrowShape). */
+const WIND_SAMPLES = [5, 10, 15, 20, 25];
+
+/** What the wind arrows show (see WindLayer in wheel-map.gts), for screen readers. */
+const WIND_LABEL =
+  'Wind: arrows from 5 km/h, a piece more every 5 km/h, chevron and tail in turn';
 
 const DOT_STEPS = [
   { label: '5', value: 5 },
@@ -20,6 +30,18 @@ const DOT_STEPS = [
 
 export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   @service declare planner: PlannerService;
+
+  /** Sample arrows, pointing right, drawn like the map's (WindLayer). */
+  get windSamples() {
+    return WIND_SAMPLES.map((kmh) => {
+      const extent = windArrowExtent(kmh);
+      return {
+        kmh,
+        width: extent + 8,
+        path: windArrowPath(windArrowShape(kmh), 4 + extent / 2, 7),
+      };
+    });
+  }
 
   get gradient() {
     const lo = TEMP_STOPS[0]![0];
@@ -60,7 +82,7 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   }
 
   get tempLabel() {
-    return this.planner.tempMetric === 'high' ? 'Average high' : 'Average low';
+    return this.planner.tempMetric === 'high' ? 'High' : 'Low';
   }
 
   get rainLabel() {
@@ -161,9 +183,22 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
             {{/if}}
           {{/if}}
           {{#if this.planner.showWind}}
-            <span class="flex items-center gap-1.5">
-              <span class="wt-legend-wind" aria-hidden="true">➝</span>
-              {{WIND_LABEL}}
+            <span class="flex items-end gap-3" aria-hidden="true">
+              {{#each this.windSamples as |a|}}
+                <span class="wt-legend-arrow flex flex-col items-center">
+                  <svg
+                    class="wt-legend-wind"
+                    viewBox="0 0 {{a.width}} 14"
+                    width={{a.width}}
+                    height="14"
+                  ><path class="wt-legend-wind-edge" d={{a.path}} /><path
+                      d={{a.path}}
+                    /></svg>
+                  <span class="wt-tick-label tabular-nums">{{a.kmh}}<span
+                      class="wt-tick-unit"
+                    > km/h</span></span>
+                </span>
+              {{/each}}
             </span>
           {{/if}}
         {{else}}

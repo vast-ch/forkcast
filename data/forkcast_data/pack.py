@@ -75,10 +75,12 @@ _SPREAD = [
     {"kind": "linear", "scale": 16, "offset": 0},  # 0 … 15.9 °C (Siberia's winter nights reach 15)
     *[{"kind": "linear", "scale": 20, "offset": -6.35}] * 2,  # ±6.35 °C (high plateaus swing 5 °C and more)
 ]
-# The prevailing wind in riding hours (wind.py), east and north components, m/s.
-# ±10 m/s in 0.08 m/s steps, mean and waves alike: Patagonia's westerlies
-# average 9 m/s, and monsoons reverse by as much.
-_WIND = [{"kind": "linear", "scale": 12.7, "offset": -10}] * TERMS
+# The strongest riding hour's wind (wind.py), m/s: east and north components
+# ±12 m/s in 0.1 m/s steps, mean and waves alike (Patagonia's westerlies
+# average 9 m/s, and a monsoon's windiest hour reverses by more); its speed
+# 0 … 20 m/s.
+_WIND = [{"kind": "linear", "scale": 10.6, "offset": -12}] * TERMS
+_SPEED = [{"kind": "linear", "scale": 12.7, "offset": 0}, *_WIND[1:]]
 # Mean highs run from about −25 °C (Greenland's ice) to +39 °C, mean lows from −35 to +28 °C.
 ENCODING = {
     "tmx": _temp(-28),
@@ -89,6 +91,7 @@ ENCODING = {
     "r10": _DAYS,
     "tmxsd": _SPREAD,
     "tmnsd": _SPREAD,
+    "wspd": _SPEED,
     "u10": _WIND,
     "v10": _WIND,
 }
@@ -146,7 +149,7 @@ def extras(climate: str, land: np.ndarray) -> dict[str, np.ndarray]:
     the spread of single days (the same in every climate: how far days stray hardly depends on the years)
     and the climate's own wind."""
     out = {}
-    for path, names in ((cpc.OUT, cpc.LAYERS.values()), (wind.grid_file(climate), wind.COMPONENTS.values())):
+    for path, names in ((cpc.OUT, cpc.LAYERS.values()), (wind.grid_file(climate), wind.LAYERS)):
         z = np.load(path)
         for name in names:
             c = fit(z[name], False).astype(np.float32)
@@ -232,7 +235,7 @@ def pack(climate: str) -> None:
     coef, static = curves(_source(climate, "bin").read_bytes(), header)
     land = ~np.isnan(coef["tmx"][0])
     coef |= extras(climate, land)
-    names = [*header["vars"], *cpc.LAYERS.values(), *wind.COMPONENTS.values()]
+    names = [*header["vars"], *cpc.LAYERS.values(), *wind.LAYERS]
     enc = {name: encode(name, c) for name, c in coef.items()}  # (its terms, rows, cols) bytes
     folder = DIR / climate
     if folder.exists():

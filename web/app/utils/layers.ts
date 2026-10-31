@@ -286,26 +286,45 @@ export function rainMarks(
 export interface WindArrow {
   lat: number;
   lon: number;
-  /** The prevailing wind in riding hours, m/s toward the east and the north */
+  /** The wind in the strongest riding hour: its speed, m/s */
+  speed: number;
+  /** Its mean wind vector, m/s toward the east and the north */
   u: number;
   v: number;
+  /** How steady it is, its cells' windSteadiness averaged: 0 … 1 */
+  steadiness: number;
 }
 
-/** The prevailing wind, one arrow per block of cells (their average). */
+/** The strongest riding hour's wind, one arrow per block of cells (their average). */
 export function windArrows(
   grid: ClimateGrid,
   /** Position in the year, 0 … 1 */
   phase: number,
   block = 1,
 ): WindArrow[] {
-  const comp = (name: 'u10' | 'v10') =>
+  const comp = (name: 'wspd' | 'u10' | 'v10') =>
     blocks(grid, block, (r, c) => grid.cellAt(name, phase, r, c), false);
+  const u = comp('u10');
   const v = comp('v10');
-  return comp('u10').map((u, i) => ({
-    lat: u.lat,
-    lon: u.lon,
-    u: u.val,
+  // Each cell's own steadiness, averaged: the block's mean vector would
+  // shrink wherever neighbouring winds blow different ways.
+  const steadiness = blocks(
+    grid,
+    block,
+    (r, c) =>
+      Math.hypot(
+        grid.cellAt('u10', phase, r, c),
+        grid.cellAt('v10', phase, r, c),
+      ) / grid.cellAt('wspd', phase, r, c),
+    false,
+  );
+  return comp('wspd').map((s, i) => ({
+    lat: s.lat,
+    lon: s.lon,
+    speed: s.val,
+    u: u[i]!.val,
     v: v[i]!.val,
+    steadiness: steadiness[i]!.val,
   }));
 }
 
@@ -382,4 +401,68 @@ export function isPlaceShown(
   if (isCapital) return true;
   if (isCapitalsOnly(zoom)) return false;
   return limit === 'big' ? pop >= BIG_CITY : rank <= TOP_CITIES;
+}
+
+/** Each piece of a wind arrow stands for this much wind, km/h; under one, no arrow. */
+export const WIND_STEP_KMH = 5;
+/** Pieces at most: 45 km/h and more all look the same. */
+const MAX_STEPS = 8;
+/** Px between chevrons. */
+const PIECE = 6;
+/** A chevron's depth, px. */
+const HEAD = 7;
+/** How far a tail sticks out behind the last chevron, px. */
+const TAIL = 6;
+
+type Pt = [x: number, y: number];
+
+/** An arrow's pieces for a wind of `kmh` (at least WIND_STEP_KMH): its chevrons, and whether a tail follows. */
+function windArrowPieces(kmh: number): { chevrons: number; tail: boolean } {
+  const steps = Math.min(MAX_STEPS, Math.floor(kmh / WIND_STEP_KMH) - 1);
+  return { chevrons: Math.floor(steps / 2) + 1, tail: steps % 2 === 1 };
+}
+
+/** How long an arrow is, px, end to end. */
+export function windArrowExtent(kmh: number): number {
+  const { chevrons, tail } = windArrowPieces(kmh);
+  return (chevrons - 1) * PIECE + HEAD + (tail ? TAIL : 0);
+}
+
+/**
+ * An arrow for a wind of `kmh`, pointing along +x and centred on 0,0, as
+ * strokes in px; none under WIND_STEP_KMH. Each WIND_STEP_KMH adds a
+ * piece, a chevron and a tail in turn: a lone chevron from 5 km/h, a tail
+ * behind it from 10, a second chevron in the tail's place from 15, a tail
+ * behind that from 20, a third chevron from 25, and so on up to MAX_STEPS.
+ * Counting pieces reads the speed, and the arrow grows with it.
+ */
+export function windArrowShape(kmh: number): Pt[][] {
+  if (!(kmh >= WIND_STEP_KMH)) return [];
+  const { chevrons, tail } = windArrowPieces(kmh);
+  const tip = windArrowExtent(kmh) / 2;
+  const lines: Pt[][] = [];
+  if (tail) {
+    lines.push([
+      [-tip, 0],
+      [tip, 0],
+    ]);
+  }
+  for (let i = 0; i < chevrons; i++) {
+    const x = tip - i * PIECE;
+    lines.push([
+      [x - HEAD, -HEAD * 0.6],
+      [x, 0],
+      [x - HEAD, HEAD * 0.6],
+    ]);
+  }
+  return lines;
+}
+
+/** An arrow's strokes as SVG path data, moved by `dx`, `dy`. */
+export function windArrowPath(lines: Pt[][], dx: number, dy: number): string {
+  return lines
+    .map((pts) =>
+      pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x + dx} ${y + dy}`).join(''),
+    )
+    .join('');
 }

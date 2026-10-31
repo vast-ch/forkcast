@@ -1,7 +1,13 @@
 // Splits a route into riding days and rest days, and attaches the expected
 // weather for each day from the climate normals.
 
-import { climateOn, type ClimateSource, type DayClimate } from './climate';
+import {
+  climateOn,
+  STEADY,
+  windSteadiness,
+  type ClimateSource,
+  type DayClimate,
+} from './climate';
 import { climbBetween, pointAt, type Route, type RoutePoint } from './route';
 import { fmtShortMonth } from './format';
 import { daylightHours } from './sun';
@@ -37,8 +43,10 @@ export interface TripDay {
   nightLow: number;
   /** How far single lows there stray from it (°C, a standard deviation) */
   nightLowSpread: number;
-  /** The average headwind over the day's stretch, m/s; negative is a tailwind (NaN on rest days or without wind data) */
+  /** The average headwind over the day's stretch in its windiest hour, m/s; negative is a tailwind (NaN on rest days or without wind data) */
   headwind: number;
+  /** How the wind meets the day's ride (undefined on rest days or without wind data) */
+  windPush?: WindPush;
   /** Hours in the saddle at the average speed (0 on rest days) */
   ridingHours: number;
   /** More riding time than daylight: part of the day is ridden in the dark */
@@ -66,6 +74,33 @@ export interface Trip {
   rainMm: number;
   /** The average headwind over the riding days, by distance, m/s (negative: a tailwind) */
   headwind: number;
+  /** The riding days' wind speed in their windiest hour, by distance, m/s */
+  windSpeed: number;
+  /** Whether that wind is mostly against the trip, behind it, or neither (undefined without wind data) */
+  windPush?: WindPush;
+}
+
+/**
+ * How the wind meets a ride: mostly against it or behind it, across it, or
+ * from all sides in turn (no steady direction).
+ */
+export type WindPush = 'against' | 'behind' | 'side' | 'varied';
+
+/** Share of the wind's speed that must push along the ride to count as against or behind. */
+const PUSH = 0.4;
+
+/** How a wind of `speed` and `steadiness` meets a ride with this `headwind` (all NaN-safe). */
+export function windPush(
+  headwind: number,
+  speed: number,
+  steadiness: number,
+): WindPush | undefined {
+  if ([headwind, speed, steadiness].some(Number.isNaN) || !(speed > 0))
+    return undefined;
+  const share = headwind / speed;
+  if (share > PUSH) return 'against';
+  if (share < -PUSH) return 'behind';
+  return steadiness < STEADY ? 'varied' : 'side';
 }
 
 /**
@@ -134,6 +169,9 @@ export function planTrip(
       : climateOn(climate, date, sleep, settings.rainThreshold);
     const daylight = daylightHours(date, here, sleep);
     const ridingHours = (to - km) / settings.speed;
+    const headwind = isRest
+      ? Number.NaN
+      : headwindBetween(here, sleep, to - km, weather.windU, weather.windV);
     days.push({
       n,
       date,
@@ -149,9 +187,10 @@ export function planTrip(
       nightLowSpread: night.lowSpread,
       daylight,
       needsLights: !isRest && ridingHours > daylight,
-      headwind: isRest
-        ? Number.NaN
-        : headwindBetween(here, sleep, to - km, weather.windU, weather.windV),
+      headwind,
+      windPush: isRest
+        ? undefined
+        : windPush(headwind, weather.windSpeed, windSteadiness(weather)),
     });
     km = to;
   }
@@ -166,6 +205,8 @@ export function planTrip(
       coldest = d;
     }
   }
+  const tripHeadwind = byDistance(riding, (d) => d.headwind);
+  const tripWind = byDistance(riding, (d) => d.weather.windSpeed);
   return {
     days,
     ridingDays: riding.length,
@@ -189,7 +230,9 @@ export function planTrip(
       settings.rainThreshold,
     ),
     rainMm: valid.reduce((s, d) => s + d.weather.rainMm, 0),
-    headwind: averageHeadwind(riding),
+    headwind: tripHeadwind,
+    windSpeed: tripWind,
+    windPush: windPush(tripHeadwind, tripWind, 1),
   };
 }
 
@@ -202,12 +245,12 @@ export function planTrip(
  */
 const SPELL_FACTOR: Record<number, number> = { 1: 2, 5: 1.6, 10: 1.5 };
 
-/** The riding days' headwind, weighted by their distance (NaN without wind data). */
-function averageHeadwind(days: TripDay[]): number {
-  const known = days.filter((d) => !Number.isNaN(d.headwind));
+/** The average of `value` over the riding days, weighted by their distance (NaN without data). */
+function byDistance(days: TripDay[], value: (d: TripDay) => number): number {
+  const known = days.filter((d) => !Number.isNaN(value(d)));
   const km = known.reduce((s, d) => s + d.distance, 0);
   return km > 0
-    ? known.reduce((s, d) => s + d.headwind * d.distance, 0) / km
+    ? known.reduce((s, d) => s + value(d) * d.distance, 0) / km
     : Number.NaN;
 }
 

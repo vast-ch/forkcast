@@ -1,5 +1,6 @@
 import { htmlSafe } from '@ember/template';
-import { usualRange, windFrom } from './climate';
+import { STEADY, usualRange, windFrom } from './climate';
+import type { WindPush } from './itinerary';
 import { isMissing } from './helpers';
 
 export const fmtTemp = (t: number | undefined | null): string =>
@@ -12,23 +13,40 @@ export const fmtUsual = (mean: number, spread: number): string => {
   return `(${Math.round(lo)} to ${Math.round(hi)}°C)`;
 };
 
-/** Below this, km/h, an average headwind is as good as none. */
-const CALM_KMH = 1;
-
-/** An average headwind, m/s, for riders: "headwind 7 km/h", "tailwind 5 km/h". */
-export const fmtHeadwind = (mps: number): string => {
-  if (isMissing(mps)) return '–';
-  const kmh = Math.round(mps * 3.6);
-  if (Math.abs(mps * 3.6) < CALM_KMH) return 'none on average';
-  return kmh > 0 ? `headwind ${kmh} km/h` : `tailwind ${-kmh} km/h`;
+const PUSH_WORDS: Record<WindPush, string> = {
+  against: 'against you',
+  behind: 'behind you',
+  side: 'from the side',
+  varied: 'from all sides',
 };
 
-/** The prevailing wind: "from the SW, 12 km/h". */
-export const fmtWind = (u: number, v: number): string => {
-  if (isMissing(u) || isMissing(v)) return '–';
-  const kmh = Math.hypot(u, v) * 3.6;
-  if (kmh < CALM_KMH) return 'none prevailing';
-  return `from the ${windFrom(u, v)}, ${Math.round(kmh)} km/h`;
+/** A day's wind: "15 km/h, against you". */
+export const fmtRideWind = (mps: number, push?: WindPush): string => {
+  if (isMissing(mps)) return '–';
+  const kmh = `${Math.round(mps * 3.6)} km/h`;
+  return push ? `${kmh}, ${PUSH_WORDS[push]}` : kmh;
+};
+
+/** The trip's wind: "14 km/h, against you", or "neither way". */
+export const fmtTripWind = (mps: number, push?: WindPush): string => {
+  if (isMissing(mps)) return '–';
+  const kmh = `${Math.round(mps * 3.6)} km/h`;
+  if (push === 'against' || push === 'behind')
+    return `${kmh}, ${PUSH_WORDS[push]}`;
+  return push ? `${kmh}, neither way` : kmh;
+};
+
+/** The wind at a spot: "15 km/h SW", or "15 km/h" when it blows from any side. */
+export const fmtWind = (
+  mps: number,
+  u: number,
+  v: number,
+  steadiness: number,
+): string => {
+  if (isMissing(mps)) return '–';
+  const kmh = `${Math.round(mps * 3.6)} km/h`;
+  // The side it blows from, as on a forecast; none when that changes daily.
+  return steadiness < STEADY ? kmh : `${kmh} ${windFrom(u, v)}`;
 };
 
 export const fmtKm = (km: number): string =>

@@ -76,7 +76,9 @@ export interface DayClimate {
   highSpread: number;
   /** The same for the lows */
   lowSpread: number;
-  /** The prevailing wind in riding hours, m/s: toward the east, and toward the north (NaN if unknown) */
+  /** The wind in the strongest riding hour of the day, on average: its speed, m/s (NaN if unknown) */
+  windSpeed: number;
+  /** Its mean wind vector, m/s toward the east and toward the north: which way it pushes, and how steadily (see windSteadiness) */
   windU: number;
   windV: number;
   /** Mean precipitation per day, mm */
@@ -138,6 +140,18 @@ const MIN_WET_SHARE = 0.02;
 /** Compass points, clockwise from north. */
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
+/**
+ * How steadily the wind blows from one side: the mean vector's length against
+ * the mean speed, 1 when always from the same side, near 0 when from every
+ * side in turn (NaN if unknown).
+ */
+export function windSteadiness(day: DayClimate): number {
+  return Math.min(1, Math.hypot(day.windU, day.windV) / day.windSpeed);
+}
+
+/** Below this steadiness the wind blows from all sides: no direction to show. */
+export const STEADY = 0.4;
+
 /** Where a wind blowing toward (u east, v north) comes from: "SW". */
 export function windFrom(u: number, v: number): string {
   const toward = (Math.atan2(u, v) * 180) / Math.PI; // clockwise from north
@@ -193,8 +207,9 @@ export function lapseRateAt(phase: number): number {
  * The seasonal curves: tmx/tmn the mean daily max/min, °C; pre the rain, mm
  * per day; r1/r5/r10 the share of days with at least 1/5/10 mm; tmxsd/tmnsd
  * how far single days' max/min stray from their mean (a standard deviation, °C);
- * u10/v10 the prevailing wind in riding hours, m/s toward the east and north
- * (the mean of the wind vector, see data/forkcast_data/wind.py).
+ * wspd the wind speed in the strongest riding hour, m/s, and u10/v10 that
+ * hour's mean wind vector, m/s toward the east and north (see
+ * data/forkcast_data/wind.py).
  */
 type SeasonVar =
   | 'tmx'
@@ -205,6 +220,7 @@ type SeasonVar =
   | 'r10'
   | 'tmxsd'
   | 'tmnsd'
+  | 'wspd'
   | 'u10'
   | 'v10';
 
@@ -436,6 +452,7 @@ export default class ClimateGrid implements ClimateSource {
       low: this.sampleAt('tmn', phase, lat, lon) + shift,
       highSpread: this.sampleAt('tmxsd', phase, lat, lon),
       lowSpread: this.sampleAt('tmnsd', phase, lat, lon),
+      windSpeed: this.sampleAt('wspd', phase, lat, lon),
       windU: this.sampleAt('u10', phase, lat, lon),
       windV: this.sampleAt('v10', phase, lat, lon),
       rainMm: rain,
@@ -586,6 +603,7 @@ const UNKNOWN: DayClimate = {
   rainChance: Number.NaN,
   wetDayMm: Number.NaN,
   altitudeShift: 0,
+  windSpeed: Number.NaN,
   windU: Number.NaN,
   windV: Number.NaN,
 };

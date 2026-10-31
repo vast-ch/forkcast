@@ -3,6 +3,7 @@ import {
   isPlaceShown,
   rainEmojiTier,
   rainEmojiTiers,
+  windArrowShape,
 } from 'forkcast/utils/layers';
 
 module('Unit | Utility | layers', function () {
@@ -41,5 +42,25 @@ module('Unit | Utility | layers', function () {
     // Bern: a capital of about 120,000, not the biggest Swiss town.
     assert.true(isPlaceShown('big', 7, 120_000, 5, true));
     assert.true(isPlaceShown('big', 5.5, 120_000, 5, true));
+  });
+
+  test('a wind arrow from 5 km/h grows a piece every 5 km/h', function (assert) {
+    // The shaft is the one two-point line; chevrons have three points.
+    const look = (kmh: number) => {
+      const lines = windArrowShape(kmh);
+      const chevrons = lines.filter((l) => l.length === 3).length;
+      const shaft = lines.find((l) => l.length === 2);
+      const tail = shaft
+        ? shaft[1]![0] - shaft[0]![0] > (chevrons - 1) * 6
+        : false;
+      return `${chevrons}${tail ? '+tail' : ''}`;
+    };
+    assert.strictEqual(look(3), '0', 'under 5: no arrow');
+    assert.strictEqual(look(7), '1', 'from 5: a lone chevron');
+    assert.strictEqual(look(12), '1+tail');
+    assert.strictEqual(look(17), '2', 'the tail ends in a chevron');
+    assert.strictEqual(look(22), '2+tail');
+    assert.strictEqual(look(27), '3');
+    assert.strictEqual(look(90), '5', 'capped at 45 km/h');
   });
 });

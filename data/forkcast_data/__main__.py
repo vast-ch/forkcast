@@ -11,6 +11,7 @@ Downloads (into cache/, except the EuroVelo tracks which are kept in eurovelo/):
     era5land-rain         ERA5-Land daily rain totals, 1981–2025 (Copernicus CDS key needed)
     era5land-temperature  ERA5-Land monthly temperature by hour of day, 1981–2025 (CDS key needed)
     era5land-wind         ERA5-Land monthly 10 m wind by hour of day, 2011–2025 (CDS key needed)
+    era5-wind-speed       ERA5 monthly 10 m wind speed by hour of day, 2011–2025 (CDS key needed)
     cpc                   NOAA CPC daily highs and lows from weather stations, 2011–2025
     orography             ERA5-Land terrain height (for the altitude correction)
     eurovelo              official EuroVelo GPX tracks
@@ -62,6 +63,7 @@ DOWNLOADS = {
     "era5land-rain": lambda a: era5land_download.rain(_history(a), a.fresh),
     "era5land-temperature": lambda a: era5land_download.temperature(_history(a), a.fresh),
     "era5land-wind": lambda a: era5land_download.wind(_years(a), a.fresh),
+    "era5-wind-speed": lambda a: era5land_download.wind_speed(_years(a), a.fresh),
     "cpc": lambda a: cpc.download(_years(a), a.fresh),
     "orography": lambda a: era5land_download.orography(a.fresh),
     "eurovelo": lambda a: eurovelo.download(a.fresh),
@@ -105,6 +107,7 @@ def status(a) -> None:
         "era5land-rain": [era5land_download.rain_file(i) for i in y] + [era5land_download.rain_last_day(y[-1] + 1)],
         "era5land-temperature": [era5land_download.temperature_file(i) for i in y],
         "era5land-wind": [era5land_download.wind_file(i) for i in _years(a)],
+        "era5-wind-speed": [era5land_download.wind_speed_file(i) for i in _years(a)],
         "cpc": cpc.files(_years(a)),
         "orography": [era5land_download.orography_file()],
         "eurovelo": [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG],
