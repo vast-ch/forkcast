@@ -564,11 +564,14 @@ export default class Help extends Component<{
                 A grid cell has one average height, but a valley or a pass on
                 your route can be hundreds of metres above or below it. Air
                 cools with height, so on your route the high and low are
-                corrected for the difference, using seasonal rates measured
+                corrected for the difference. Highs use seasonal rates measured
                 across the Alps: smaller in winter, when cold air settles in
-                valleys. Pointing at the route shows the correction when it's
-                0.5 °C or more; the map colours themselves are the cell
-                averages. Try it:
+                valleys. Lows change only about half as much with height: on
+                calm nights cold air drains downhill, so valleys are colder and
+                slopes milder than the daytime rate would say; weather stations
+                around the world show it. Pointing at the route shows the
+                correction when it's 0.5 °C or more; the map colours themselves
+                are the cell averages. Try it:
               </p>
               <AltitudeDemo />
             </section>
@@ -591,16 +594,23 @@ export default class Help extends Component<{
               <p>
                 Made from
                 {{this.years}}. Enough years that one unusually hot, cold or wet
-                year doesn't throw things off, and recent enough to show today's
-                warmer climate. Of the choices, it's the one that would have
-                predicted past years best, so it's what Forkcast starts with.
+                year doesn't throw things off. Of the choices, it's the one that
+                would have predicted past years best, so it's what Forkcast
+                starts with.
+              </p>
+              <p>
+                An average of 15 years describes their middle year, 2018, and
+                the climate has warmed since. So the highs and lows of every
+                climate are brought forward to 2026, at the pace each region has
+                warmed since 1981: a few tenths of a degree. Tested on past
+                years, this made forecasts closer in most of them. Rain stays as
+                it was.
               </p>
 
               <h3>10 yrs, 5 yrs</h3>
               <p>
-                Made from only the most recent years. They come out a little
-                warmer, by about 0.2–0.5 °C, because the climate keeps warming.
-                But the fewer the years, the more a single odd year shows,
+                Made from only the most recent years, brought forward the same
+                way. The fewer the years, the more a single odd year shows,
                 especially in the rain. Good for seeing how things are changing;
                 for planning, 15 yrs is the safer choice.
               </p>

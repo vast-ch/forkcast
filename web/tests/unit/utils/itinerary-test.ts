@@ -26,7 +26,8 @@ const climate: ClimateSource = {
     rainMm: 1,
     rainChance: 0.25,
     wetDayMm: 4,
-    altitudeShift: 0,
+    highAltitudeShift: 0,
+    lowAltitudeShift: 0,
   }),
 };
 // A straight route east along 46°N, about 460 km.

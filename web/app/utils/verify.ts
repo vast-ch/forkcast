@@ -45,6 +45,7 @@ export const MISSING = 'not measured';
 // Shares are fractions of 1, shown as percent with one decimal.
 const DIGITS: Record<string, number> = {
   '°C': 2,
+  '°C per km': 1,
   mm: 1,
   days: 2,
   kB: 0,

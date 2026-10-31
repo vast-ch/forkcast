@@ -99,7 +99,22 @@ module('Acceptance | help', function (hooks) {
   test('the nerd Climates tab shows the measurements, with intervals', async function (assert) {
     await visit('/help/climates?nerd=true');
     assert.dom('.wt-help-nerd-missing').doesNotExist();
-    assert.dom('.wt-help-table').exists({ count: 6 });
+    assert.dom('.wt-help-table').exists({ count: 8 });
+    // The plain 15-year average lagged the warming: too cold, and further off
+    // on average than brought forward.
+    const warming = [...document.querySelectorAll('.wt-help-table')].find((t) =>
+      t.querySelector('caption')?.textContent?.startsWith('Europe: 15 yrs'),
+    )!;
+    for (const row of warming.querySelectorAll('tbody tr')) {
+      const [shifted, plain] = [...row.querySelectorAll('td')].map((td) =>
+        Number(td.firstChild?.textContent?.replace('−', '-').split(' ')[0]),
+      );
+      assert.true(plain! < 0, `${row.textContent}: plain average too cold`);
+      assert.true(
+        Math.abs(shifted!) < Math.abs(plain!),
+        'brought forward is closer',
+      );
+    }
     // The backtest's rows are the four windows; each cell has its interval.
     const rows = [...document.querySelectorAll('.wt-help-table')]
       .find((t) =>

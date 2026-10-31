@@ -55,16 +55,24 @@ export interface ClimateHeader {
 }
 
 /**
- * How much the air cools with height, °C per metre, by month (Jan … Dec).
+ * How much the highs cool with height, °C per metre, by month (Jan … Dec).
  * The yearly average is the familiar 6.5 °C per 1,000 m, but it is smaller in
  * winter, when cold air settles in valleys, and larger in summer. Values are
  * the seasonal lapse rates measured across the Alps (Rolland 2003, J. Climate
- * 16:1032-1046), rounded.
+ * 16:1032-1046), rounded; weather stations worldwide bear them out (verify).
  */
 export const LAPSE_RATES = [
   0.0045, 0.005, 0.0058, 0.0064, 0.0067, 0.0068, 0.0068, 0.0066, 0.006, 0.0054,
   0.0048, 0.0044,
 ];
+
+/**
+ * How much the lows cool with height, °C per metre, all year. Nights are
+ * calmer: cold air drains into valleys, so a valley's night is colder, and a
+ * slope's milder, than a daytime rate says. Fitted on half of the world's
+ * weather stations and tested on the other half (data/forkcast_data/verify_stations.py).
+ */
+export const LOW_LAPSE_RATE = 0.003;
 
 /** Expected weather for one place on one day of the year. */
 export interface DayClimate {
@@ -90,8 +98,10 @@ export interface DayClimate {
    * rains. NaN where rain is too rare to say.
    */
   wetDayMm: number;
-  /** °C added to high and low for the point's height versus its grid cell (0 if unknown) */
-  altitudeShift: number;
+  /** °C added to the high for the point's height versus its grid cell (0 if unknown) */
+  highAltitudeShift: number;
+  /** °C added to the low, the same way (see LOW_LAPSE_RATE) */
+  lowAltitudeShift: number;
 }
 
 /** The climates a rider can pick: the 2011–2025 grid, and the variants data/forkcast_data/variants.py builds. */
@@ -193,7 +203,7 @@ function evalSeason(c: Float32Array, at: number, phase: number): number {
   return v;
 }
 
-/** Lapse rate (°C per m) at a position in the year, blended between mid-month values. */
+/** The highs' lapse rate (°C per m) at a position in the year, blended between mid-month values. */
 export function lapseRateAt(phase: number): number {
   const x = phase * 12 - 0.5;
   const m0 = Math.floor(x);
@@ -415,17 +425,15 @@ export default class ClimateGrid implements ClimateSource {
     return !Number.isNaN(this.sampleAt('tmx', 0, lat, lon));
   }
 
-  /** °C to add at a position in the year for a point at `ele` m, compared with its grid cell's mean height. */
-  altitudeShiftAt(
+  /** Metres a point at `ele` m sits above its grid cell's mean height (0 if either is unknown). */
+  heightAboveCell(
     lat: number,
     lon: number,
     ele: number | null | undefined,
-    phase: number,
   ): number {
     if (!this.hasElevation || ele === null || ele === undefined) return 0;
     const cell = this.interpolate(lat, lon, (r, c) => this.elevation(r, c));
-    if (Number.isNaN(cell)) return 0;
-    return -lapseRateAt(phase) * (ele - cell);
+    return Number.isNaN(cell) ? 0 : ele - cell;
   }
 
   /**
@@ -440,7 +448,9 @@ export default class ClimateGrid implements ClimateSource {
     threshold: number,
     ele?: number | null,
   ): DayClimate {
-    const shift = this.altitudeShiftAt(lat, lon, ele, phase);
+    const above = this.heightAboveCell(lat, lon, ele);
+    const highShift = -lapseRateAt(phase) * above;
+    const lowShift = -LOW_LAPSE_RATE * above;
     const rain = Math.max(0, this.sampleAt('pre', phase, lat, lon));
     const chance = clamp01(this.sampleAt(countVar(threshold), phase, lat, lon));
     // The rain over the days with rain: the average spread over dry
@@ -448,8 +458,8 @@ export default class ClimateGrid implements ClimateSource {
     const wet =
       threshold <= 1 ? chance : clamp01(this.sampleAt('r1', phase, lat, lon));
     return {
-      high: this.sampleAt('tmx', phase, lat, lon) + shift,
-      low: this.sampleAt('tmn', phase, lat, lon) + shift,
+      high: this.sampleAt('tmx', phase, lat, lon) + highShift,
+      low: this.sampleAt('tmn', phase, lat, lon) + lowShift,
       highSpread: this.sampleAt('tmxsd', phase, lat, lon),
       lowSpread: this.sampleAt('tmnsd', phase, lat, lon),
       windSpeed: this.sampleAt('wspd', phase, lat, lon),
@@ -458,7 +468,8 @@ export default class ClimateGrid implements ClimateSource {
       rainMm: rain,
       rainChance: chance,
       wetDayMm: wet >= MIN_WET_SHARE ? rain / wet : Number.NaN,
-      altitudeShift: shift,
+      highAltitudeShift: highShift,
+      lowAltitudeShift: lowShift,
     };
   }
 
@@ -602,7 +613,8 @@ const UNKNOWN: DayClimate = {
   rainMm: Number.NaN,
   rainChance: Number.NaN,
   wetDayMm: Number.NaN,
-  altitudeShift: 0,
+  highAltitudeShift: 0,
+  lowAltitudeShift: 0,
   windSpeed: Number.NaN,
   windU: Number.NaN,
   windV: Number.NaN,

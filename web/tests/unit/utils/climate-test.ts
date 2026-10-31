@@ -1,5 +1,7 @@
 import { module, test } from 'qunit';
 import ClimateGrid, {
+  LOW_LAPSE_RATE,
+  lapseRateAt,
   type ClimateHeader,
   type Encoding,
   type GridGeometry,
@@ -16,7 +18,7 @@ const FLAT: Encoding = { kind: 'linear', scale: 1, offset: 0 };
  * A one-cell grid with the same weather all year: `pre` mm of rain a day and
  * a share `r1` of days with rain.
  */
-function grid(pre: number, r1: number): ClimateGrid {
+function grid(pre: number, r1: number, elev?: number): ClimateGrid {
   const curve = (mean: Encoding): Encoding[] => [
     mean,
     ...Array<Encoding>(6).fill(FLAT),
@@ -38,11 +40,16 @@ function grid(pre: number, r1: number): ClimateGrid {
       r1: curve({ kind: 'linear', scale: 200, offset: 0 }),
       r5: curve({ kind: 'linear', scale: 200, offset: 0 }),
       r10: curve({ kind: 'linear', scale: 200, offset: 0 }),
+      elev: { kind: 'linear', scale: 0.025, offset: 0 },
     },
     nodata: 255,
+    ...(elev === undefined ? {} : { static: ['elev' as const] }),
   };
   const means = [168, 148, Math.sqrt(pre) * 40, r1 * 200, 0, 0];
-  const data = new Uint8Array(means.flatMap((m) => [m, 0, 0, 0, 0, 0, 0]));
+  const data = new Uint8Array([
+    ...means.flatMap((m) => [m, 0, 0, 0, 0, 0, 0]),
+    ...(elev === undefined ? [] : [elev * 0.025]),
+  ]);
   return new ClimateGrid(header, CELL, data.buffer);
 }
 
@@ -60,5 +67,30 @@ module('Unit | Utility | climate', function () {
 
   test('where it hardly ever rains, there is no rain per wet day', function (assert) {
     assert.true(Number.isNaN(grid(0, 0).at(0.5, 47, 8, 1).wetDayMm));
+  });
+
+  test('a point above its cell gets cooler highs and, less so, cooler lows', function (assert) {
+    // The cell's mean height is 1,000 m; the point 1,000 m higher, in mid-July.
+    const g = grid(0, 0, 1000);
+    const july = 6.5 / 12;
+    const flat = g.at(july, 47, 8, 1);
+    const up = g.at(july, 47, 8, 1, 2000);
+    closeTo(assert, up.highAltitudeShift, -lapseRateAt(july) * 1000, 0.001);
+    closeTo(assert, up.lowAltitudeShift, -LOW_LAPSE_RATE * 1000, 0.001);
+    closeTo(
+      assert,
+      up.high,
+      flat.high - 6.8,
+      0.01,
+      'highs: the Alps’ summer rate',
+    );
+    closeTo(
+      assert,
+      up.low,
+      flat.low - 3,
+      0.01,
+      'lows: the stations’ night rate',
+    );
+    assert.strictEqual(g.at(july, 47, 8, 1, null).lowAltitudeShift, 0);
   });
 });
