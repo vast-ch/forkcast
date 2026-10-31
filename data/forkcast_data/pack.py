@@ -144,18 +144,25 @@ def decode(name: str, b: np.ndarray) -> np.ndarray:
     return out
 
 
-def extras(climate: str, land: np.ndarray) -> dict[str, np.ndarray]:
-    """The layers built outside the monthly grid, as coefficients (TERMS, rows, cols) on land, NaN elsewhere:
-    the spread of single days (the same in every climate: how far days stray hardly depends on the years)
-    and the climate's own wind."""
+def _layers(path: Path, names, land: np.ndarray) -> dict[str, np.ndarray]:
+    """Monthly layers from an .npz as coefficients (TERMS, rows, cols) on land, NaN elsewhere."""
+    z = np.load(path)
     out = {}
-    for path, names in ((cpc.OUT, cpc.LAYERS.values()), (wind.grid_file(climate), wind.LAYERS)):
-        z = np.load(path)
-        for name in names:
-            c = fit(z[name], False).astype(np.float32)
-            c[:, ~land] = np.nan
-            out[name] = c
+    for name in names:
+        c = fit(z[name], False).astype(np.float32)
+        c[:, ~land] = np.nan
+        out[name] = c
     return out
+
+
+def spread(land: np.ndarray) -> dict[str, np.ndarray]:
+    """The spread of single days, the same in every climate: how far days stray hardly depends on the years."""
+    return _layers(cpc.OUT, cpc.LAYERS.values(), land)
+
+
+def extras(climate: str, land: np.ndarray) -> dict[str, np.ndarray]:
+    """The layers built outside the monthly grid: the spread of single days and the climate's own wind."""
+    return spread(land) | _layers(wind.grid_file(climate), wind.LAYERS, land)
 
 
 TILE = 10  # degrees; tiles start at multiples of it
