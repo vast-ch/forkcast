@@ -5,7 +5,7 @@ import { on } from '@ember/modifier';
 import { waitForPromise } from '@ember/test-waiters';
 import { fn } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
-import { ButtonGroup, SegmentedControl } from 'frontile/buttons';
+import { Button, ButtonGroup, SegmentedControl } from 'frontile/buttons';
 import { DatePicker, Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
 import {
@@ -432,11 +432,12 @@ export default class SidePanel extends Component<SidePanelSignature> {
                   />
                 </:calendar>
                 <:footer as |f|>
-                  <button
-                    type="button"
-                    class="{{btn}} wt-today-button"
-                    {{on "click" (fn this.pickToday f.setValue)}}
-                  >Today</button>
+                  <Button
+                    @variant="subtle"
+                    @color="primary"
+                    @size="xs"
+                    @onPress={{fn this.pickToday f.setValue}}
+                  >Today</Button>
                 </:footer>
               </DatePicker>
             </div>
