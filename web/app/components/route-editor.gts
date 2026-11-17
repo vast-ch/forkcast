@@ -4,6 +4,7 @@ import { on } from '@ember/modifier';
 import { Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
 import { not } from 'forkcast/utils/helpers';
+import { btn, btnGhost, btnPrimary } from 'forkcast/utils/classes';
 
 interface RouteEditorSignature {
   Args: {
@@ -35,8 +36,9 @@ export default class RouteEditor extends Component<RouteEditorSignature> {
   }
 
   <template>
+    {{! Framed in the drawing colour; where it sits gives the background. }}
     <div
-      class="flex flex-wrap items-center gap-2"
+      class="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-wt-draw"
       role="toolbar"
       aria-label={{this.label}}
       ...attributes
@@ -58,20 +60,20 @@ export default class RouteEditor extends Component<RouteEditorSignature> {
       {{/if}}
       <button
         type="button"
-        class="wt-btn is-primary"
+        class={{btnPrimary}}
         disabled={{not this.planner.canSave}}
         {{on "click" this.save}}
       >Save route</button>
       {{#if this.planner.isDrawing}}
         <button
           type="button"
-          class="wt-btn"
+          class={{btn}}
           {{on "click" this.undoPoint}}
         >Undo</button>
       {{/if}}
       <button
         type="button"
-        class="wt-btn is-ghost"
+        class={{btnGhost}}
         {{on "click" this.cancel}}
       >Cancel</button>
     </div>

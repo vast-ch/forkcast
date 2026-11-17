@@ -2,7 +2,7 @@ import { find, findAll } from '@ember/test-helpers';
 
 /** The button (or button-like label) whose text is `text`. */
 export function button(text: string): HTMLElement {
-  const el = findAll('button, label.wt-btn').find(
+  const el = findAll('button, label:has(> input[type="file"])').find(
     (b) => b.textContent?.trim() === text,
   );
   if (!el) throw new Error(`No button "${text}"`);

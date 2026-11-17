@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import RangeInput from 'forkcast/components/range-input';
 import TempPill from 'forkcast/components/temp-pill';
+import { helpDemo } from 'forkcast/utils/classes';
 
 /** The temperature colours, as the app's own pills: a scale, and one to try. */
 export default class TempScale extends Component {
@@ -18,7 +19,7 @@ export default class TempScale extends Component {
   };
 
   <template>
-    <div class="wt-help-demo">
+    <div class={{helpDemo}}>
       <div class="flex flex-wrap gap-1.5">
         {{#each this.scale as |t|}}
           <TempPill @t={{t}} />

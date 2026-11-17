@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import RangeInput from 'forkcast/components/range-input';
 import { LOW_LAPSE_RATE, lapseRateAt, MONTHS } from 'forkcast/utils/climate';
 import TempPill from 'forkcast/components/temp-pill';
+import { helpDemo, inlineStats } from 'forkcast/utils/classes';
 
 /**
  * The altitude correction with the app's own rates (seasonal for highs, one
@@ -70,7 +71,7 @@ export default class AltitudeDemo extends Component {
   };
 
   <template>
-    <div class="wt-help-demo flex flex-col gap-3">
+    <div class="{{helpDemo}} flex flex-col gap-3">
       <RangeInput
         @label="Month: {{this.monthName}}"
         @value={{this.monthValue}}
@@ -87,13 +88,13 @@ export default class AltitudeDemo extends Component {
         max="1500"
         step="100"
       />
-      <dl class="wt-inline-stats">
+      <dl class={{inlineStats}}>
         <div><dt>High</dt><dd>{{this.ratePerKm}}°C per 1,000m:
             {{this.shiftText}}</dd></div>
         <div><dt>Cell</dt><dd><TempPill @t={{this.cellHigh}} /></dd></div>
         <div><dt>Your point</dt><dd><TempPill @t={{this.adjusted}} /></dd></div>
       </dl>
-      <dl class="wt-inline-stats">
+      <dl class={{inlineStats}}>
         <div><dt>Low</dt><dd>{{this.lowRatePerKm}}°C per 1,000m:
             {{this.lowShiftText}}</dd></div>
         <div><dt>Cell</dt><dd><TempPill @t={{this.cellLow}} /></dd></div>

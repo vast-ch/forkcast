@@ -15,6 +15,6 @@ module('Integration | Component | temp-pill', function (hooks) {
   test('it shows a dash where there is no climate data', async function (assert) {
     await render(<template><TempPill @t={{null}} /></template>);
     assert.dom('.wt-temp-pill').hasText('–');
-    assert.dom('.wt-temp-pill').hasAttribute('style', /var\(--wt-band\)/);
+    assert.dom('.wt-temp-pill').hasAttribute('style', /var\(--color-wt-band\)/);
   });
 });

@@ -1,4 +1,5 @@
 import type { TOC } from '@ember/component/template-only';
+import { helpDefs } from 'forkcast/utils/classes';
 
 /** The About tab in Nerd mode: how Forkcast is built and how to check it yourself. */
 const NerdAbout: TOC<object> = <template>
@@ -14,7 +15,7 @@ const NerdAbout: TOC<object> = <template>
     </p>
 
     <h3>How it's built</h3>
-    <dl class="wt-help-defs">
+    <dl class={{helpDefs}}>
       <div><dt>The app</dt><dd>Ember with Vite and Embroider, TypeScript in .gts
           files, Leaflet for the map, Tailwind and Frontile for the interface.
           It runs entirely in the browser; Netlify serves the built files.</dd></div>

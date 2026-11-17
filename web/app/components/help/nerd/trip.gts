@@ -1,6 +1,7 @@
 import type { TOC } from '@ember/component/template-only';
 import Measured from 'forkcast/components/help/measured';
 import { value, withInterval } from 'forkcast/utils/verify';
+import { helpTable } from 'forkcast/utils/classes';
 
 /** The Trip tab in Nerd mode: how a day's and a trip's numbers are made, and how they hold up against real days. */
 const NerdTrip: TOC<object> = <template>
@@ -76,7 +77,7 @@ const NerdTrip: TOC<object> = <template>
         resampling the places.
       </p>
 
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>Station days outside the usual range (10% each side if right)</caption>
         <thead><tr><th scope="col"></th><th scope="col">Below</th><th
               scope="col"
@@ -109,7 +110,7 @@ const NerdTrip: TOC<object> = <template>
         interpolation between stations, so part of the difference is CPC's.
       </p>
 
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>Real trips beating the likely lowest low and highest high (50%
           if right)</caption>
         <thead><tr><th scope="col"></th><th scope="col">Spells counted (the app)</th><th
@@ -162,7 +163,7 @@ const NerdTrip: TOC<object> = <template>
         themselves (below), they come out close to half.
       </p>
 
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>Real trips outside the rainy-day range (10% each side if
           right), and the real count minus the expected one, per trip</caption>
         <thead><tr><th scope="col"></th><th scope="col">Fewer</th><th
@@ -213,7 +214,7 @@ const NerdTrip: TOC<object> = <template>
         works it out on a route. The spreads are still CPC's, measured on its
         grid.
       </p>
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>Station days outside the usual range (10% each side if right),
           and trips beating the likely extremes (50% if right)</caption>
         <thead><tr><th scope="col"></th><th scope="col">Europe</th><th
@@ -227,7 +228,7 @@ const NerdTrip: TOC<object> = <template>
           {{/each}}
         </tbody>
       </table>
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>Real trips outside the rainy-day range at stations (10% each
           side if right), and the real count minus the expected one</caption>
         <thead><tr><th scope="col"></th><th scope="col">Fewer</th><th

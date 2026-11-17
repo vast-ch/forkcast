@@ -25,6 +25,13 @@ import NerdAccuracy from 'forkcast/components/help/nerd/accuracy';
 import NerdSharing from 'forkcast/components/help/nerd/sharing';
 import NerdSources from 'forkcast/components/help/nerd/sources';
 import NerdAbout from 'forkcast/components/help/nerd/about';
+import {
+  helpColumn,
+  helpDefs,
+  helpDemo,
+  helpLink,
+  prose,
+} from 'forkcast/utils/classes';
 
 export default class Help extends Component<{
   Args: { controller: HelpController };
@@ -86,27 +93,29 @@ export default class Help extends Component<{
 
   <template>
     {{pageTitle this.sectionLabel " · How it works"}}
-    <div class="wt-help-page">
-      <header class="wt-help-header">
+    <div class="h-full overflow-y-auto px-5 pt-8 pb-16">
+      <header class={{helpColumn}}>
         <nav class="flex justify-between">
-          <LinkTo @route="index" class="wt-help-link">← Back to the map</LinkTo>
-          <LinkTo @route="changelog" class="wt-help-link">What's new</LinkTo>
+          <LinkTo @route="index" class="wt-help-link {{helpLink}}">← Back to the
+            map</LinkTo>
+          <LinkTo @route="changelog" class="wt-help-link {{helpLink}}">What's
+            new</LinkTo>
         </nav>
-        <h1 class="wt-logo-heading mt-3"><LinkTo
-            @route="index"
-            aria-label="Forkcast home"
-          ><Logo /></LinkTo></h1>
-        <p class="wt-help-lede">What the weather usually does along your bike
-          route, day by day: how to read it, where the numbers come from, and
-          how far to trust them.</p>
-        <div class="wt-help-nerd">
+        <h1 class="mt-3"><LinkTo @route="index" aria-label="Forkcast home"><Logo
+            /></LinkTo></h1>
+        <p class="mt-3 text-[1.1rem] text-balance text-wt-muted">What the
+          weather usually does along your bike route, day by day: how to read
+          it, where the numbers come from, and how far to trust them.</p>
+        <div
+          class="wt-help-nerd mt-4 flex flex-wrap items-center gap-x-3 gap-y-1"
+        >
           <Switch
             @label="Nerd mode"
             @size="sm"
             @isSelected={{this.isNerd}}
             @onChange={{this.setNerd}}
           />
-          <span class="wt-help-nerd-hint">{{if
+          <span class="text-sm text-wt-muted">{{if
               this.isNerd
               "How each number is made, and how well it holds up."
               "Switch on for the formulas and the measurements."
@@ -118,7 +127,10 @@ export default class Help extends Component<{
         @label="Help sections"
         @variant="underline"
         @size="sm"
-        class="wt-help-tabs"
+        {{! Tabs wrap onto more lines on narrow screens rather than scroll
+            sideways, and are tighter than Frontile's default, so all fit one
+            line on a laptop. }}
+        class="{{helpColumn}} mt-6 block *:flex-wrap [&_a]:px-[0.55rem]"
         as |Nav|
       >
         {{#each this.sections as |sec|}}
@@ -130,7 +142,7 @@ export default class Help extends Component<{
         {{/each}}
       </TabNav>
 
-      <article class="wt-help">
+      <article class={{prose}}>
         {{#if (this.shows "map")}}
           {{#if this.isNerd}}
             <NerdMap />
@@ -181,14 +193,16 @@ export default class Help extends Component<{
                 follow your choice (the legend always shows the current ones),
                 in rainy days a week:
               </p>
-              <dl class="wt-help-defs">
+              <dl class={{helpDefs}}>
                 {{#each this.rainSteps as |r|}}
                   <div><dt>{{r.mm}} mm</dt><dd>
                       {{#each r.tiers as |t|}}
-                        <span class="wt-help-rain-step">{{t.emoji}}
+                        <span class="mr-3 whitespace-nowrap">{{t.emoji}}
                           {{t.label}}</span>
                       {{/each}}
-                      <span class="wt-help-rain-kind">({{r.kind}})</span>
+                      <span
+                        class="whitespace-nowrap text-wt-muted"
+                      >({{r.kind}})</span>
                     </dd></div>
                 {{/each}}
               </dl>
@@ -223,7 +237,7 @@ export default class Help extends Component<{
                 fold it into a chip, and again to bring it back; this one works
                 too:
               </p>
-              <div class="wt-help-demo">
+              <div class={{helpDemo}}>
                 <Legend />
               </div>
 
@@ -251,7 +265,7 @@ export default class Help extends Component<{
 
               <h3>More on the map</h3>
               <p>The buttons at the bottom of “Map” switch details on and off:</p>
-              <dl class="wt-help-defs">
+              <dl class={{helpDefs}}>
                 <div><dt>Borders</dt><dd>Country outlines.</dd></div>
                 <div><dt>Relief</dt><dd>Hill shading, so mountain ranges stand
                     out. It only darkens, so the temperature colours stay true.</dd></div>
@@ -357,7 +371,7 @@ export default class Help extends Component<{
               </p>
 
               <h3>A day's numbers</h3>
-              <dl class="wt-help-defs">
+              <dl class={{helpDefs}}>
                 <div><dt>Low</dt><dd>The low where you sleep, at the end of the
                     day's ride.</dd></div>
                 <div><dt>High</dt><dd>The day's high in the middle of the day's
@@ -401,7 +415,7 @@ export default class Help extends Component<{
               <DaylightDemo />
 
               <h3>The summary</h3>
-              <dl class="wt-help-defs">
+              <dl class={{helpDefs}}>
                 <div><dt>Days</dt><dd>The whole trip, riding and rest days, and
                     the arrival date.</dd></div>
                 <div><dt>High</dt><dd>The average high over the riding days.</dd></div>
@@ -518,7 +532,7 @@ export default class Help extends Component<{
                 for what it does best, all from
                 {{this.years}}.
               </p>
-              <dl class="wt-help-defs">
+              <dl class={{helpDefs}}>
                 <div><dt>ERA5-Land</dt><dd>From the European Copernicus Climate
                     Change Service: a weather model re-run over the past and
                     continuously corrected with real observations, giving the
@@ -542,7 +556,7 @@ export default class Help extends Component<{
               </p>
 
               <h3>How they're turned into the numbers</h3>
-              <dl class="wt-help-defs">
+              <dl class={{helpDefs}}>
                 <div><dt>Rain</dt><dd>From ERA5-Land's daily rain totals. Every
                     day from
                     {{this.years}}

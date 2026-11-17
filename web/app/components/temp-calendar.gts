@@ -49,9 +49,10 @@ export default class TempCalendar extends Component<TempCalendarSignature> {
       <:day as |day|>
         {{#let (this.swatch day.date) as |swatch|}}
           <span
-            class="wt-temp-day
+            class="wt-temp-day flex size-[calc(var(--calendar-cell-size)-0.25rem-6px)] items-center justify-center rounded-full
               {{if day.isOutside 'is-outside'}}
-              {{if swatch 'has-temp'}}"
+              {{if swatch 'has-temp'}}
+              {{if day.isOutside (if swatch 'opacity-45')}}"
             style={{swatch.style}}
             title={{swatch.title}}
           >{{day.dayOfMonth}}</span>

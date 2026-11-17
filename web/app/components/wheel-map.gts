@@ -50,10 +50,21 @@ import {
 
 /** The selected day, as everywhere in the app: its night stop's ring and its
  * stretch of route, a vivid purple that stands out on every temperature
- * colour (it glows a little, see .wt-stop.is-active and .wt-day-stretch in
- * app.css). The other stops are ringed in plain ink. */
+ * colour (it glows a little, PICK_GLOW). The other stops are ringed in plain
+ * ink, with a white halo that keeps them apart from the colours below. */
 const ROUTE_ACCENT = '#a020f0';
 const STOP_RING = '#17212b';
+const PICK_GLOW =
+  'drop-shadow-[0_0_2px_color-mix(in_srgb,var(--color-wt-pick)_90%,transparent)]';
+const STOP_HALO = 'drop-shadow-[0_0_2px_rgb(255_255_255/0.9)]';
+
+/** A map label's text: a white halo keeps it readable over any colour. */
+const LABEL_TEXT =
+  '[&>span]:pointer-events-none [&>span]:absolute [&>span]:whitespace-nowrap';
+/** A town: its name beside a dot, on a zero-size marker at its point. */
+const PLACE = `wt-place ${LABEL_TEXT} [&>span]:top-[-0.6em] [&>span]:left-[5px] [&>span]:text-[10px] [&>span]:text-wt-ink [&>span]:[text-shadow:0_0_2px_#fff,0_0_2px_#fff,0_0_3px_#fff] before:absolute before:-top-0.5 before:-left-0.5 before:size-1 before:rounded-full before:bg-wt-ink before:shadow-[0_0_0_1px_#fff] before:content-['']`;
+/** A date over a night stop: a small tag just above the pin. */
+const STOP_DATE = `wt-stop-date ${LABEL_TEXT} [&>span]:bottom-2 [&>span]:left-0 [&>span]:-translate-x-1/2 [&>span]:rounded [&>span]:bg-wt-ink/85 [&>span]:px-1 [&>span]:text-[10px] [&>span]:leading-normal [&>span]:font-semibold [&>span]:text-white`;
 
 /** Where the map opens the first time: Europe. */
 const FIRST_VIEW: L.LatLngBoundsExpression = [
@@ -86,7 +97,7 @@ const STICKY_TIP: L.TooltipOptions = { sticky: true, direction: 'top' };
 const PANES: [name: string, zIndex: number, isInteractive: boolean][] = [
   ['land', 200, false],
   ['climate', 300, false],
-  // Relief shading, multiplied onto the colours (see .leaflet-relief-pane).
+  // Relief shading, multiplied onto the colours (see the map's classes).
   ['relief', 320, false],
   ['rain', 350, false],
   ['wind', 355, false],
@@ -359,9 +370,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           pane: 'squares',
           interactive: false,
           weight: 1,
+          // Dashed until a click starts loading it.
           className: atlas.loading.has(id)
-            ? 'wt-square wt-square-loading'
-            : 'wt-square',
+            ? 'stroke-wt-accent [stroke-opacity:0.45] fill-wt-accent [fill-opacity:0.12]'
+            : 'stroke-wt-accent [stroke-opacity:0.45] [stroke-dasharray:4_4] fill-wt-accent [fill-opacity:0.04]',
         }).addTo(group);
         // Its path exists once the group is on the map.
         square.on('add', () =>
@@ -400,7 +412,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             interactive: false,
             stroke: false,
             fillOpacity: 1,
-            className: 'wt-lake',
+            className: 'fill-wt-sea',
           }).addTo(group);
         }
         for (const river of w.rivers) {
@@ -408,7 +420,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             pane: 'water',
             interactive: false,
             weight: 1.2,
-            className: 'wt-river',
+            className: 'stroke-[#5f8db3]/85',
           }).addTo(group);
         }
       }
@@ -455,7 +467,9 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             name,
             lat,
             lon,
-            isCapital ? 'wt-place is-capital' : 'wt-place',
+            isCapital
+              ? `${PLACE} is-capital [&>span]:text-[11px] [&>span]:font-semibold`
+              : PLACE,
           ).addTo(group);
         }
       }
@@ -505,7 +519,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       this.layers.land = L.geoJSON(countries, {
         pane: 'land',
         interactive: false,
-        style: { stroke: false, fillOpacity: 1, className: 'wt-land' },
+        style: { stroke: false, fillOpacity: 1, className: 'fill-wt-land' },
       }).addTo(map);
     }
     this.layer('borders', [countries, s.details.borders], (group) => {
@@ -513,7 +527,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       L.geoJSON(countries, {
         pane: 'borders',
         interactive: false,
-        style: { weight: 0.8, fill: false, className: 'wt-border' },
+        style: { weight: 0.8, fill: false, className: 'stroke-wt-border/55' },
       }).addTo(group);
     });
     // The loaded tiles in view: grids differ per climate, so a switch
@@ -620,7 +634,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             weight: 2.5,
             opacity: 0.75,
             dashArray: '6 5',
-            className: 'wt-overview-route',
+            className: 'cursor-pointer hover:stroke-4 hover:[stroke-opacity:1]',
           })
             .bindTooltip(r.name, STICKY_TIP)
             .on(
@@ -680,7 +694,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
           color: isHi ? ROUTE_ACCENT : STOP_RING,
           weight: isHi ? 3 : 2,
-          className: isHi ? 'wt-stop is-active' : 'wt-stop',
+          className: isHi ? PICK_GLOW : STOP_HALO,
           fillColor: tempSwatch(d.weather.high, '#888'),
           fillOpacity: 1,
         });
@@ -704,7 +718,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
             weight: 6,
             opacity: 0.95,
             interactive: false,
-            className: 'wt-day-stretch',
+            className: PICK_GLOW,
           }).addTo(group);
         }
       }
@@ -715,7 +729,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       const { trip } = s;
       if (!trip) return;
       for (const { day, label: text } of milestones(trip, s.dates)) {
-        label(text, day.sleep.lat, day.sleep.lon, 'wt-stop-date').addTo(group);
+        label(text, day.sleep.lat, day.sleep.lon, STOP_DATE).addTo(group);
       }
     });
 
@@ -1017,8 +1031,11 @@ export default class WheelMap extends Component<WheelMapSignature> {
   }
 
   <template>
+    {{! Leaflet's own elements: tooltips in the app's type, a shorter
+        attribution on phones, the relief multiplied onto the colours, and no
+        zoom animation for those who'd rather not. }}
     <div
-      class="wt-map h-full w-full"
+      class="h-full w-full bg-wt-sea font-body [&_.leaflet-relief-pane]:mix-blend-multiply [&_.leaflet-tooltip]:text-[12px] max-desktop:[&_.leaflet-control-attribution]:text-[9px] max-desktop:[&_.leaflet-control-attribution]:leading-[1.3] motion-reduce:[&.leaflet-zoom-anim_.leaflet-zoom-animated]:transition-none!"
       aria-label="Map of the climate around {{this.weekLabel}} and routes"
       {{LeafletModifier map=this state=this.state}}
       ...attributes

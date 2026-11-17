@@ -18,13 +18,14 @@ import HelpLink from 'forkcast/components/help-link';
 import RouteEditor from 'forkcast/components/route-editor';
 import type { TOC } from '@ember/component/template-only';
 import type { Trip } from 'forkcast/utils/itinerary';
+import { btnPrimary } from 'forkcast/utils/classes';
 
 /** The day-by-day chart under the map, once there is a trip. */
 const ChartPanel: TOC<{ Args: { trip?: Trip }; Element: HTMLElement }> =
   <template>
     {{#if @trip}}
       <section
-        class="wt-chart-panel min-w-0 px-4 pt-3 pb-2"
+        class="min-w-0 border-t border-wt-line bg-wt-paper px-4 pt-3 pb-2"
         aria-label="Weather by day"
         ...attributes
       >
@@ -55,28 +56,45 @@ export default class IndexTemplate extends Component {
 
   <template>
     {{#if this.media.isPhone}}
-      {{! Phones: map first, the trip below it, every setting in a drawer. }}
-      <main class="wt-shell wt-phone">
-        <header class="wt-phone-bar">
-          <LinkTo @route="index" aria-label="Forkcast home" class="min-w-0">
-            <Logo class="wt-logo-small" />
+      {{! Phones: map first, the trip below it, every setting in a drawer.
+          Each part keeps its full height and the page scrolls: the panel's
+          desktop sizing (shrink to fit, scroll inside) would squeeze the trip
+          overview into whatever is left under the map. }}
+      <main class="wt-phone flex h-full flex-col overflow-y-auto *:flex-none">
+        <header
+          class="sticky top-0 z-[1100] flex items-center gap-3 border-b border-wt-line bg-wt-paper px-4 py-2"
+        >
+          <LinkTo
+            @route="index"
+            aria-label="Forkcast home"
+            class="mr-auto min-w-0"
+          >
+            <Logo @isSmall={{true}} />
           </LinkTo>
           <HelpLink @iconClass="size-6" />
           <button
             type="button"
-            class="wt-btn is-primary"
+            class="{{btnPrimary}} gap-1.5"
             aria-haspopup="dialog"
             aria-expanded={{if this.isSettingsOpen "true" "false"}}
             {{on "click" this.openSettings}}
           ><SlidersHorizontal class="size-4" aria-hidden="true" />
             Settings</button>
         </header>
-        <section class="wt-phone-map relative" aria-label="Map">
+        {{! isolate: Leaflet's z-indexes (up to 1000) stay inside the map, so
+            drawers and the phone bar stay on top. }}
+        <section
+          class="wt-phone-map relative isolate h-[58vh] min-h-[300px]"
+          aria-label="Map"
+        >
           <WheelMap />
-          <Legend class="absolute bottom-6 left-3 z-[1000]" />
+          <Legend class="absolute bottom-[1.6rem] left-2 z-[1000]" />
           {{#if this.planner.isDrawing}}
             {{! Drawing needs the map, so the drawer closes and these take over. }}
-            <RouteEditor class="wt-draw-bar" @onSave={{this.closeSettings}} />
+            <RouteEditor
+              class="absolute top-2 right-2 left-14 z-[1000] bg-wt-paper/94 px-2.5 py-2"
+              @onSave={{this.closeSettings}}
+            />
           {{/if}}
         </section>
         <ChartPanel @trip={{this.planner.trip}} />
@@ -98,14 +116,17 @@ export default class IndexTemplate extends Component {
         </Drawer>
       {{/if}}
     {{else}}
-      <main class="wt-shell wt-layout">
-        <SidePanel class="wt-layout-panel" />
-        <section class="wt-layout-map relative min-h-0" aria-label="Map">
+      {{! Panel on the left, the map and the day chart on the right. }}
+      <main
+        class="grid h-full grid-cols-[380px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] overflow-hidden"
+      >
+        <SidePanel class="row-span-2 overflow-hidden border-r border-wt-line" />
+        <section class="relative isolate min-h-0" aria-label="Map">
           <WheelMap />
           <HoverCard class="absolute top-3 right-3 z-[1000]" />
           <Legend class="absolute bottom-6 left-3 z-[1000]" />
         </section>
-        <ChartPanel @trip={{this.planner.trip}} class="wt-layout-chart" />
+        <ChartPanel @trip={{this.planner.trip}} class="col-start-2" />
       </main>
     {{/if}}
   </template>
