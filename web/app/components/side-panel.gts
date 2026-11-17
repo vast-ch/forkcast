@@ -5,7 +5,7 @@ import { on } from '@ember/modifier';
 import { waitForPromise } from '@ember/test-waiters';
 import { fn } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
-import { ButtonGroup, SegmentedControl } from 'frontile/buttons';
+import { Button, ButtonGroup, SegmentedControl } from 'frontile/buttons';
 import { DatePicker, Input, Switch } from 'frontile/forms';
 import type PlannerService from 'forkcast/services/planner';
 import {
@@ -213,6 +213,8 @@ export default class SidePanel extends Component<SidePanelSignature> {
   setStart = (d: Date | null) => {
     if (d) this.planner.setStart(isoDate(d));
   };
+  /** The picker's Today button: through the picker, like a click on the day. */
+  pickToday = (setValue: (d: Date) => void) => setValue(new Date());
 
   /** The start picker's days: the temperature at the route's start. */
   startTempOn = (date: Date) => this.planner.startTempOn(date);
@@ -429,6 +431,14 @@ export default class SidePanel extends Component<SidePanelSignature> {
                     class="p-2"
                   />
                 </:calendar>
+                <:footer as |f|>
+                  <Button
+                    @variant="subtle"
+                    @color="primary"
+                    @size="xs"
+                    @onPress={{fn this.pickToday f.setValue}}
+                  >Today</Button>
+                </:footer>
               </DatePicker>
             </div>
             {{#each this.tripFields as |f|}}

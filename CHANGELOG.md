@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.17.0 - 2026-11-17
+
+### Added
+
+- The start date's calendar has a Today button, and today's date is bold and underlined so it's easy to find.
+
+### Changed
+
+- The picked start date is ringed in purple in the calendar, the same colour that marks the picked day on the map.
+
 ## v0.16.0 - 2026-11-17
 
 ### Added

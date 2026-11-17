@@ -11,8 +11,9 @@ export const focusRing =
 // can't override another's.
 const button =
   'inline-flex h-8 cursor-pointer items-center rounded-lg border px-3 text-sm font-medium focus-within:outline-2 focus-within:outline-wt-accent disabled:cursor-not-allowed disabled:opacity-45';
-/** A plain action button (Frontile's Button rendered oversized here and its
- * press handling didn't respond to plain clicks). */
+/** A plain action button (Frontile's Button once rendered oversized here and
+ * its press handling didn't respond to plain clicks; inside a Frontile
+ * component, its own Button follows its docs). */
 export const btn = `${button} border-wt-line bg-white text-wt-ink hover:bg-wt-accent-soft`;
 /** The one action that matters most where it is: Save, Settings. */
 export const btnPrimary = `${button} border-wt-ink bg-wt-ink text-white hover:bg-wt-accent`;
