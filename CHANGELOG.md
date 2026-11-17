@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The EuroVelo routes now come from OpenStreetMap, the map kept up to date by the people who ride them, instead of a one-off download of EuroVelo's own tracks, and their climbing from a terrain model with a point every 90 m. Where the map has a hole in a route, it's filled with the best way for a touring bike, so EV7 now runs all the way down southern Italy to Sicily, and EV13 round the Gulf of Finland and through the Baltic states, instead of crossing the sea in a straight line.
+
 ## v0.14.1 - 2026-11-17
 
 ### Fixed

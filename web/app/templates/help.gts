@@ -464,10 +464,10 @@ export default class Help extends Component<{
                 both banks of a river or alternatives through different
                 countries, Forkcast follows the shortest way from start to
                 finish; ferries count as travel time, not riding distance.
-                Climbing comes from a terrain model with a point every 90 m.
-                The demo route, Interlaken – Málaga, runs
-                down the Rhône valley and Spain's east coast, routed for touring
-                bikes on cycle-friendly roads.
+                Climbing comes from a terrain model with a point every 90 m. The
+                demo route, Interlaken – Málaga, runs down the Rhône valley and
+                Spain's east coast, routed for touring bikes on cycle-friendly
+                roads.
               </p>
               <p>
                 Pick a route in the list or click a dashed one on the map. The ⇅
@@ -842,9 +842,9 @@ export default class Help extends Component<{
                     rel="noopener noreferrer"
                   >Open Database License (ODbL)</a>. Their heights: Copernicus
                   DEM GLO-90, © DLR e.V. 2010–2014 and © Airbus Defence and
-                  Space GmbH 2014–2018, provided under COPERNICUS by the European
-                  Union and ESA; all rights reserved. EuroVelo® is a registered
-                  trademark of the European Cyclists' Federation.
+                  Space GmbH 2014–2018, provided under COPERNICUS by the
+                  European Union and ESA; all rights reserved. EuroVelo® is a
+                  registered trademark of the European Cyclists' Federation.
                 </li>
                 <li>
                   <strong>Demo route:</strong>
