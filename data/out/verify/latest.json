@@ -1,7 +1,7 @@
 {
  "run": {
   "date": "2026-10-31",
-  "code": "812deaa5bb18",
+  "code": "5379fee9239d",
   "grids": "791bde74e57e+714c920dc700"
  },
  "backtest": [
@@ -3822,7 +3822,7 @@
    "field": "tiles",
    "area": "World",
    "stat": "median kB",
-   "value": 82.37,
+   "value": 117.7,
    "unit": "kB"
   },
   {
@@ -3831,7 +3831,7 @@
    "field": "tiles",
    "area": "World",
    "stat": "median kB gzipped",
-   "value": 21.38,
+   "value": 27.98,
    "unit": "kB"
   },
   {
@@ -3840,7 +3840,7 @@
    "field": "tiles",
    "area": "World",
    "stat": "largest kB gzipped",
-   "value": 56.64,
+   "value": 71.78,
    "unit": "kB"
   },
   {
@@ -3849,7 +3849,7 @@
    "field": "tiles",
    "area": "World",
    "stat": "all MB",
-   "value": 26.11,
+   "value": 37.3,
    "unit": "MB"
   },
   {
