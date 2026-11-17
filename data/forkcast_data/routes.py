@@ -1,6 +1,6 @@
 """Build out/routes/: one JSON file per preset route plus index.json.
 
-- EuroVelo routes come from the official GPX tracks (see eurovelo.py).
+- EuroVelo routes come from OpenStreetMap's route relations (see eurovelo.py).
 - Hand-made routes (anchors.py) are ordered lists of towns; consecutive towns
   are routed with BRouter's "trekking" (touring bike) profile, so distances
   are real riding distances. Legs marked as ferries are straight lines and do
@@ -8,11 +8,17 @@
 
 - download (`brouter`): geocodes the hand-made routes' stops (geocode.py)
   and fetches every leg from BRouter into cache/brouter/, one file per leg.
+- download (`eurovelo-legs`): the stretches the EuroVelo routes need routed
+  (eurovelo.legs(): unmapped gaps, ends the mapping stops short of), listed
+  in cache/brouter/eurovelo-legs.json and fetched the same way. It needs the
+  bicycle routes, so it builds them first if they are out of date. Where
+  BRouter finds no route, the leg file keeps BRouter's answer as an error,
+  and the route keeps its straight gap there.
 - build (`routes`): reads only cached files, never the network. Besides one
   file per route it writes overview.json, every route simplified to ~1 km, so
   the app can draw all of them on the map cheaply.
 
-Usage: uv run python -m forkcast_data download brouter | build routes [--fresh]
+Usage: uv run python -m forkcast_data download brouter | download eurovelo-legs | build routes [--fresh]
 """
 
 import hashlib
@@ -20,10 +26,11 @@ import json
 import math
 import sys
 import time
+import urllib.error
 import urllib.parse
 from pathlib import Path
 
-from . import anchors, eurovelo, geocode, pipeline
+from . import anchors, dem, eurovelo, geocode, osm, pipeline
 from .anchors import ROUTES
 from .eurovelo import haversine_km
 from .pipeline import CACHE as CACHE_ROOT
@@ -33,6 +40,7 @@ CACHE = CACHE_ROOT / "brouter"
 GEOCODED = geocode.CACHE
 OUT_DIR = OUT / "routes"
 BROUTER = "https://brouter.de/brouter"
+EUROVELO_LEGS = CACHE / "eurovelo-legs.json"
 SIMPLIFY_M = 40  # Douglas-Peucker tolerance
 
 
@@ -63,18 +71,85 @@ def legs(geo):
             yield a, b
 
 
+def _fetch(a, b, fresh: bool, may_fail: bool = False) -> None:
+    q = urllib.parse.urlencode({"lonlats": _lonlats(a, b), "profile": "trekking", "alternativeidx": 0, "format": "geojson"})
+
+    def fetch(to):
+        try:
+            http_get(f"{BROUTER}?{q}", to, timeout=300)
+        except urllib.error.HTTPError as e:
+            if not may_fail or e.code == 429:
+                raise
+            error = e.read().decode(errors="replace")[:500]
+            if _busy(error):
+                raise RuntimeError(f"BRouter is busy: {error.strip()}") from e
+            # BRouter says why it found no route (e.g. "to-position not mapped"): kept, so it isn't asked again.
+            to.write_text(json.dumps({"error": error}))
+
+    try:
+        status = ensure(leg_path(a, b), fetch, _validate_ev_leg if may_fail else _validate_leg, fresh)
+    except RuntimeError as e:
+        if not may_fail:
+            raise
+        log(f"  {e}; left for the next run ({_lonlats(a, b)})")
+        return
+    if status.startswith("got"):
+        log(f"  {status} ({_lonlats(a, b)})")
+        time.sleep(1.5)  # be polite to the public server
+
+
+def _busy(error: str) -> bool:
+    """A refusal because the public server was busy (a long leg cut short), not a leg with no route."""
+    return "watchdog" in error or "retry later" in error.lower()
+
+
+def _validate_ev_leg(path: Path) -> None:
+    gj = json.loads(path.read_text())
+    if "error" not in gj:
+        _validate_leg(path)
+    elif _busy(gj["error"]):
+        raise ValueError("BRouter was busy")
+
+
 def download(fresh: bool = False) -> None:
     geocode.main(fresh)
     geo = json.loads(GEOCODED.read_text())
     for a, b in legs(geo):
-        q = urllib.parse.urlencode(
-            {"lonlats": _lonlats(a, b), "profile": "trekking", "alternativeidx": 0, "format": "geojson"}
-        )
-        status = ensure(leg_path(a, b), lambda to, q=q: http_get(f"{BROUTER}?{q}", to, timeout=180), _validate_leg, fresh)
-        if status.startswith("got"):
-            log("  " + status)
-            time.sleep(1.5)  # be polite to the public server
+        _fetch(a, b, fresh)
     log("  BRouter legs ready")
+
+
+def download_eurovelo(fresh: bool = False) -> None:
+    osm.build()
+    wanted = eurovelo.legs()
+    CACHE.mkdir(parents=True, exist_ok=True)
+    EUROVELO_LEGS.write_text(json.dumps(wanted))
+    for a, b in wanted:
+        _fetch(a, b, fresh, may_fail=True)
+    have = [leg_path(a, b) for a, b in wanted if leg_path(a, b).exists()]
+    failed = sum("error" in json.loads(p.read_text()) for p in have)
+    log(f"  {len(have)} of {len(wanted)} EuroVelo legs ready, {failed} without a route")
+
+
+def eurovelo_leg(a, b):
+    """The cached leg for a EuroVelo fill as [[lat, lon, ferry], ...], or None where BRouter found no route.
+    `ferry`: the line into the point is a ferry (`route=ferry` in BRouter's way tags)."""
+    path = leg_path(a, b)
+    if not path.exists():
+        raise SystemExit(f"Missing BRouter leg {path.name} for EuroVelo. Run: download eurovelo-legs")
+    gj = json.loads(path.read_text())
+    if "error" in gj:
+        return None
+    feature = gj["features"][0]
+    # Each message row is a stretch of one way, ending at its position (micro-degrees); the
+    # coordinates up to that one are on that way.
+    rows = [(int(r[0]), int(r[1]), "route=ferry" in r[9]) for r in feature["properties"].get("messages", [])[1:]]
+    out, i = [], 0
+    for c in feature["geometry"]["coordinates"]:
+        out.append([c[1], c[0], i < len(rows) and rows[i][2]])
+        if i < len(rows) and (round(c[0] * 1e6), round(c[1] * 1e6)) == rows[i][:2]:
+            i += 1
+    return out
 
 
 def brouter_leg(a, b):
@@ -183,16 +258,19 @@ def outputs() -> list[Path]:
 
 def build(fresh: bool = False) -> None:
     geo = json.loads(GEOCODED.read_text())
-    inputs = [GEOCODED, eurovelo.COUNTRIES]
-    inputs += [eurovelo.GPX_DIR / f"ev{c[0]}.gpx.gz" for c in eurovelo.CATALOG]
+    inputs = [GEOCODED, eurovelo.COUNTRIES, osm.BICYCLE, *dem.files()]
     inputs += [leg_path(a, b) for a, b in legs(geo)]
-    code = code_hash(sys.modules[__name__], eurovelo, anchors, pipeline)
+    if EUROVELO_LEGS.exists():
+        inputs += [EUROVELO_LEGS] + [leg_path(a, b) for a, b in json.loads(EUROVELO_LEGS.read_text())]
+    else:
+        inputs.append(EUROVELO_LEGS)
+    code = code_hash(sys.modules[__name__], eurovelo, osm, dem, anchors, pipeline)
     stamp = Stamp("routes", inputs, outputs(), code)
     if not fresh and stamp.up_to_date():
         log("  routes are up to date")
         return
     if missing := stamp.missing_inputs():
-        raise SystemExit(f"Missing route inputs ({missing[0].name}, …). Run: download eurovelo, download brouter, build borders")
+        raise SystemExit(f"Missing route inputs ({missing[0].name}, …). Run: download osm, download dem, download brouter, download eurovelo-legs, build borders")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     index = []
     for route in ROUTES:
@@ -200,8 +278,8 @@ def build(fresh: bool = False) -> None:
         r = build_route(route, geo)
         (OUT_DIR / f"{r['id']}.json").write_text(json.dumps(r, separators=(",", ":"), ensure_ascii=False))
         index.append({k: r[k] for k in ("id", "name", "group", "color", "url", "km")})
-    log("EuroVelo (official GPX tracks)")
-    index += eurovelo.build(simplify_indices, OUT_DIR)
+    log("EuroVelo (OpenStreetMap)")
+    index += eurovelo.build(simplify_indices, OUT_DIR, eurovelo_leg)
     (OUT_DIR / "index.json").write_text(json.dumps({"routes": index}, separators=(",", ":"), ensure_ascii=False))
     write_overview(index)
     stamp.done()

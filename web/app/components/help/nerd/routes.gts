@@ -26,20 +26,31 @@ export default class NerdRoutes extends Component {
 
       <h3>EuroVelo</h3>
       <ol>
-        <li><strong>Tracks:</strong>
-          the official EuroVelo GPX files, one track per stage, including
-          variants and spurs.</li>
+        <li><strong>Relations:</strong>
+          from the OpenStreetMap planet, every bicycle route relation with the
+          route's ref (also one of several, as in “EV7/BI1”), or international
+          and named “EuroVelo N” without one; their ways, through stages and
+          countries, leaving out members marked as alternatives, variants,
+          excursions or connections.</li>
         <li><strong>One path:</strong>
-          the stages are chained into a single path from the route's start to
-          its end, taking the shortest way where a route offers several. Stages
-          less than 1 km apart are joined.</li>
+          the ways make a graph, and the route is its shortest path from the
+          official start to the end, so a route that offers several ways (both
+          banks of a river) takes the shortest. Pieces less than 1 km apart are
+          joined.</li>
         <li><strong>Holes:</strong>
-          where consecutive stages don't touch, a straight line bridges them:
-          over the sea it's a ferry (not counted as riding distance), over land
-          an unmapped stretch (counted).</li>
+          pieces that don't touch are bridged by straight lines, which cost more
+          than riding so the path only takes one where the mapping really has a
+          hole. A hole over 3 km is routed for touring bikes with BRouter, also
+          on OpenStreetMap: over land always, over the sea up to 400 km, unless
+          riding round is more than 2.5 times the crossing. What stays straight
+          over the sea is a ferry (not counted as riding distance), over land an
+          unmapped stretch (counted).</li>
+        <li><strong>Heights</strong>
+          from the Copernicus GLO-90 terrain model every 50 m, averaged over 250
+          m against its noise; OpenStreetMap has none.</li>
         <li><strong>Simplified</strong>
-          with Douglas–Peucker at 30 m, which keeps the shape and drops points
-          on straight stretches; heights come with the tracks.</li>
+          to the points that matter for the line (30 m) or for the climbing (5
+          m).</li>
       </ol>
 
       <h3>The demo route</h3>
@@ -74,10 +85,13 @@ export default class NerdRoutes extends Component {
         </tbody>
       </table>
       <p>
-        How these compare with EuroVelo's own figures, and how much the
-        simplification takes off the climbing, isn't measured yet. The routes
-        are moving to OpenStreetMap alone (issue #22), which is when to measure
-        them.
+        Compared with EuroVelo's official tracks, ours mostly follow them. They
+        differ where OpenStreetMap maps another way than the official one (EV7
+        west of Lake Vänern), where a hole was filled by a different road than
+        the official one (EV7 through Calabria, EV3 by Copenhagen instead of
+        down Jutland), or where the official track carries a branch our single
+        line from start to end leaves out (EV1's coast of Portugal, to
+        Finisterre).
       </p>
     </section>
   </template>
