@@ -5,6 +5,7 @@
 ### Added
 
 - A second demo route, Milan – Athens: it joins EuroVelo 8 south of Milan and follows it along the Po, down the Adriatic coast and through the Balkans all the way to Athens.
+- A third demo route, Milan – Palermo: EuroVelo 5 to Rome, EuroVelo 7 down to Messina and across the strait, then along Sicily's north coast to Palermo.
 
 ### Changed
 

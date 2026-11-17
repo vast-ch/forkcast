@@ -258,7 +258,7 @@ def build_route(route, geo):
         "color": route["color"],
         "url": route["url"],
         "source": "Routed with BRouter (trekking profile) on OpenStreetMap data"
-        + "".join(f", then EuroVelo {by[2:]} from {stops[i - 1][1]}" for i, by in enumerate(map(_arrives_by, stops)) if by and by != "ferry"),
+        + "".join(f", EuroVelo {by[2:]} from {stops[i - 1][1]} to {stops[i][1]}" for i, by in enumerate(map(_arrives_by, stops)) if by and by != "ferry"),
         "km": round(km, 1),
         # Compact columns: lat, lon (5 dp), elevation (m), cumulative km (0.01), ferry flag.
         "lat": [round(p[0], 5) for p in points],

@@ -128,7 +128,7 @@ What it costs, measured on 2026-11-17 (an Apple-silicon Mac, Docker with
 | Step | Time | Peak memory |
 |---|---|---|
 | `build bicycle`: the bicycle relations cut out of the planet (osmium; 96 GB in, 733 MB out) | 12.6 min | 2.7 GB |
-| `build routes`: the 17 EuroVelo routes and the two hand-made ones | 2.0 min | 5.0 GB |
+| `build routes`: the 17 EuroVelo routes and the three hand-made ones | 2.0 min | 5.0 GB |
 | `build cyclenet`: the network for drawing | 0.9 min | under 5 GB |
 
 The downloads are the long part, and only needed once or to refresh the data:

@@ -4,7 +4,8 @@ Each stop is (country code, name for geocoding[, how]); how the leg arriving
 at that stop goes: BRouter if left out, "ferry" for a ferry crossing, or a
 EuroVelo route ("ev8") to follow it, joined to the stops with BRouter.
 The Interlaken – Málaga route (Rhône valley, then EuroVelo 8 down Spain's east coast) and
-Milan – Athens (EuroVelo 8 from the Po valley through the Balkans) are demo routes, not official ones.
+Milan – Athens (EuroVelo 8 from the Po valley through the Balkans) and Milan – Palermo
+(EuroVelo 5 to Rome, EuroVelo 7 to Messina, then Sicily's north coast) are demo routes, not official ones.
 EuroVelo routes are not listed here: they come from OpenStreetMap
 (see eurovelo.py).
 """
@@ -42,6 +43,18 @@ ROUTES = [
         "stops": [
             ("it", "Milano"),
             ("gr", "Athens", "ev8"),
+        ],
+    },
+    {
+        "id": "milan-palermo",
+        "name": "Milan – Palermo",
+        "color": "#8c6d1f",
+        "url": "",
+        "stops": [
+            ("it", "Milano"),
+            ("it", "Roma", "ev5"),
+            ("it", "Messina", "ev7"),
+            ("it", "Palermo"),
         ],
     },
 ]
