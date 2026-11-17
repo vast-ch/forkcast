@@ -25,7 +25,7 @@ work after `data`).
 | `cru` | CRU TS 4.10 monthly grids: tmx, tmn, pre, wet for 2011–2025 | 215 MB | University of East Anglia. Used to calibrate highs and lows. |
 | `era5land-rain` | ERA5-Land daily rain totals, one file per year, 1981–2025, 0.25°, world without Antarctica | ~10 GB | Copernicus CDS key needed (see below). 2011–2025 make the climate; the earlier years only the El Niño / La Niña variants. |
 | `era5land-temperature` | ERA5-Land monthly mean 2 m temperature for each hour of the day, one file per year, 1981–2025, 0.25° | ~6.7 GB | CDS key needed. The 30 extra years took about 3.5 hours from the CDS. |
-| `brouter` | Geocodes the hand-made routes' stops (`forkcast_data/geocoded.json`, committed) and routes each leg with BRouter | small | Public servers: Nominatim (1 request/s) and brouter.de. |
+| `brouter` | Geocodes the hand-made routes' stops (`forkcast_data/geocoded.json`, committed) and routes each leg with BRouter; a leg marked to follow a EuroVelo route (`"ev8"` in `anchors.py`) takes that built route between the stops' nearest points, and only the joins onto it (over 1 km) are routed | small | Public servers: Nominatim (1 request/s) and brouter.de. |
 | `borders` | Natural Earth country outlines, 1:50m and 1:110m | 2 MB | Public domain. |
 | `details` | Natural Earth populated places (1:10m), rivers and lake centerlines and lakes (1:50m) | 12 MB | Public domain. For the map's Cities and Water layers. |
 | `oni` | NOAA's Oceanic Niño Index, monthly since 1950 | 10 kB | Decides which months were El Niño or La Niña. |
@@ -128,7 +128,7 @@ What it costs, measured on 2026-11-17 (an Apple-silicon Mac, Docker with
 | Step | Time | Peak memory |
 |---|---|---|
 | `build bicycle`: the bicycle relations cut out of the planet (osmium; 96 GB in, 733 MB out) | 12.6 min | 2.7 GB |
-| `build routes`: the 17 EuroVelo routes and the hand-made one | 2.0 min | 5.0 GB |
+| `build routes`: the 17 EuroVelo routes and the two hand-made ones | 2.0 min | 5.0 GB |
 | `build cyclenet`: the network for drawing | 0.9 min | under 5 GB |
 
 The downloads are the long part, and only needed once or to refresh the data:

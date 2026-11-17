@@ -42,6 +42,7 @@ OUT_DIR = OUT / "routes"
 BROUTER = "https://brouter.de/brouter"
 EUROVELO_LEGS = CACHE / "eurovelo-legs.json"
 SIMPLIFY_M = 40  # Douglas-Peucker tolerance
+JOIN_KM = 1.0  # a stop further than this from the EuroVelo route it follows is joined to it with BRouter
 
 
 def _lonlats(a, b) -> str:
@@ -59,16 +60,45 @@ def _validate_leg(path: Path) -> None:
         raise ValueError("leg has fewer than two points")
 
 
+def _arrives_by(stop) -> str | None:
+    """How the leg into a stop goes: None (BRouter), "ferry", or a EuroVelo route ("ev8")."""
+    return stop[2] if len(stop) > 2 else None
+
+
+def _follow(a, b, route_id: str) -> list[list]:
+    """The built EuroVelo route `route_id` from its point nearest a to its point nearest b (either way
+    along it), as [lat, lon, ele, ferry] points; ferry: the line into the point is a ferry."""
+    r = json.loads((OUT_DIR / f"{route_id}.json").read_text())
+    ferries = set(r["ferry"])
+    pts = [[la, lo, e, j in ferries] for j, (la, lo, e) in enumerate(zip(r["lat"], r["lon"], r["ele"], strict=True))]
+    near = lambda p: min(range(len(pts)), key=lambda j: haversine_km(p, pts[j]))  # noqa: E731
+    i, j = near(a), near(b)
+    if i <= j:
+        return [list(p) for p in pts[i : j + 1]]
+    # Backwards: the line into a point is the one that came out of it going forwards.
+    return [[*pts[k][:3], k < i and pts[k + 1][3]] for k in range(i, j - 1, -1)]
+
+
+def _joins(a, b, track):
+    """The legs joining stop a onto a followed track and its end onto stop b, where they're apart."""
+    return [(p, q) for p, q in ((a, track[0][:2]), (track[-1][:2], b)) if haversine_km(p, q) > JOIN_KM]
+
+
 def legs(geo):
-    """All routed (non-ferry) legs of the hand-made routes, as (from, to) coordinates."""
+    """All routed (non-ferry) legs of the hand-made routes, as (from, to) coordinates; along a
+    followed EuroVelo route, only the joins onto it."""
     for route in ROUTES:
         stops = route["stops"]
         for i in range(1, len(stops)):
-            if len(stops[i]) > 2 and stops[i][2] == "ferry":
+            by = _arrives_by(stops[i])
+            if by == "ferry":
                 continue
             a = geo[f"{stops[i - 1][0]}|{stops[i - 1][1]}"]
             b = geo[f"{stops[i][0]}|{stops[i][1]}"]
-            yield a, b
+            if by:
+                yield from _joins(a, b, _follow(a, b, by))
+            else:
+                yield a, b
 
 
 def _fetch(a, b, fresh: bool, may_fail: bool = False) -> None:
@@ -204,21 +234,31 @@ def build_route(route, geo):
             points.append([ll[0], ll[1], None, 0.0, False])
             continue
         prev = geo[f"{stops[i - 1][0]}|{stops[i - 1][1]}"]
-        ferry = len(stop) > 2 and stop[2] == "ferry"
-        leg = [[prev[0], prev[1], None], [ll[0], ll[1], None]] if ferry else brouter_leg(prev, ll)
-        leg = simplify(leg, SIMPLIFY_M)
+        by = _arrives_by(stop)
+        if by == "ferry":
+            leg = [[prev[0], prev[1], None, False], [ll[0], ll[1], None, True]]
+        elif by:
+            track = _follow(prev, ll, by)
+            head, tail = (prev, track[0][:2]), (track[-1][:2], ll)
+            joined = _joins(prev, ll, track)
+            leg = [[*p, False] for p in simplify(brouter_leg(*head), SIMPLIFY_M)] if head in joined else [[*prev, None, False]]
+            leg += track[1:] if head in joined else track
+            if tail in joined:
+                leg += [[*p, False] for p in simplify(brouter_leg(*tail), SIMPLIFY_M)[1:]]
+        else:
+            leg = [[*p, False] for p in simplify(brouter_leg(prev, ll), SIMPLIFY_M)]
         for p in leg[1:]:
-            last = points[-1]
-            if not ferry:
-                km += haversine_km(last, p)
-            points.append([p[0], p[1], p[2], km, ferry])
+            if not p[3]:
+                km += haversine_km(points[-1], p)
+            points.append([p[0], p[1], p[2], km, p[3]])
     return {
         "id": route["id"],
         "name": route["name"],
         "group": route.get("group", "Demo"),
         "color": route["color"],
         "url": route["url"],
-        "source": "Routed with BRouter (trekking profile) on OpenStreetMap data",
+        "source": "Routed with BRouter (trekking profile) on OpenStreetMap data"
+        + "".join(f", then EuroVelo {by[2:]} from {stops[i - 1][1]}" for i, by in enumerate(map(_arrives_by, stops)) if by and by != "ferry"),
         "km": round(km, 1),
         # Compact columns: lat, lon (5 dp), elevation (m), cumulative km (0.01), ferry flag.
         "lat": [round(p[0], 5) for p in points],
@@ -272,14 +312,17 @@ def build(fresh: bool = False) -> None:
     if missing := stamp.missing_inputs():
         raise SystemExit(f"Missing route inputs ({missing[0].name}, …). Run: download osm, download dem, download brouter, download eurovelo-legs, build borders")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    # EuroVelo first: a hand-made route can follow one.
+    log("EuroVelo (OpenStreetMap)")
+    ev = eurovelo.build(simplify_indices, OUT_DIR, eurovelo_leg)
     index = []
     for route in ROUTES:
         log(route["name"])
         r = build_route(route, geo)
         (OUT_DIR / f"{r['id']}.json").write_text(json.dumps(r, separators=(",", ":"), ensure_ascii=False))
         index.append({k: r[k] for k in ("id", "name", "group", "color", "url", "km")})
-    log("EuroVelo (OpenStreetMap)")
-    index += eurovelo.build(simplify_indices, OUT_DIR, eurovelo_leg)
+        log(f"  {r['km']:.0f} km")
+    index += ev
     (OUT_DIR / "index.json").write_text(json.dumps({"routes": index}, separators=(",", ":"), ensure_ascii=False))
     write_overview(index)
     stamp.done()
