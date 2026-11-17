@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 import re
+from collections import OrderedDict
 from pathlib import Path
 
 from .pipeline import CACHE, ensure, http_get, is_verified, log
@@ -78,23 +79,31 @@ def files() -> list[Path]:
 
 
 class Dem:
-    """Heights from the downloaded squares, each read once when first needed."""
+    """Heights from the downloaded squares, read when first needed. Only the last KEEP squares
+    stay in memory (about 6 MB each): a route moves along, and all of Europe's would not fit."""
+
+    KEEP = 200
 
     def __init__(self) -> None:
-        self._tiles: dict[tuple[int, int], tuple | None] = {}
+        self._tiles: OrderedDict[tuple[int, int], tuple | None] = OrderedDict()
 
     def _tile(self, lat: int, lon: int):
         key = (lat, lon)
-        if key not in self._tiles:
-            path = tile_file(_name(lat, lon))
-            if not path.exists():
-                self._tiles[key] = None
-            else:
-                import rasterio
+        if key in self._tiles:
+            self._tiles.move_to_end(key)
+            return self._tiles[key]
+        path = tile_file(_name(lat, lon))
+        if not path.exists():
+            tile = None
+        else:
+            import rasterio
 
-                with rasterio.open(path) as src:
-                    self._tiles[key] = (src.read(1), ~src.transform)
-        return self._tiles[key]
+            with rasterio.open(path) as src:
+                tile = (src.read(1), ~src.transform)
+        self._tiles[key] = tile
+        if len(self._tiles) > self.KEEP:
+            self._tiles.popitem(last=False)
+        return tile
 
     def height(self, lat: float, lon: float) -> float:
         tile = self._tile(math.floor(lat), math.floor(lon))

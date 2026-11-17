@@ -80,18 +80,35 @@ def _fetch(a, b, fresh: bool, may_fail: bool = False) -> None:
         except urllib.error.HTTPError as e:
             if not may_fail or e.code == 429:
                 raise
+            error = e.read().decode(errors="replace")[:500]
+            if _busy(error):
+                raise RuntimeError(f"BRouter is busy: {error.strip()}") from e
             # BRouter says why it found no route (e.g. "to-position not mapped"): kept, so it isn't asked again.
-            to.write_text(json.dumps({"error": e.read().decode(errors="replace")[:500]}))
+            to.write_text(json.dumps({"error": error}))
 
-    status = ensure(leg_path(a, b), fetch, _validate_ev_leg if may_fail else _validate_leg, fresh)
+    try:
+        status = ensure(leg_path(a, b), fetch, _validate_ev_leg if may_fail else _validate_leg, fresh)
+    except RuntimeError as e:
+        if not may_fail:
+            raise
+        log(f"  {e}; left for the next run ({_lonlats(a, b)})")
+        return
     if status.startswith("got"):
         log(f"  {status} ({_lonlats(a, b)})")
         time.sleep(1.5)  # be polite to the public server
 
 
+def _busy(error: str) -> bool:
+    """A refusal because the public server was busy (a long leg cut short), not a leg with no route."""
+    return "watchdog" in error or "retry later" in error.lower()
+
+
 def _validate_ev_leg(path: Path) -> None:
-    if "error" not in json.loads(path.read_text()):
+    gj = json.loads(path.read_text())
+    if "error" not in gj:
         _validate_leg(path)
+    elif _busy(gj["error"]):
+        raise ValueError("BRouter was busy")
 
 
 def download(fresh: bool = False) -> None:
@@ -109,19 +126,30 @@ def download_eurovelo(fresh: bool = False) -> None:
     EUROVELO_LEGS.write_text(json.dumps(wanted))
     for a, b in wanted:
         _fetch(a, b, fresh, may_fail=True)
-    failed = sum("error" in json.loads(leg_path(a, b).read_text()) for a, b in wanted)
-    log(f"  {len(wanted)} EuroVelo legs ready, {failed} without a route")
+    have = [leg_path(a, b) for a, b in wanted if leg_path(a, b).exists()]
+    failed = sum("error" in json.loads(p.read_text()) for p in have)
+    log(f"  {len(have)} of {len(wanted)} EuroVelo legs ready, {failed} without a route")
 
 
 def eurovelo_leg(a, b):
-    """The cached leg for a EuroVelo fill as [[lat, lon], ...], or None where BRouter found no route."""
+    """The cached leg for a EuroVelo fill as [[lat, lon, ferry], ...], or None where BRouter found no route.
+    `ferry`: the line into the point is a ferry (`route=ferry` in BRouter's way tags)."""
     path = leg_path(a, b)
     if not path.exists():
         raise SystemExit(f"Missing BRouter leg {path.name} for EuroVelo. Run: download eurovelo-legs")
     gj = json.loads(path.read_text())
     if "error" in gj:
         return None
-    return [[c[1], c[0]] for c in gj["features"][0]["geometry"]["coordinates"]]
+    feature = gj["features"][0]
+    # Each message row is a stretch of one way, ending at its position (micro-degrees); the
+    # coordinates up to that one are on that way.
+    rows = [(int(r[0]), int(r[1]), "route=ferry" in r[9]) for r in feature["properties"].get("messages", [])[1:]]
+    out, i = [], 0
+    for c in feature["geometry"]["coordinates"]:
+        out.append([c[1], c[0], i < len(rows) and rows[i][2]])
+        if i < len(rows) and (round(c[0] * 1e6), round(c[1] * 1e6)) == rows[i][:2]:
+            i += 1
+    return out
 
 
 def brouter_leg(a, b):

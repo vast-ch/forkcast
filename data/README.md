@@ -107,9 +107,12 @@ short of an official end (EV4 at the Polish–Ukrainian border, 670 km
 short of Kyiv; EV2 in Dublin and in Belarus), that stretch is routed with
 BRouter's touring-bike profile, which also runs on OpenStreetMap: the
 `eurovelo-legs` download lists them (`cache/brouter/eurovelo-legs.json`) and
-caches each answer like the hand-made routes' legs. Sea gaps are only asked
-up to 60 km, and stay a ferry if the road round is over 2.5 times the
-crossing. Where BRouter finds no route, its answer is kept as an error and
+caches each answer like the hand-made routes' legs. Sea gaps are asked up
+to 400 km, since a long one is often a coast the mapping lacks (EV7 in
+southern Italy, EV13 round the Baltic), and stay a ferry if the road round
+is over 2.5 times the crossing; a longer one is a crossing (EV1 from Bergen
+to Aberdeen). Ferries BRouter takes on a leg (`route=ferry` in its way
+tags) are drawn as ferries. Where BRouter finds no route, its answer is kept as an error and
 the straight gap stays. OSM has no heights: they come from the Copernicus terrain
 model every 50 m, averaged over 250 m against its noise. Points are kept
 where they matter for the line (30 m) or for the climbing (5 m).
@@ -118,6 +121,22 @@ Before this, the routes were the official GPX tracks from EuroVelo.com,
 committed to the repository. OpenStreetMap holds the same routes, kept up to
 date by the people who ride them, so it is the one source for every route
 and the cycle network.
+
+What it costs, measured on 2026-11-17 (an Apple-silicon Mac, Docker with
+8.4 GB of memory), from scratch with `--fresh` but the downloads in place:
+
+| Step | Time | Peak memory |
+|---|---|---|
+| `build bicycle`: the bicycle relations cut out of the planet (osmium; 96 GB in, 733 MB out) | 12.6 min | 2.7 GB |
+| `build routes`: the 17 EuroVelo routes and the hand-made one | 2.0 min | 5.0 GB |
+| `build cyclenet`: the network for drawing | 0.9 min | under 5 GB |
+
+The downloads are the long part, and only needed once or to refresh the data:
+the planet (96 GB, as long as the line takes: about 2 h at 100 Mbit/s), the
+terrain model (4.9 GB in 1,702 squares) and the BRouter legs (57 for EuroVelo,
+seconds each, minutes when the public server is busy and asks to retry). The
+terrain squares are read as a route reaches them, and only the last 200 stay
+in memory: all of them would not fit.
 
 Builds never use the network; a build whose inputs are missing stops and says
 which download to run.

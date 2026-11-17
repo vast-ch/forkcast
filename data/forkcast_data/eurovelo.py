@@ -20,7 +20,9 @@ superroute `ref=EV<n>` with a part per country, stages below, then ways.
   mapping stops short of a pinned end, the stretch is routed with BRouter
   (also on OpenStreetMap data), from legs the `brouter` download caches
   (`legs()` lists them). A sea gap is only asked up to SEA_FILL_KM, and kept
-  as a ferry if the road round is over DETOUR times the crossing.
+  as a ferry if the road round is over DETOUR times the crossing: a long one
+  is often a stretch the mapping lacks along a coast (southern Italy, the
+  Baltic). Ferries BRouter takes on the way stay ferries.
 - The route is the shortest path through that graph from its official start
   to its end (via points for the loop, EV10), as pinned in CATALOG: OSM
   doesn't say which end is the start, and mapped spurs would otherwise
@@ -54,7 +56,7 @@ NEAREST = 3  # gap edges from each loose end, to the nearest other pieces
 FERRY_COST, LAND_GAP_COST = 2.0, 8.0  # per km, against 1 for riding
 LONG_GAP_KM, LONG_GAP_FACTOR = 25.0, 10.0  # a longer straight gap costs this many times more
 FILL_KM = 3.0  # gaps, and pinned ends this far off the mapping, are routed with BRouter
-SEA_FILL_KM = 60.0  # longer sea gaps are crossings: not routed
+SEA_FILL_KM = 400.0  # longer sea gaps are crossings: not routed (Bergen to Aberdeen)
 DETOUR = 2.5  # a sea gap whose road round is longer than this times the crossing stays a ferry
 STEP_KM = 0.05  # heights sampled at least this often
 SMOOTH_KM = 0.25  # and averaged over this distance, against the model's noise
@@ -310,14 +312,18 @@ def fills(g: Graph, pins, nodes) -> list[tuple[tuple[float, float], tuple[float,
 
 
 def _ride(points, p, q) -> None:
-    """Ride from the last point to q, densified so the heights don't skip a hill between far-apart points."""
+    """Ride from the last point to q, densified so the heights don't skip a hill between far-apart points.
+    A q flagged as reached by ferry (a routed leg's third value) is sailed to instead."""
+    if len(q) > 2 and q[2]:
+        points.append([q[0], q[1], 1])
+        return
     n = max(1, math.ceil(haversine_km(p, q) / STEP_KM))
     points += [[p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n, 0] for k in range(1, n)]
     points.append([q[0], q[1], 0])
 
 
 def _routed(leg, a, b, kind):
-    """The BRouter leg from a to b as [lat, lon] points, or None to keep the straight gap."""
+    """The BRouter leg from a to b as [lat, lon(, ferry)] points, or None to keep the straight gap."""
     pts = leg(a, b)
     if not pts:
         return None
@@ -397,7 +403,7 @@ def ferry_ways(path=None) -> set[int]:
 
 def build(simplify, out_dir, leg):
     """Write out/routes/ev<N>.json for every catalogued route; return index entries.
-    `leg(a, b)`: the cached BRouter leg as [lat, lon] points, or None where BRouter found none."""
+    `leg(a, b)`: the cached BRouter leg as [lat, lon, ferry] points, or None where BRouter found none."""
     out_dir.mkdir(parents=True, exist_ok=True)
     built = graphs()
     heights = dem.Dem()

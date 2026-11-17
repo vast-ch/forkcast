@@ -119,3 +119,20 @@ def test_fills_ask_for_a_land_gap_and_an_end_off_the_mapping(monkeypatch):
     assert all(kind == 0 for *_, kind in points)
     assert _walk(points)[-1] == (46.0, 7.6)
     assert (46.01, 7.2) in _walk(points)
+
+
+def test_a_routed_leg_keeps_its_ferries(monkeypatch):
+    # A long sea gap BRouter rides round, taking a short ferry on the way.
+    monkeypatch.setattr(eurovelo, "crosses_sea", lambda a, b: True)
+    west = _line(100, 46.0, [7.0, 7.1])
+    east = _line(200, 46.0, [8.1, 8.2])  # ~77 km across, past the old 60 km limit
+    g = Graph([west, east])
+    g.bridge()
+    pins = [(46.0, 7.0), (46.0, 8.2)]
+    gap = ((46.0, 7.1), (46.0, 8.1))
+    assert gap in eurovelo.fills(g, pins, eurovelo.walk(g, pins))
+    road = {gap: [[46.1, 7.4, False], [46.1, 7.6, True], [46.0, 7.9, False]]}
+    points = trace(g, pins, lambda a, b: road.get((a, b)))
+    assert [p[:2] for p in points if p[2] == 1] == [[46.1, 7.6]]
+    assert _walk(points)[-1] == (46.0, 8.2)
+

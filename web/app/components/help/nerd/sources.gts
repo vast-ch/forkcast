@@ -54,34 +54,31 @@ const NerdSources: TOC<{ Args: { years: string } }> = <template>
           <td>Monthly, measured across the Alps</td>
           <td>Published values</td></tr>
         <tr><th scope="row"><a
-              href="https://www.eurovelo.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >EuroVelo GPX tracks</a>, European Cyclists' Federation</th>
-          <td>The EuroVelo routes</td>
-          <td>Downloaded 2026-10-23</td>
-          <td>ODbL; EuroVelo® is a registered trademark of the ECF</td></tr>
-        <tr><th scope="row"><a
               href="https://www.openstreetmap.org/copyright"
               target="_blank"
               rel="noopener noreferrer"
             >OpenStreetMap</a>
-            contributors, via
-            <a
+            contributors, the planet file</th>
+          <td>The EuroVelo routes; the cycle network for drawing</td>
+          <td>Bicycle route relations, data of 2026-10-26</td>
+          <td>ODbL; EuroVelo® is a registered trademark of the ECF</td></tr>
+        <tr><th scope="row"><a
               href="https://brouter.de"
               target="_blank"
               rel="noopener noreferrer"
-            >BRouter</a>
-            and the
-            <a
-              href="https://overpass-api.de"
+            >BRouter</a>, on OpenStreetMap data</th>
+          <td>The demo route; holes in the EuroVelo routes' mapping</td>
+          <td>The trekking profile</td>
+          <td>ODbL</td></tr>
+        <tr><th scope="row"><a
+              href="https://registry.opendata.aws/copernicus-dem/"
               target="_blank"
               rel="noopener noreferrer"
-            >Overpass API</a></th>
-          <td>The demo route; the cycle network for drawing</td>
-          <td>BRouter's trekking profile; international (icn) bicycle route
-            relations</td>
-          <td>ODbL</td></tr>
+            >Copernicus DEM GLO-90</a>, DLR and Airbus, under COPERNICUS by the
+            EU and ESA</th>
+          <td>The EuroVelo routes' heights</td>
+          <td>90 m</td>
+          <td>Copernicus DEM licence</td></tr>
         <tr><th scope="row"><a
               href="https://www.naturalearthdata.com"
               target="_blank"
