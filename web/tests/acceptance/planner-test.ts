@@ -226,6 +226,20 @@ module('Acceptance | planner', function (hooks) {
     assert.dom('.leaflet-rain-pane .leaflet-tile').doesNotExist();
   });
 
+  test('the day chart marks rainy days with the map’s emoji', async function (assert) {
+    const emoji = () =>
+      findAll('.wt-rain-emoji').map((e) => e.textContent?.trim());
+    // Late autumn in the Alps: a wet start.
+    await visit('/?start=2026-11-17');
+    const at5 = emoji();
+    assert.ok(at5.length > 0, 'some days get one');
+    assert.true(at5.every((e) => ['🌦️', '🌧️', '☔'].includes(e)));
+    await click(button('1mm'));
+    assert.ok(emoji().length >= at5.length, 'more days count as rainy at 1 mm');
+    await click(button('10mm'));
+    assert.ok(emoji().length <= at5.length, 'fewer at 10 mm');
+  });
+
   test('dates over the night stops: months, weeks or none', async function (assert) {
     const dates = () =>
       findAll('.leaflet-labels-pane .wt-stop-date').map((d) =>

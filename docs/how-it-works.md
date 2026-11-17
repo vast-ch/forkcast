@@ -110,7 +110,7 @@ top.
 
 ## The day chart
 
-Under the map, one column per day: the day number on top, a bar from the low to the high, coloured by the high, the chance of a rainy day under it. Rest days are shaded columns, with the weather at the rest stop, and a line, labelled with the month's name along it, marks the start of each month; the selected day's date is above the chart. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
+Under the map, one column per day: the day number on top, a 🔦 under it when the riding outlasts the daylight, then the map's rain emoji for the day (its chance of a rainy day × 7 as rainy days a week, through the same `rainEmojiTier` as the map and its legend, so an emoji means the same in both places), a bar from the low to the high, coloured by the high, the chance of a rainy day under it. Rest days are shaded columns, with the weather at the rest stop, and a line, labelled with the month's name along it, marks the start of each month; the selected day's date is above the chart. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
 
 **Why:** a list of days repeated what the chart shows, and on a phone it was a long scroll. The selected day's figures sit above the chart.
 

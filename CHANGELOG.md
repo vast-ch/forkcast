@@ -11,6 +11,7 @@
 - Each day's high and low now come with their usual range, in brackets, such as “(9 to 20°C)”: where 8 days in 10 fall, measured from weather stations for that place and time of year. The day chart shows it as a thin line through each day's bar. A coast in summer barely varies; a continental winter can swing 15°C.
 - The trip summary says how low your lowest low and how high your highest high are likely to be: half of trips get lower or higher, the rest milder. Cold and heat come in spells, and that is counted in. Before, the summary only had the lowest *average* low, which real trips nearly always beat.
 - An About page in the help: who makes Forkcast, where to report a problem or ask for a feature, and a QR code to our Discord channel.
+- The day chart shows the rain at a glance: each rainy day gets the same emoji as the map (🌦️ 🌧️ ☔), so you can spot the wet stretches of your trip without reading the small bars at the bottom. Changing what counts as a rainy day (1, 5 or 10 mm) changes them just like on the map.
 - The start date's calendar is coloured by the weather: each day shows, in the map's colours, how warm it usually is where your route begins if you set off that day, so a good time to leave stands out at a glance. The help's “Your trip” page lets you try it for a few starting towns.
 
 ### Changed

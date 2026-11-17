@@ -333,6 +333,11 @@ export default class Help extends Component<{
                   <strong>🔦</strong>
                   under the day number when the day's riding takes longer than
                   its daylight;</li>
+                <li>the map's
+                  <strong>rain emoji</strong>
+                  (🌦️ 🌧️ ☔) under that, for a day as rainy as that emoji's
+                  place on the map: the day's chance of a rainy day, as rainy
+                  days a week. A dry day gets none;</li>
                 <li><strong>shaded columns</strong>
                   for rest days, with the weather where you stay;</li>
                 <li>a

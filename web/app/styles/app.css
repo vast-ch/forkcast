@@ -735,6 +735,10 @@ body {
 .wt-lights {
   font-size: 10px;
 }
+/* A day's rain, in the map's emoji. */
+.wt-rain-emoji {
+  font-size: 11px;
+}
 /* Small chart labels: day numbers, parking columns, month names. */
 .wt-day-num,
 .wt-park-label,

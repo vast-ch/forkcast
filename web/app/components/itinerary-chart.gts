@@ -6,6 +6,7 @@ import { modifier } from 'ember-modifier';
 import type PlannerService from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
 import { tempSwatch, usualRange } from 'forkcast/utils/climate';
+import { rainEmojiTier } from 'forkcast/utils/layers';
 import TempPill from 'forkcast/components/temp-pill';
 import {
   css,
@@ -25,7 +26,8 @@ import {
 const COL = 18; // px per day
 const NUM_Y = 10; // baseline of the day numbers
 const LIGHTS_Y = 22; // baseline of the 🔦 marks under them
-const TOP = 28; // top of the temperature band, below both rows
+const RAIN_EMOJI_Y = 35; // baseline of the rain emoji under those
+const TOP = 42; // top of the temperature band, below all three rows
 const TEMP_H = 110;
 const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
@@ -77,6 +79,8 @@ interface Bar {
   rainY: number;
   color: string;
   rainH: number;
+  /** The map's rain emoji for the day's rainy days a week, if any */
+  rainEmoji?: string;
   isHighlighted: boolean;
   /** Set on the first day of a month after the trip's first: its name, for the line before it */
   monthStart?: string;
@@ -202,6 +206,10 @@ export default class ItineraryChart extends Component<{
         noData || Number.isNaN(warm) || Number.isNaN(cold)
           ? {}
           : { usualY: this.y(warm), usualEnd: this.y(cold) };
+      // The day's chance as rainy days a week, so it reads like the map.
+      const tier = noData
+        ? undefined
+        : rainEmojiTier(day.weather.rainChance * 7, this.planner.rainThreshold);
       return {
         ...band,
         day,
@@ -213,6 +221,7 @@ export default class ItineraryChart extends Component<{
         rainY: this.rainTop + RAIN_H - rainH,
         color: tempSwatch(day.weather.high, 'var(--wt-muted)'),
         rainH,
+        rainEmoji: tier?.emoji,
         isHighlighted: this.planner.highlightedDay === day.n,
         monthStart:
           prev !== undefined && prev.date.getMonth() !== day.date.getMonth()
@@ -270,6 +279,7 @@ export default class ItineraryChart extends Component<{
   left = LEFT;
   numY = NUM_Y;
   lightsY = LIGHTS_Y;
+  rainEmojiY = RAIN_EMOJI_Y;
   /** Right edge of the axis labels. */
   axisX = LEFT - 6;
   firstDayX = colX(1);
@@ -427,6 +437,15 @@ export default class ItineraryChart extends Component<{
                   text-anchor="middle"
                   class="wt-lights"
                 >🔦</text>
+              {{/if}}
+              {{#if b.rainEmoji}}
+                <text
+                  x={{b.x}}
+                  dx={{this.half}}
+                  y={{this.rainEmojiY}}
+                  text-anchor="middle"
+                  class="wt-rain-emoji"
+                >{{b.rainEmoji}}</text>
               {{/if}}
               {{#if b.usualEnd}}
                 <line
