@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- On a phone, the help's row of topics no longer makes the whole page wider than the screen: it scrolls sideways on its own, so the page reads without sliding left and right.
+
 ## v0.14.0 - 2026-11-17
 
 ### Added

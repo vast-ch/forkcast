@@ -127,10 +127,11 @@ export default class Help extends Component<{
         @label="Help sections"
         @variant="underline"
         @size="sm"
-        {{! Tabs wrap onto more lines on narrow screens rather than scroll
-            sideways, and are tighter than Frontile's default, so all fit one
-            line on a laptop. }}
-        class="{{helpColumn}} mt-6 block *:flex-wrap [&_a]:px-[0.55rem]"
+        {{! The nav is the list: on narrow screens it scrolls sideways rather
+            than widen the page, each tab on one line. Tighter than Frontile's
+            default, so all fit one line on a laptop. }}
+        class="{{helpColumn}}
+          mt-6 overflow-x-auto *:shrink-0 *:whitespace-nowrap [&_a]:px-[0.55rem]"
         as |Nav|
       >
         {{#each this.sections as |sec|}}
