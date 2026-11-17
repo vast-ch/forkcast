@@ -1,8 +1,11 @@
 """Hand-made preset routes: ordered lists of towns, routed with BRouter.
 
-Each stop is (country code, name for geocoding[, "ferry"]); "ferry" marks
-the leg arriving at that stop as a ferry crossing.
-The Interlaken – Málaga route (Rhône valley, then Spain's east coast) is a demo route, not an official one.
+Each stop is (country code, name for geocoding[, how]); how the leg arriving
+at that stop goes: BRouter if left out, "ferry" for a ferry crossing, or a
+EuroVelo route ("ev8") to follow it, joined to the stops with BRouter.
+The Interlaken – Málaga route (Rhône valley, then EuroVelo 8 down Spain's east coast) and
+Milan – Athens (EuroVelo 8 from the Po valley through the Balkans) and Milan – Palermo
+(EuroVelo 5 to Rome, EuroVelo 7 to Messina, then Sicily's north coast) are demo routes, not official ones.
 EuroVelo routes are not listed here: they come from OpenStreetMap
 (see eurovelo.py).
 """
@@ -29,33 +32,29 @@ ROUTES = [
             ("fr", "Avignon"),
             ("fr", "Nîmes"),
             ("fr", "Montpellier"),
-            ("fr", "Béziers"),
-            ("fr", "Narbonne"),
-            ("fr", "Perpignan"),
-            ("es", "Figueres"),
-            ("es", "Girona"),
-            ("es", "Barcelona"),
-            ("es", "Sitges"),
-            ("es", "Tarragona"),
-            ("es", "L'Ametlla de Mar"),
-            ("es", "Vinaròs"),
-            ("es", "Castelló de la Plana"),
-            ("es", "Valencia"),
-            ("es", "Gandía"),
-            ("es", "Dénia"),
-            ("es", "Benidorm"),
-            ("es", "Alicante"),
-            ("es", "Elche"),
-            ("es", "Torrevieja"),
-            ("es", "Cartagena"),
-            ("es", "Águilas"),
-            ("es", "Mojácar"),
-            ("es", "Almería"),
-            ("es", "Adra"),
-            ("es", "Motril"),
-            ("es", "Almuñécar"),
-            ("es", "Nerja"),
-            ("es", "Málaga"),
+            ("es", "Málaga", "ev8"),
+        ],
+    },
+    {
+        "id": "milan-athens",
+        "name": "Milan – Athens",
+        "color": "#b5532a",
+        "url": "",
+        "stops": [
+            ("it", "Milano"),
+            ("gr", "Athens", "ev8"),
+        ],
+    },
+    {
+        "id": "milan-palermo",
+        "name": "Milan – Palermo",
+        "color": "#8c6d1f",
+        "url": "",
+        "stops": [
+            ("it", "Milano"),
+            ("it", "Roma", "ev5"),
+            ("it", "Messina", "ev7"),
+            ("it", "Palermo"),
         ],
     },
 ]

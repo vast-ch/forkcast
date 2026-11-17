@@ -81,8 +81,8 @@ module('Acceptance | planner', function (hooks) {
     await visit('/');
     assert.deepEqual(
       [...atlas.tiles.keys()].sort(),
-      ['30_-10', '30_0', '40_-10', '40_0'],
-      'Interlaken – Málaga: four squares, nothing world-wide',
+      ['30_-10', '30_0', '40_0'],
+      'Interlaken – Málaga: three squares, nothing world-wide',
     );
     assert.true(
       Number.isNaN(atlas.climate!.at(0.04, 55.75, 37.6, 5).high),
@@ -114,6 +114,7 @@ module('Acceptance | planner', function (hooks) {
     const colours = () =>
       findAll('.leaflet-climate-pane img').map((i) => i.getAttribute('src'));
     await visit('/');
+    await atlas.pick('40_-10'); // Madrid's square: off the default route
     const usual = { july: july(), colours: colours() };
     assert.true(usual.colours.length > 0, 'temperature images');
     await click(button('5 yrs'));
@@ -131,6 +132,7 @@ module('Acceptance | planner', function (hooks) {
     const atlas = this.owner.lookup('service:atlas');
     const june = () => atlas.climate!.at(5.5 / 12, 40.4, -3.7, 5).high;
     await visit('/');
+    await atlas.pick('40_-10'); // Madrid's square: off the default route
     const usual = june();
     await click(button('1 yr'));
     assert.strictEqual(currentURL(), '/?climate=last1');

@@ -465,8 +465,12 @@ export default class Help extends Component<{
                 countries, Forkcast follows the shortest way from start to
                 finish; ferries count as travel time, not riding distance.
                 Climbing comes from a terrain model with a point every 90 m. The
-                demo route, Interlaken – Málaga, runs down the Rhône valley and
-                Spain's east coast, routed for touring bikes on cycle-friendly
+                three demo routes: Interlaken – Málaga runs down the Rhône
+                valley, then follows EuroVelo 8 down Spain's east coast; Milan –
+                Athens joins EuroVelo 8 south of Milan and follows it through
+                the Balkans to Athens; Milan – Palermo follows EuroVelo 5 to
+                Rome and EuroVelo 7 to Messina, then Sicily's north coast. Off
+                EuroVelo they're routed for touring bikes on cycle-friendly
                 roads.
               </p>
               <p>
@@ -847,7 +851,7 @@ export default class Help extends Component<{
                   registered trademark of the European Cyclists' Federation.
                 </li>
                 <li>
-                  <strong>Demo route:</strong>
+                  <strong>Demo routes:</strong>
                   routed with
                   <a
                     href="https://brouter.de"

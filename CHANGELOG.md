@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.16.0 - 2026-11-17
+
+### Added
+
+- A second demo route, Milan – Athens: it joins EuroVelo 8 south of Milan and follows it along the Po, down the Adriatic coast and through the Balkans all the way to Athens.
+- A third demo route, Milan – Palermo: EuroVelo 5 to Rome, EuroVelo 7 down to Messina and across the strait, then along Sicily's north coast to Palermo.
+
+### Changed
+
+- The Interlaken – Málaga demo route now follows EuroVelo 8 from Montpellier all the way to Málaga, along the coast, instead of going town to town on the fastest cycle-friendly roads.
+
 ## v0.15.0 - 2026-11-17
 
 ### Changed
