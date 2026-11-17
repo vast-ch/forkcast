@@ -23,7 +23,10 @@ interface TempCalendarSignature {
 /**
  * Frontile's calendar with each day filled in the map's colour for its
  * temperature. Inset inside the day button, so a selected day's fill shows
- * as a ring around it.
+ * as a ring around it, in the purple the map marks the picked day with.
+ * Today's numeral is bold and underlined, which a
+ * ring would compete with: Frontile marks today itself only when it draws
+ * the days.
  */
 export default class TempCalendar extends Component<TempCalendarSignature> {
   swatch = (date: Date) => {
@@ -44,6 +47,7 @@ export default class TempCalendar extends Component<TempCalendarSignature> {
       @weekStartsOn={{1}}
       @labelledBy={{@labelledBy}}
       @autofocus={{@autofocus}}
+      class="[&_[data-part=day][data-selected=true]]:bg-wt-pick [&_[data-part=day][data-selected=true]:hover]:bg-wt-pick"
       ...attributes
     >
       <:day as |day|>
@@ -51,6 +55,10 @@ export default class TempCalendar extends Component<TempCalendarSignature> {
           <span
             class="wt-temp-day flex size-[calc(var(--calendar-cell-size)-0.25rem-6px)] items-center justify-center rounded-full
               {{if day.isOutside 'is-outside'}}
+              {{if
+                day.isToday
+                'is-today font-bold underline decoration-2 underline-offset-3'
+              }}
               {{if swatch 'has-temp'}}
               {{if day.isOutside (if swatch 'opacity-45')}}"
             style={{swatch.style}}

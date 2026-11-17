@@ -213,6 +213,8 @@ export default class SidePanel extends Component<SidePanelSignature> {
   setStart = (d: Date | null) => {
     if (d) this.planner.setStart(isoDate(d));
   };
+  /** The picker's Today button: through the picker, like a click on the day. */
+  pickToday = (setValue: (d: Date) => void) => setValue(new Date());
 
   /** The start picker's days: the temperature at the route's start. */
   startTempOn = (date: Date) => this.planner.startTempOn(date);
@@ -429,6 +431,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
                     class="p-2"
                   />
                 </:calendar>
+                <:footer as |f|>
+                  <button
+                    type="button"
+                    class="{{btn}} wt-today-button"
+                    {{on "click" (fn this.pickToday f.setValue)}}
+                  >Today</button>
+                </:footer>
               </DatePicker>
             </div>
             {{#each this.tripFields as |f|}}

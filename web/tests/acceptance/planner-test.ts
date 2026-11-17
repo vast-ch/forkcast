@@ -9,6 +9,7 @@ import {
 } from '@ember/test-helpers';
 import { setupApplicationTest, storeAsApp } from 'forkcast/tests/helpers';
 import { button, field } from 'forkcast/tests/helpers/find';
+import { isoDate } from 'forkcast/utils/settings';
 
 /** The summary's value for a label, e.g. "Days". */
 const summary = (label: string) =>
@@ -301,5 +302,24 @@ module('Acceptance | planner', function (hooks) {
     await visit('/?start=2026-07-15');
     await click('#start-date');
     assert.ok(tempOn(15) > 18, 'a warm one in July');
+  });
+
+  test('the start picker marks today', async function (assert) {
+    await visit('/');
+    await click('#start-date');
+    assert
+      .dom(`[data-key="${isoDate()}"] .wt-temp-day`)
+      .hasClass('is-today', 'today is marked');
+    assert
+      .dom('.wt-temp-day.is-today')
+      .exists({ count: 1 }, 'and no other day');
+  });
+
+  test('the Today button in the start picker starts the trip today', async function (assert) {
+    await visit('/?start=2026-01-15');
+    await click('#start-date');
+    await click(button('Today'));
+    assert.false(currentURL().includes('start='), 'today is the default start');
+    assert.dom('[data-key]').doesNotExist('the calendar closes');
   });
 });
