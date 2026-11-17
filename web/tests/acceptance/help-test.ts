@@ -13,6 +13,27 @@ module('Acceptance | help', function (hooks) {
     assert.dom('[aria-current="page"]').hasText(sections[0]!.label);
   });
 
+  test('on a phone the tabs scroll sideways, not the page', async function (assert) {
+    // Narrow the app, not the window: the phone media queries don't apply, so
+    // this checks the tabs alone, not the rest of the page.
+    const app = document.querySelector<HTMLElement>('#ember-testing')!;
+    app.style.width = '360px';
+    try {
+      await visit('/help');
+      const tabs = find('nav[aria-label="Help sections"]') as HTMLElement;
+      const page = tabs.closest('.overflow-y-auto')!;
+      tabs.scrollLeft = 100; // only a scrolling box can be scrolled
+      assert.true(tabs.scrollLeft > 0, 'the tabs scroll');
+      assert.true(tabs.offsetWidth <= page.clientWidth, 'within the page');
+      assert.true(
+        tabs.querySelector('a')!.getBoundingClientRect().height < 40,
+        'each tab stays on one line',
+      );
+    } finally {
+      app.style.width = '';
+    }
+  });
+
   for (const s of sections) {
     test(`/help/${s.id} opens its tab`, async function (assert) {
       await visit(`/help/${s.id}`);
