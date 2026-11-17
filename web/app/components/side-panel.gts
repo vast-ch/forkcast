@@ -35,6 +35,7 @@ import RangeInput from 'forkcast/components/range-input';
 import RouteEditor from 'forkcast/components/route-editor';
 import TempCalendar from 'forkcast/components/temp-calendar';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
+import { btn, eyebrow, focusRing } from 'forkcast/utils/classes';
 
 type MapSetting =
   | 'climate'
@@ -86,6 +87,15 @@ export default class SidePanel extends Component<SidePanelSignature> {
     year: 'numeric',
   };
   rainThresholds = RAIN_THRESHOLDS;
+
+  /** The time-of-year slider's rows of labels and ticks, placed by `left`. */
+  rangeScale =
+    'absolute inset-x-4 *:absolute *:-translate-x-1/2 *:whitespace-nowrap';
+
+  /** The sections' headings: full-width bands, so each section (route, trip,
+   * map) reads as its own block; inside the phone drawer, rounded instead. */
+  heading =
+    '-mx-5 border-y border-wt-line bg-wt-band px-5 py-[0.45rem] font-display text-[0.8rem] font-bold tracking-[0.08em] text-wt-ink uppercase in-[[role=dialog]]:mx-0 in-[[role=dialog]]:rounded-md in-[[role=dialog]]:border-0 in-[[role=dialog]]:px-3';
   dateChoices = DATE_CHOICES;
   cityChoices = CITY_CHOICES;
   climateChoices = CLIMATE_CHOICES;
@@ -247,40 +257,45 @@ export default class SidePanel extends Component<SidePanelSignature> {
   };
 
   <template>
-    <aside class="wt-panel flex min-h-0 flex-col" ...attributes>
+    {{! In the phone drawer, the drawer's own background and padding. }}
+    <aside
+      class="wt-panel flex min-h-0 flex-col bg-wt-paper in-[[role=dialog]]:bg-transparent"
+      ...attributes
+    >
       {{#if this.showHeader}}
-        <header class="wt-brand px-5 pt-5 pb-4">
+        <header class="px-5 pt-5 pb-4">
           <div class="flex items-baseline justify-between gap-3">
-            <h1 class="wt-logo-heading"><LinkTo
-                @route="index"
-                aria-label="Forkcast home"
-              ><Logo /></LinkTo></h1>
+            <h1><LinkTo @route="index" aria-label="Forkcast home"><Logo
+                /></LinkTo></h1>
             <HelpLink />
           </div>
         </header>
       {{/if}}
 
       <div
-        class="wt-panel-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6"
+        class="wt-panel-scroll flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 pb-6 in-[[role=dialog]]:px-0"
       >
-        <section
-          aria-labelledby="h-route"
-          class="wt-sec-route flex flex-col gap-3"
-        >
-          <h2 id="h-route" class="wt-h2">Route</h2>
+        <section aria-labelledby="h-route" class="flex flex-col gap-3">
+          <h2 id="h-route" class={{this.heading}}>Route</h2>
           <div class="flex flex-col gap-1.5">
             <label for="route-picker" class="sr-only">Route</label>
             {{#if this.groups.length}}
               <div class="flex items-stretch gap-2">
-                <div class="wt-select min-w-0 flex-1">
+                <div
+                  class="flex min-w-0 flex-1 items-stretch gap-2.5 rounded-md border border-wt-ink bg-white px-2 py-[0.35rem] focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-wt-accent"
+                >
                   <span
-                    class="wt-route-swatch"
+                    class="w-[0.35rem] self-stretch rounded-xs"
                     style={{css
                       "background: "
                       (if this.selected this.selected.color "transparent")
                     }}
                   ></span>
-                  <select id="route-picker" {{on "change" this.selectRoute}}>
+                  <select
+                    id="route-picker"
+                    class="min-w-0 flex-1 cursor-pointer border-0 bg-transparent py-[0.2rem] font-medium text-wt-ink focus-visible:outline-none"
+                    {{on "change" this.selectRoute}}
+                  >
                     {{#if this.planner.isMissingRoute}}
                       <option selected disabled>Route not saved here</option>
                     {{/if}}
@@ -298,7 +313,13 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 </div>
                 <button
                   type="button"
-                  class="wt-reverse {{if this.planner.isReversed 'is-active'}}"
+                  class="inline-grid w-[2.6rem] flex-none cursor-pointer place-items-center rounded-md border
+                    {{focusRing}}
+                    {{if
+                      this.planner.isReversed
+                      'border-wt-ink bg-wt-ink text-white'
+                      'border-wt-line bg-white text-wt-ink hover:border-wt-ink'
+                    }}"
                   aria-pressed={{if this.planner.isReversed "true" "false"}}
                   aria-label="Ride it the other way"
                   title="Ride it the other way"
@@ -306,18 +327,20 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 ><ArrowsDownUp class="size-5" aria-hidden="true" /></button>
               </div>
             {{else}}
-              <p class="wt-empty">No preset routes here yet. Draw a route on the
-                map or import a GPX file.</p>
+              <p
+                class="rounded-md border border-dashed border-wt-line px-3 py-2.5 text-[0.85rem] text-wt-muted"
+              >No preset routes here yet. Draw a route on the map or import a
+                GPX file.</p>
             {{/if}}
             {{#if this.planner.isMissingRoute}}
-              <p class="wt-error text-sm" role="alert">This link points to a
-                route someone drew or imported. Those are saved only in the
+              <p class="text-sm text-wt-danger" role="alert">This link points to
+                a route someone drew or imported. Those are saved only in the
                 browser where they were made, so it can't be shown here: ask for
                 its GPX file (Export GPX) and import it.</p>
             {{else if this.isLoadingRoute}}
-              <p class="wt-muted text-xs">Loading the track…</p>
+              <p class="text-xs text-wt-muted">Loading the track…</p>
             {{else if this.route.url}}
-              <p class="wt-muted text-xs"><a
+              <p class="text-xs text-wt-muted"><a
                   href={{this.route.url}}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -325,7 +348,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 >Route page</a></p>
             {{/if}}
             {{#if this.planner.myRoutes.saveError}}
-              <p class="wt-error text-sm" role="alert">
+              <p class="text-sm text-wt-danger" role="alert">
                 {{this.planner.myRoutes.saveError}}</p>
             {{/if}}
             {{#if this.planner.selectedOwn}}
@@ -333,12 +356,12 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 <p class="flex flex-wrap items-center gap-x-3 text-xs">
                   <button
                     type="button"
-                    class="wt-link"
+                    class="p-1 text-wt-accent hover:underline"
                     {{on "click" this.editSelected}}
                   >Edit route</button>
                   <button
                     type="button"
-                    class="wt-link-danger"
+                    class="p-1 text-wt-danger hover:underline"
                     {{on "click" this.deleteSelected}}
                   >Delete this route</button>
                 </p>
@@ -347,15 +370,16 @@ export default class SidePanel extends Component<SidePanelSignature> {
           </div>
 
           {{#if this.planner.isEditing}}
-            <RouteEditor class="wt-draw p-3" />
+            <RouteEditor class="bg-wt-draw-soft p-3" />
           {{else}}
-            <div class="wt-route-actions grid grid-cols-3 gap-2">
+            {{! On phones one per row, full width: three across wrap. }}
+            <div class="grid grid-cols-3 gap-2 max-desktop:grid-cols-1">
               <button
                 type="button"
-                class="wt-btn justify-center"
+                class="{{btn}} justify-center"
                 {{on "click" this.startDrawing}}
               >Draw a route</button>
-              <label class="wt-btn justify-center">
+              <label class="{{btn}} justify-center">
                 Import GPX
                 <input
                   type="file"
@@ -366,21 +390,21 @@ export default class SidePanel extends Component<SidePanelSignature> {
               </label>
               <button
                 type="button"
-                class="wt-btn justify-center"
+                class="{{btn}} justify-center"
                 {{on "click" this.exportGpx}}
               >Export GPX</button>
             </div>
           {{/if}}
           {{#if this.importError}}
-            <p class="wt-error text-sm" role="alert">{{this.importError}}</p>
+            <p
+              class="text-sm text-wt-danger"
+              role="alert"
+            >{{this.importError}}</p>
           {{/if}}
         </section>
 
-        <section
-          aria-labelledby="h-trip"
-          class="wt-sec-trip flex flex-col gap-3"
-        >
-          <h2 id="h-trip" class="wt-h2">Trip</h2>
+        <section aria-labelledby="h-trip" class="flex flex-col gap-3">
+          <h2 id="h-trip" class={{this.heading}}>Trip</h2>
           <div class="grid grid-cols-2 gap-2">
             <div class="col-span-2">
               <DatePicker
@@ -424,20 +448,27 @@ export default class SidePanel extends Component<SidePanelSignature> {
           </div>
 
           {{#if this.summary.length}}
-            <dl class="wt-summary">
+            <dl
+              class="wt-summary grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border border-wt-line bg-white p-3"
+            >
               {{#each this.summary as |item|}}
-                <div><dt>{{item.label}}</dt><dd>{{item.value}}</dd></div>
+                {{! Values in the body font with tabular figures: monospace
+                    made dates like "Thu 4 Feb" look like a different typeface
+                    from the numbers. }}
+                <div><dt class={{eyebrow}}>{{item.label}}</dt><dd
+                    class="text-base font-medium tabular-nums"
+                  >{{item.value}}</dd></div>
               {{/each}}
             </dl>
           {{/if}}
         </section>
 
-        <section aria-labelledby="h-map" class="wt-sec-map flex flex-col gap-3">
-          <h2 id="h-map" class="wt-h2">Map</h2>
+        <section aria-labelledby="h-map" class="flex flex-col gap-3">
+          <h2 id="h-map" class={{this.heading}}>Map</h2>
           <div class="flex min-w-0 flex-col gap-1.5">
             <span class="text-sm">Climate</span>
             {{! Full width; on a narrow panel it scrolls sideways instead of widening it. }}
-            <div class="wt-climate-scroll min-w-0 overflow-x-auto">
+            <div class="min-w-0 overflow-x-auto">
               <SegmentedControl
                 @value={{this.planner.climate}}
                 @onChange={{fn this.setMap "climate"}}
@@ -456,10 +487,14 @@ export default class SidePanel extends Component<SidePanelSignature> {
               </SegmentedControl>
             </div>
           </div>
-          <div class="wt-range-wrap">
-            <div class="wt-range-scale is-top" aria-hidden="true">
+          {{! Time of year: 48 quarter-month steps, the chosen one named above
+              the thumb, month names below the track. Both scales are inset by
+              the padding plus half the thumb, so 0% and 100% sit on the
+              thumb's centre at either end. }}
+          <div class="relative isolate px-2 pt-[1.4rem] pb-[1.1rem]">
+            <div class="{{this.rangeScale}} top-0 h-4" aria-hidden="true">
               <span
-                class="wt-range-value"
+                class="text-[0.8rem] font-semibold text-wt-ink"
                 style={{this.weekLabelStyle}}
               >{{this.planner.weekSlot.label}}</span>
             </div>
@@ -472,15 +507,25 @@ export default class SidePanel extends Component<SidePanelSignature> {
               aria-label="Time of year"
               aria-valuetext={{this.planner.weekSlot.label}}
             />
-            <div class="wt-range-scale is-ticks" aria-hidden="true">
-              {{#each this.months as |m|}}
-                <span class="wt-range-tick" style={{m.tickStyle}}></span>
-              {{/each}}
-            </div>
-            <div class="wt-range-scale is-bottom" aria-hidden="true">
+            {{! Month starts: behind the input, taller than the track, so they
+                show above and below it and the thumb slides over them. The
+                input is 1.5rem high below 1.4rem of padding, so the track's
+                centre is at 2.15rem. }}
+            <div
+              class="{{this.rangeScale}} top-[calc(2.15rem-7px)] -z-1 h-[14px]"
+              aria-hidden="true"
+            >
               {{#each this.months as |m|}}
                 <span
-                  class="wt-range-month"
+                  class="h-full w-px bg-wt-rule"
+                  style={{m.tickStyle}}
+                ></span>
+              {{/each}}
+            </div>
+            <div class="{{this.rangeScale}} bottom-0 h-4" aria-hidden="true">
+              {{#each this.months as |m|}}
+                <span
+                  class="text-[0.7rem] text-wt-muted"
                   style={{m.style}}
                 >{{m.label}}</span>
               {{/each}}
@@ -581,7 +626,10 @@ export default class SidePanel extends Component<SidePanelSignature> {
           </div>
           <ButtonGroup
             @size="xs"
-            class="wt-detail-toggles"
+            {{! Quieter than Frontile's default (black when on): white when
+                off, a soft teal when on; one equal column per toggle, filling
+                the panel's width (over the group's own inline-flex). }}
+            class="grid! auto-cols-[minmax(0,1fr)] grid-flow-col [&_button]:h-7 [&_button]:justify-center [&_button]:border-wt-line [&_button]:bg-white [&_button]:text-xs [&_button]:font-medium [&_button]:text-wt-muted [&_button]:shadow-none [&_button:hover]:bg-wt-band [&_button[aria-pressed=true]]:border-wt-accent/35 [&_button[aria-pressed=true]]:bg-wt-accent-soft [&_button[aria-pressed=true]]:text-wt-accent"
             role="group"
             aria-label="Show on the map"
             as |Group|

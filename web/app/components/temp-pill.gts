@@ -10,10 +10,10 @@ const TempPill: TOC<{
 }> = <template>
   <Chip
     @size="sm"
-    class="wt-temp-pill"
+    class="wt-temp-pill min-w-[3.4rem] justify-center font-data font-semibold"
     style={{css
       "background: "
-      (tempSwatch @t "var(--wt-band)")
+      (tempSwatch @t "var(--color-wt-band)")
       "; color: "
       (tempInk @t)
     }}

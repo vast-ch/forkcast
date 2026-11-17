@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type AtlasService from 'forkcast/services/atlas';
+import { helpTable } from 'forkcast/utils/classes';
 
 /** The Routes tab in Nerd mode: how the ready-made routes are built, with the built ones' figures. */
 export default class NerdRoutes extends Component {
@@ -61,7 +62,7 @@ export default class NerdRoutes extends Component {
       </p>
 
       <h3>The built routes</h3>
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>{{this.routes.length}}
           routes,
           {{this.totalKm}}

@@ -4,6 +4,7 @@ import { RAIN_THRESHOLDS, TEMP_STOPS } from 'forkcast/utils/climate';
 import { DOT_FULL, rainEmojiTiers } from 'forkcast/utils/layers';
 import { css } from 'forkcast/utils/format';
 import { value } from 'forkcast/utils/verify';
+import { helpDefs, helpTable } from 'forkcast/utils/classes';
 
 const STOPS = TEMP_STOPS.map(([t, color]) => ({
   t: String(t).replace('-', '−'),
@@ -32,12 +33,12 @@ const NerdMap: TOC<object> = <template>
       stops and flat beyond the ends, drawn onto a Web-Mercator canvas of about
       3 pixels per cell (at most 12 per degree), transparent over the sea:
     </p>
-    <table class="wt-help-table">
+    <table class="wt-help-table {{helpTable}}">
       <thead><tr><th scope="col">°C</th>{{#each STOPS as |s|}}<th
               scope="col"
             >{{s.t}}</th>{{/each}}</tr></thead>
       <tbody><tr><th scope="row">Colour</th>{{#each STOPS as |s|}}<td><span
-                class="wt-help-swatch"
+                class="inline-block h-[0.9rem] w-5 rounded-[0.2rem] align-middle"
                 style={{s.swatch}}
                 title={{s.color}}
               ></span></td>{{/each}}</tr></tbody>
@@ -53,11 +54,11 @@ const NerdMap: TOC<object> = <template>
       <li><strong>Emoji:</strong>
         the rainy-day chance at the chosen threshold × 7, as rainy days a week;
         the steps differ by threshold because heavier rain is rarer:
-        <dl class="wt-help-defs">
+        <dl class={{helpDefs}}>
           {{#each EMOJI as |e|}}
             <div><dt>{{e.mm}} mm</dt><dd>
                 {{#each e.tiers as |t|}}
-                  <span class="wt-help-rain-step">{{t.emoji}}
+                  <span class="mr-3 whitespace-nowrap">{{t.emoji}}
                     from
                     {{t.min}}</span>
                 {{/each}}

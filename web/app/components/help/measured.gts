@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import type Owner from '@ember/owner';
 import { tracked } from '@glimmer/tracking';
 import { loadMeasurements, type Measurements } from 'forkcast/utils/verify';
+import { helpNote } from 'forkcast/utils/classes';
 
 interface Signature {
   Args: object;
@@ -27,15 +28,16 @@ export default class Measured extends Component<Signature> {
   <template>
     {{#if this.data}}
       {{yield this.data}}
-      <p class="wt-help-measured-at">Measured on
+      <p class="wt-help-measured-at {{helpNote}}">Measured on
         {{this.data.run.date}}
         by the data pipeline's verify step (code
         <code>{{this.data.run.code}}</code>, grids
         <code>{{this.data.run.grids}}</code>).</p>
     {{else if this.failed}}
-      <p class="wt-help-measured-at">The measurements couldn't be loaded.</p>
+      <p class="wt-help-measured-at {{helpNote}}">The measurements couldn't be
+        loaded.</p>
     {{else}}
-      <p class="wt-help-measured-at">Loading the measurements…</p>
+      <p class="wt-help-measured-at {{helpNote}}">Loading the measurements…</p>
     {{/if}}
   </template>
 }

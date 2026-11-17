@@ -1,6 +1,7 @@
 import type { TOC } from '@ember/component/template-only';
 import Measured from 'forkcast/components/help/measured';
 import { signed, value, withInterval } from 'forkcast/utils/verify';
+import { helpTable } from 'forkcast/utils/classes';
 
 /** The Accuracy tab in Nerd mode: how much the weather itself varies, and the data's known limits, measured. */
 const NerdAccuracy: TOC<{ Args: { years: string } }> = <template>
@@ -12,7 +13,7 @@ const NerdAccuracy: TOC<{ Args: { years: string } }> = <template>
     </p>
     <Measured as |m|>
       <h3>The weather itself</h3>
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>How much a month swings from year to year,
           {{@years}}, on ERA5-Land's months (a standard deviation over the
           years)</caption>

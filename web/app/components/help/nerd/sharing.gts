@@ -1,6 +1,7 @@
 import type { TOC } from '@ember/component/template-only';
 import Measured from 'forkcast/components/help/measured';
 import { value } from 'forkcast/utils/verify';
+import { helpDefs } from 'forkcast/utils/classes';
 
 /** The Sharing & privacy tab in Nerd mode: exactly what is stored where, and what is fetched when. */
 const NerdSharing: TOC<object> = <template>
@@ -8,7 +9,7 @@ const NerdSharing: TOC<object> = <template>
     <h2>Sharing and privacy</h2>
 
     <h3>Where things are kept</h3>
-    <dl class="wt-help-defs">
+    <dl class={{helpDefs}}>
       <div><dt>The address</dt><dd>Every planner setting is a query parameter,
           left out at its default; values that don't parse read as the default.
           Your own route appears only as a random UUID.</dd></div>

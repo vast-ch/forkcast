@@ -1,10 +1,11 @@
 import type { TOC } from '@ember/component/template-only';
+import { helpTable } from 'forkcast/utils/classes';
 
 /** The Sources tab in Nerd mode: full citations, with version, resolution and period. */
 const NerdSources: TOC<{ Args: { years: string } }> = <template>
   <section id="sources">
     <h2>Sources and licences</h2>
-    <table class="wt-help-table">
+    <table class="wt-help-table {{helpTable}}">
       <thead><tr><th scope="col">Dataset</th><th scope="col">Used for</th><th
             scope="col"
           >Resolution, period</th><th scope="col">Licence</th></tr></thead>

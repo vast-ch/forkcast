@@ -3,6 +3,7 @@ import Measured from 'forkcast/components/help/measured';
 import AltitudeDemo from 'forkcast/components/help/altitude-demo';
 import { LAPSE_RATES, LOW_LAPSE_RATE } from 'forkcast/utils/climate';
 import { signed, value, withInterval } from 'forkcast/utils/verify';
+import { helpDefs, helpTable } from 'forkcast/utils/classes';
 
 const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
 const LAPSE = LAPSE_RATES.map((r, i) => ({
@@ -45,7 +46,7 @@ const NerdData: TOC<{ Args: { years: string } }> = <template>
     <h2>Where the numbers come from</h2>
 
     <h3>Sources</h3>
-    <dl class="wt-help-defs">
+    <dl class={{helpDefs}}>
       <div><dt>ERA5-Land</dt><dd>ECMWF's land reanalysis for Copernicus, 0.1°,
           hourly, regridded to 0.25° for Forkcast: daily rain totals (the 00:00
           step holds the day before), the monthly average temperature by hour of
@@ -101,7 +102,7 @@ const NerdData: TOC<{ Args: { years: string } }> = <template>
       all year, in °C per 1,000 m:
     </p>
     <Measured as |m|>
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <thead><tr><th scope="col"></th>{{#each LAPSE as |l|}}<th
                 scope="col"
               >{{l.month}}</th>{{/each}}</tr></thead>
@@ -156,7 +157,7 @@ const NerdData: TOC<{ Args: { years: string } }> = <template>
         {{withInterval m "lapse-test" "tmn" "Europe" "abs bias change"}}, too
         few stations to be sure there alone).
       </p>
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>Each station's average over 2011–2025 minus ours at its place
           and height: on average, and how far off typically</caption>
         <thead><tr><th scope="col"></th><th scope="col">Europe, average</th><th
@@ -197,7 +198,7 @@ const NerdData: TOC<{ Args: { years: string } }> = <template>
         for lows: ERA5-Land's warmest hour is cooler than the stations' average
         high, and its coldest hour is a bit warmer than their average low.
       </p>
-      <table class="wt-help-table">
+      <table class="wt-help-table {{helpTable}}">
         <caption>The seasonal curve against the monthly grid, every land cell
           and month: the fit alone, and as the app gets it (packed in bytes)</caption>
         <thead><tr><th scope="col"></th><th scope="col">Typical (mean)</th><th

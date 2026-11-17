@@ -6,6 +6,7 @@ import {
   type Measurement,
   type Measurements,
 } from 'forkcast/utils/verify';
+import { helpTable } from 'forkcast/utils/classes';
 
 const label = (id: string) =>
   CLIMATE_CHOICES.find((c) => c.value === id)?.label ?? id;
@@ -189,7 +190,7 @@ function shifts(m: Measurements) {
 export const BacktestTable: TOC<{
   Args: { measurements: Measurements; area: string };
 }> = <template>
-  <table class="wt-help-table">
+  <table class="wt-help-table {{helpTable}}">
     <caption>{{@area}}: a month's average error as a forecast of the following
       year, with its 95% interval</caption>
     <thead><tr><th scope="col">Climate</th>
@@ -211,7 +212,7 @@ export const BacktestTable: TOC<{
 export const WarmingTable: TOC<{
   Args: { measurements: Measurements; area: string };
 }> = <template>
-  <table class="wt-help-table">
+  <table class="wt-help-table {{helpTable}}">
     <caption>{{@area}}: 15 yrs brought forward, and the plain average, as a
       forecast of the following year (an average error below 0 is too cold)</caption>
     <thead><tr><th scope="col"></th><th scope="col">Average error</th><th
@@ -235,7 +236,7 @@ export const WarmingTable: TOC<{
 export const VersusTable: TOC<{
   Args: { measurements: Measurements; area: string };
 }> = <template>
-  <table class="wt-help-table">
+  <table class="wt-help-table {{helpTable}}">
     <caption>{{@area}}: the error compared with 15 yrs, year by year (more is
       worse)</caption>
     <thead><tr><th scope="col">Climate</th>
@@ -259,7 +260,7 @@ export const VersusTable: TOC<{
 /** The known ENSO effects, as the El Niño and La Niña climates change them. */
 export const EnsoTable: TOC<{ Args: { measurements: Measurements } }> =
   <template>
-    <table class="wt-help-table">
+    <table class="wt-help-table {{helpTable}}">
       <caption>Where the effect is well known: the climate's change from 15 yrs,
         averaged over the region and months</caption>
       <thead><tr><th scope="col">Climate</th><th scope="col">Where, when</th><th
@@ -281,7 +282,7 @@ export const EnsoTable: TOC<{ Args: { measurements: Measurements } }> =
 /** How far each climate moves the year's average high from 15 yrs. */
 export const ShiftTable: TOC<{ Args: { measurements: Measurements } }> =
   <template>
-    <table class="wt-help-table">
+    <table class="wt-help-table {{helpTable}}">
       <caption>The year's average high, compared with 15 yrs</caption>
       <thead><tr><th scope="col">Climate</th>
           {{#each AREAS as |a|}}<th scope="col">{{a}}</th>{{/each}}

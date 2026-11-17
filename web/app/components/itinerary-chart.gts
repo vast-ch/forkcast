@@ -6,6 +6,7 @@ import { modifier } from 'ember-modifier';
 import type PlannerService from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
 import { tempSwatch, usualRange } from 'forkcast/utils/climate';
+import { rainEmojiTier } from 'forkcast/utils/layers';
 import TempPill from 'forkcast/components/temp-pill';
 import {
   css,
@@ -21,11 +22,13 @@ import {
   fmtTemp,
   fmtUsual,
 } from 'forkcast/utils/format';
+import { focusRing, inlineStats, title } from 'forkcast/utils/classes';
 
 const COL = 18; // px per day
 const NUM_Y = 10; // baseline of the day numbers
 const LIGHTS_Y = 22; // baseline of the 🔦 marks under them
-const TOP = 28; // top of the temperature band, below both rows
+const RAIN_EMOJI_Y = 35; // baseline of the rain emoji under those
+const TOP = 42; // top of the temperature band, below all three rows
 const TEMP_H = 110;
 const GAP = 22; // room for the rain band's caption
 const RAIN_H = 34;
@@ -77,6 +80,8 @@ interface Bar {
   rainY: number;
   color: string;
   rainH: number;
+  /** The map's rain emoji for the day's rainy days a week, if any */
+  rainEmoji?: string;
   isHighlighted: boolean;
   /** Set on the first day of a month after the trip's first: its name, for the line before it */
   monthStart?: string;
@@ -202,6 +207,10 @@ export default class ItineraryChart extends Component<{
         noData || Number.isNaN(warm) || Number.isNaN(cold)
           ? {}
           : { usualY: this.y(warm), usualEnd: this.y(cold) };
+      // The day's chance as rainy days a week, so it reads like the map.
+      const tier = noData
+        ? undefined
+        : rainEmojiTier(day.weather.rainChance * 7, this.planner.rainThreshold);
       return {
         ...band,
         day,
@@ -211,8 +220,9 @@ export default class ItineraryChart extends Component<{
         yHigh: this.y(high),
         barH: Math.max(2, this.y(low) - this.y(high)),
         rainY: this.rainTop + RAIN_H - rainH,
-        color: tempSwatch(day.weather.high, 'var(--wt-muted)'),
+        color: tempSwatch(day.weather.high, 'var(--color-wt-muted)'),
         rainH,
+        rainEmoji: tier?.emoji,
         isHighlighted: this.planner.highlightedDay === day.n,
         monthStart:
           prev !== undefined && prev.date.getMonth() !== day.date.getMonth()
@@ -242,6 +252,15 @@ export default class ItineraryChart extends Component<{
 
   select = (day: TripDay) => this.planner.toggleDay(day);
 
+  /** A column's background: the selected day, else a rest day's shading, else
+   * a tint on hover. */
+  hitClass = (b: Bar) =>
+    b.isHighlighted
+      ? 'fill-wt-pick-wash'
+      : b.day.isRest
+        ? 'fill-wt-ink/4'
+        : 'fill-transparent group-hover:fill-wt-accent/8';
+
   /** What a screen reader says for the selected day. */
   get valueText() {
     const d = this.detail;
@@ -270,6 +289,7 @@ export default class ItineraryChart extends Component<{
   left = LEFT;
   numY = NUM_Y;
   lightsY = LIGHTS_Y;
+  rainEmojiY = RAIN_EMOJI_Y;
   /** Right edge of the axis labels. */
   axisX = LEFT - 6;
   firstDayX = colX(1);
@@ -282,17 +302,17 @@ export default class ItineraryChart extends Component<{
       >
         {{#if this.detail}}
           <div class="min-w-0">
-            <p class="wt-title">{{this.detailTitle}}</p>
-            <p class="wt-muted text-xs">{{this.detailRoute}}</p>
+            <p class={{title}}>{{this.detailTitle}}</p>
+            <p class="text-xs text-wt-muted">{{this.detailRoute}}</p>
           </div>
-          <dl class="wt-inline-stats">
+          <dl class={{inlineStats}}>
             <div><dt>Low</dt><dd><TempPill @t={{this.detail.nightLow}} />
-                <span class="wt-muted text-xs">{{fmtUsual
+                <span class="text-xs text-wt-muted">{{fmtUsual
                     this.detail.nightLow
                     this.detail.nightLowSpread
                   }}</span></dd></div>
             <div><dt>High</dt><dd><TempPill @t={{this.detail.weather.high}} />
-                <span class="wt-muted text-xs">{{fmtUsual
+                <span class="text-xs text-wt-muted">{{fmtUsual
                     this.detail.weather.high
                     this.detail.weather.highSpread
                   }}</span></dd></div>
@@ -314,8 +334,8 @@ export default class ItineraryChart extends Component<{
           </dl>
         {{else if this.offTripNote}}
           <div class="min-w-0">
-            <p class="wt-title">{{this.planner.weekSlot.label}}</p>
-            <p class="wt-muted text-xs">{{this.offTripNote}}</p>
+            <p class={{title}}>{{this.planner.weekSlot.label}}</p>
+            <p class="text-xs text-wt-muted">{{this.offTripNote}}</p>
           </div>
         {{/if}}
       </div>
@@ -325,7 +345,8 @@ export default class ItineraryChart extends Component<{
           aria-hidden and the selected day is read out as the value. }}
       {{! template-lint-disable require-presentational-children }}
       <div
-        class="wt-scroll overflow-x-auto overflow-y-hidden"
+        class="overflow-x-auto overflow-y-hidden [scrollbar-width:thin]
+          {{focusRing}}"
         role="slider"
         tabindex="0"
         aria-label="Day of the trip (temperatures and rain for each day)"
@@ -343,38 +364,51 @@ export default class ItineraryChart extends Component<{
           width={{this.width}}
           height={{this.height}}
           aria-hidden="true"
-          class="block"
+          class="fill-wt-muted font-data text-[9px]"
         >
+          {{! Its labels are small and muted, in the data font, unless they say
+              otherwise. }}
           {{#each this.gridLines as |g|}}
             <line
               x1={{this.left}}
               x2={{this.width}}
               y1={{g.y}}
               y2={{g.y}}
-              class={{if g.isZero "wt-grid-zero" "wt-grid"}}
+              class={{if
+                g.isZero
+                "stroke-wt-rule [stroke-dasharray:3_3]"
+                "stroke-wt-line"
+              }}
             />
             <text
               x={{this.axisX}}
               y={{g.y}}
               dy="3.5"
               text-anchor="end"
-              class="wt-axis"
+              class="text-[10px]"
             >{{g.label}}</text>
           {{/each}}
           <text
             x={{this.firstDayX}}
             y={{this.rainTop}}
             dy="-5"
-            class="wt-axis wt-axis-title"
+            class="font-body text-[11px]"
           >Chance of a rainy day (over {{this.planner.rainThreshold}}mm)</text>
+          {{! The parking columns at both ends: where the map's week is when it
+              lies before or after the trip. }}
           {{#each this.parking as |p|}}
-            <g class="wt-park {{if p.isActive 'is-active'}}">
+            <g>
               <rect
                 x={{p.x}}
                 y="0"
                 width={{this.colW}}
                 height={{this.height}}
-                class="wt-park-slot"
+                class="[stroke-dasharray:3_3]
+                  {{if
+                    p.isActive
+                    'fill-wt-pick-wash stroke-wt-pick'
+                    'fill-transparent stroke-wt-line'
+                  }}"
               />
               <text
                 x={{p.cx}}
@@ -382,7 +416,7 @@ export default class ItineraryChart extends Component<{
                 transform={{p.transform}}
                 text-anchor="middle"
                 dominant-baseline="central"
-                class="wt-park-label"
+                class={{if p.isActive "fill-wt-pick font-semibold"}}
               >{{p.label}}</text>
             </g>
           {{/each}}
@@ -390,9 +424,7 @@ export default class ItineraryChart extends Component<{
             {{! Clicking a column picks its day; keyboards use the slider above. }}
             {{! template-lint-disable no-invalid-interactive }}
             <g
-              class="wt-day
-                {{if b.isHighlighted 'is-active'}}
-                {{if b.day.isRest 'is-rest'}}"
+              class="group cursor-pointer"
               aria-hidden="true"
               {{on "click" (fn this.select b.day)}}
             >
@@ -401,7 +433,7 @@ export default class ItineraryChart extends Component<{
                 y="0"
                 width={{this.colW}}
                 height={{this.height}}
-                class="wt-day-hit"
+                class={{this.hitClass b}}
               />
               {{#if b.monthStart}}
                 <line
@@ -409,7 +441,7 @@ export default class ItineraryChart extends Component<{
                   x2={{b.x}}
                   y1="4"
                   y2={{this.height}}
-                  class="wt-month-line"
+                  class="stroke-wt-rule"
                 />
               {{/if}}
               <text
@@ -417,7 +449,7 @@ export default class ItineraryChart extends Component<{
                 dx={{this.half}}
                 y={{this.numY}}
                 text-anchor="middle"
-                class="wt-day-num"
+                class={{if b.isHighlighted "fill-wt-pick font-semibold"}}
               >{{b.day.n}}</text>
               {{#if b.day.needsLights}}
                 <text
@@ -425,8 +457,19 @@ export default class ItineraryChart extends Component<{
                   dx={{this.half}}
                   y={{this.lightsY}}
                   text-anchor="middle"
-                  class="wt-lights"
+                  class="text-[10px]"
                 >🔦</text>
+              {{/if}}
+              {{! In the body font: the data font's fallback draws ☔ as a plain
+                  glyph. }}
+              {{#if b.rainEmoji}}
+                <text
+                  x={{b.x}}
+                  dx={{this.half}}
+                  y={{this.rainEmojiY}}
+                  text-anchor="middle"
+                  class="wt-rain-emoji font-body text-[11px]"
+                >{{b.rainEmoji}}</text>
               {{/if}}
               {{#if b.usualEnd}}
                 <line
@@ -434,7 +477,7 @@ export default class ItineraryChart extends Component<{
                   x2={{b.midX}}
                   y1={{b.usualY}}
                   y2={{b.usualEnd}}
-                  class="wt-temp-usual"
+                  class="stroke-wt-muted stroke-1"
                 />
               {{/if}}
               <rect
@@ -442,7 +485,11 @@ export default class ItineraryChart extends Component<{
                 y={{b.yHigh}}
                 width={{this.barW}}
                 height={{b.barH}}
-                class="wt-temp-bar"
+                class={{if
+                  b.isHighlighted
+                  "stroke-wt-pick stroke-2"
+                  "stroke-black/18 stroke-[0.5]"
+                }}
                 style={{css "fill: " b.color}}
                 rx="2"
               />
@@ -451,19 +498,20 @@ export default class ItineraryChart extends Component<{
                 y={{b.rainY}}
                 width={{this.barW}}
                 height={{b.rainH}}
-                class="wt-rain-bar"
+                class="fill-wt-rain opacity-75"
                 rx="1"
               />
             </g>
           {{/each}}
-          {{! On top of every column, so the next day's bar can't cover them. }}
+          {{! On top of every column, so the next day's bar can't cover them;
+              the halo keeps them readable over the bars. }}
           {{#each this.months as |m|}}
             <text
               x={{m.x}}
               y={{m.y}}
               transform={{m.transform}}
               dominant-baseline="central"
-              class="wt-month-name"
+              class="pointer-events-none stroke-wt-paper stroke-[3px] [paint-order:stroke]"
             >{{m.name}}</text>
           {{/each}}
         </svg>

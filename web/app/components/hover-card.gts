@@ -15,6 +15,7 @@ import {
   fmtRideWind,
   fmtWind,
 } from 'forkcast/utils/format';
+import { card, eyebrow, title } from 'forkcast/utils/classes';
 
 const round = (n: number | null | undefined) =>
   isMissing(n) ? '–' : Math.round(n);
@@ -69,6 +70,9 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
     return `high ${fmt(high)}, low ${fmt(low)}`;
   }
 
+  readout =
+    'grid grid-cols-[auto_1fr] gap-x-3 gap-y-[0.2rem] [&_dd]:text-right [&_dd]:font-data [&_dd]:text-[0.85rem] [&_dt]:text-wt-muted';
+
   get dayTitle() {
     const d = this.route?.day;
     return d ? fmtDayTitle(d) : '';
@@ -79,25 +83,25 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
   }
 
   <template>
-    <div class="wt-card pointer-events-none w-64 p-3 text-sm" ...attributes>
+    <div class="{{card}} pointer-events-none w-64 p-3 text-sm" ...attributes>
       {{#if this.hover}}
         {{#if this.route}}
-          <p class="wt-eyebrow">On your route ·
+          <p class={{eyebrow}}>On your route ·
             {{fmtKm this.route.km}}
             from the start</p>
           {{#if this.route.day}}
-            <p class="wt-title mt-0.5">{{this.dayTitle}}</p>
+            <p class="{{title}} mt-0.5">{{this.dayTitle}}</p>
             {{#if this.route.weather}}
-              <dl class="wt-readout mt-2">
+              <dl class="{{this.readout}} mt-2">
                 <dt>Low</dt>
                 <dd><TempPill @t={{this.route.weather.low}} />
-                  <span class="wt-muted text-xs">{{fmtUsual
+                  <span class="text-xs text-wt-muted">{{fmtUsual
                       this.route.weather.low
                       this.route.weather.lowSpread
                     }}</span></dd>
                 <dt>High</dt>
                 <dd><TempPill @t={{this.route.weather.high}} />
-                  <span class="wt-muted text-xs">{{fmtUsual
+                  <span class="text-xs text-wt-muted">{{fmtUsual
                       this.route.weather.high
                       this.route.weather.highSpread
                     }}</span></dd>
@@ -129,20 +133,20 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
               </dl>
             {{/if}}
           {{else}}
-            <p class="wt-muted mt-1">Beyond the end of the planned days.</p>
+            <p class="mt-1 text-wt-muted">Beyond the end of the planned days.</p>
           {{/if}}
         {{else if this.hover.climate}}
-          <p class="wt-eyebrow">{{this.weekLabel}} · {{this.coords}}</p>
-          <dl class="wt-readout mt-2">
+          <p class={{eyebrow}}>{{this.weekLabel}} · {{this.coords}}</p>
+          <dl class="{{this.readout}} mt-2">
             <dt>Low</dt>
             <dd><TempPill @t={{this.hover.climate.low}} />
-              <span class="wt-muted text-xs">{{fmtUsual
+              <span class="text-xs text-wt-muted">{{fmtUsual
                   this.hover.climate.low
                   this.hover.climate.lowSpread
                 }}</span></dd>
             <dt>High</dt>
             <dd><TempPill @t={{this.hover.climate.high}} />
-              <span class="wt-muted text-xs">{{fmtUsual
+              <span class="text-xs text-wt-muted">{{fmtUsual
                   this.hover.climate.high
                   this.hover.climate.highSpread
                 }}</span></dd>
@@ -161,19 +165,19 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
               }}</dd>
           </dl>
         {{else if this.isSquareLoading}}
-          <p class="wt-eyebrow">{{this.coords}}</p>
-          <p class="wt-muted mt-1">Loading this square's climate…</p>
+          <p class={{eyebrow}}>{{this.coords}}</p>
+          <p class="mt-1 text-wt-muted">Loading this square's climate…</p>
         {{else if this.hover.square}}
-          <p class="wt-eyebrow">{{this.coords}}</p>
-          <p class="wt-muted mt-1">Click to load this square's climate.</p>
+          <p class={{eyebrow}}>{{this.coords}}</p>
+          <p class="mt-1 text-wt-muted">Click to load this square's climate.</p>
         {{else}}
-          <p class="wt-eyebrow">{{this.coords}}</p>
-          <p class="wt-muted mt-1">No climate data here (sea or outside the map
-            area).</p>
+          <p class={{eyebrow}}>{{this.coords}}</p>
+          <p class="mt-1 text-wt-muted">No climate data here (sea or outside the
+            map area).</p>
         {{/if}}
       {{else}}
-        <p class="wt-eyebrow">{{this.weekLabel}}</p>
-        <p class="wt-muted mt-1">Point at the map for the climate (click an
+        <p class={{eyebrow}}>{{this.weekLabel}}</p>
+        <p class="mt-1 text-wt-muted">Point at the map for the climate (click an
           outlined square to load it), or at the route for the weather on that
           day of your trip.</p>
       {{/if}}

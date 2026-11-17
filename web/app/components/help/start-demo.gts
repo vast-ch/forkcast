@@ -10,6 +10,7 @@ import { fmtDate } from 'forkcast/utils/format';
 import { DEFAULTS } from 'forkcast/utils/settings';
 import TempCalendar from 'forkcast/components/temp-calendar';
 import TempPill from 'forkcast/components/temp-pill';
+import { helpDemo, inlineStats } from 'forkcast/utils/classes';
 
 const PLACES = {
   nordkapp: { name: 'Nordkapp', lat: 71.17, lon: 25.78, ele: 300 },
@@ -79,7 +80,7 @@ export default class StartDemo extends Component {
   };
 
   <template>
-    <div class="wt-help-demo flex flex-col gap-3">
+    <div class="{{helpDemo}} flex flex-col gap-3">
       <SegmentedControl
         @value={{this.place}}
         @onChange={{this.setPlace}}
@@ -101,7 +102,8 @@ export default class StartDemo extends Component {
         <Ctl.Item @value="high">High</Ctl.Item>
         <Ctl.Item @value="low">Low</Ctl.Item>
       </SegmentedControl>
-      <div class="wt-help-calendar">
+      {{! As wide as its days, not the card. }}
+      <div class="self-start">
         <TempCalendar
           @value={{this.date}}
           @onChange={{this.setDate}}
@@ -110,7 +112,7 @@ export default class StartDemo extends Component {
           aria-label="Start date"
         />
       </div>
-      <dl class="wt-inline-stats">
+      <dl class={{inlineStats}}>
         <div><dt>Start</dt><dd>{{fmtDate this.date}}</dd></div>
         <div><dt>Low</dt><dd><TempPill @t={{this.picked.low}} /></dd></div>
         <div><dt>High</dt><dd><TempPill @t={{this.picked.high}} /></dd></div>

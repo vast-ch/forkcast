@@ -11,6 +11,7 @@ import {
   rainEmojiTiers,
   WIND_STOPS,
 } from 'forkcast/utils/layers';
+import { card, focusRing } from 'forkcast/utils/classes';
 
 /** The wind scale's ends and ticks, km/h: from CALM_KMH, where arrows start. */
 const WIND_MIN = CALM_KMH;
@@ -44,6 +45,8 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
       k,
       left: ((k - WIND_MIN) / (WIND_MAX - WIND_MIN)) * 100,
       isMinor: i > 0 && i < WIND_TICKS.length - 1,
+      // Four "km/h" don't fit: the unit only on the last mark (25 km/h).
+      isLast: i === WIND_TICKS.length - 1,
     }));
   }
 
@@ -57,16 +60,19 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
   }
 
   get ticks() {
-    return [-10, 0, 10, 20, 30].map((t) => ({
+    const ts = [-10, 0, 10, 20, 30];
+    return ts.map((t, i) => ({
       t,
       left: ((t + 15) / 50) * 100,
       isMinor: t === 0 || t === 20,
+      // Phones are too narrow for five "°C": the unit only on the last (30°C).
+      isLast: i === ts.length - 1,
     }));
   }
 
   /** The emoji steps for the rainy-day threshold chosen. */
   get rainEmoji() {
-    // "2+ days": the "days" can go where space is short (see app.css).
+    // "2+ days": the "days" can go where space is short (on phones).
     return rainEmojiTiers(this.planner.rainThreshold).map((t) => ({
       ...t,
       count: t.label.replace(/ days$/, ''),
@@ -128,11 +134,19 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
 
   <template>
     {{#if this.hasContent}}
-      {{! The whole legend is the toggle: click to shrink it to a chip and back. }}
+      {{! The whole legend is the toggle: click to shrink it to a chip and back.
+          Compact on phones. }}
       <button
         type="button"
-        class="wt-card wt-legend flex flex-wrap items-end gap-x-6 gap-y-3 px-3 py-2.5 text-left text-xs
-          {{unless this.isOpen 'is-closed'}}"
+        class="{{card}}
+          flex cursor-pointer flex-wrap px-3 py-2.5 text-left text-xs
+          {{focusRing}}
+          max-desktop:max-w-[calc(100%-1rem)] max-desktop:flex-nowrap max-desktop:px-2 max-desktop:py-[0.35rem] max-desktop:text-[10px]
+          {{if
+            this.isOpen
+            'items-end gap-x-6 gap-y-3 max-desktop:gap-x-[0.6rem] max-desktop:gap-y-1'
+            'items-center gap-1.5'
+          }}"
         aria-expanded={{if this.isOpen "true" "false"}}
         aria-label={{this.buttonLabel}}
         title={{if this.isOpen "Hide the legend" "Show the legend"}}
@@ -143,15 +157,20 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
           {{#if this.planner.showTemp}}
             <span class="block min-w-0">
               <span
-                class="wt-legend-scale relative mt-0.5 block h-2.5 rounded-sm"
+                class="relative mt-0.5 block h-2.5 w-60 rounded-sm max-desktop:w-[5.5rem]"
                 style={{css "background: " this.gradient}}
               ></span>
-              <span class="wt-legend-scale relative block h-4 tabular-nums">
+              <span
+                class="relative block h-4 w-60 tabular-nums max-desktop:w-[5.5rem]"
+              >
                 {{#each this.ticks as |tick|}}
                   <span
-                    class="wt-tick {{if tick.isMinor 'wt-tick-minor'}}"
+                    class="absolute top-0.5 -translate-x-1/2 whitespace-nowrap text-wt-muted
+                      {{if tick.isMinor 'max-desktop:hidden'}}"
                     style={{css "left: " tick.left "%"}}
-                  >{{tick.t}}<span class="wt-tick-unit">°C</span></span>
+                  >{{tick.t}}<span
+                      class={{unless tick.isLast "max-desktop:hidden"}}
+                    >°C</span></span>
                 {{/each}}
               </span>
             </span>
@@ -159,27 +178,31 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
           {{#if this.planner.showRain}}
             {{#if this.isEmoji}}
               <span
-                class="wt-legend-emoji flex items-center gap-3 tabular-nums"
+                class="wt-legend-emoji flex items-center gap-3 tabular-nums max-desktop:gap-[0.35rem]"
                 title={{this.rainLabel}}
               >
                 {{#each this.rainEmoji as |t|}}
-                  <span class="flex items-center gap-1">
+                  <span
+                    class="flex items-center gap-1 max-desktop:gap-[0.1rem]"
+                  >
                     <span
                       aria-hidden="true"
                       style={{css "font-size: " t.px "px; line-height: 1"}}
                     >{{t.emoji}}</span>
                     <span>{{t.count}}<span
-                        class="wt-legend-unit"
+                        class="max-desktop:hidden"
                       >{{t.unit}}</span></span>
                   </span>
                 {{/each}}
               </span>
             {{else}}
-              <span class="wt-legend-dots flex items-end gap-3 tabular-nums">
+              <span
+                class="wt-legend-dots flex items-end gap-3 tabular-nums max-desktop:gap-[0.35rem]"
+              >
                 {{#each this.dots as |dot|}}
                   <span class="flex items-center gap-1">
                     <span
-                      class="wt-dot"
+                      class="inline-block rounded-full border border-white/60 bg-wt-rain/78"
                       style={{css
                         "width: "
                         dot.size
@@ -195,19 +218,24 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
             {{/if}}
           {{/if}}
           {{#if this.planner.showWind}}
-            <span class="wt-legend-wind block min-w-0" aria-hidden="true">
+            <span
+              class="block min-w-0 max-desktop:pr-[1.1rem] max-desktop:pl-[0.35rem]"
+              aria-hidden="true"
+            >
               <span
-                class="wt-legend-scale wt-legend-wind-scale relative mt-0.5 block h-2.5 rounded-sm"
+                class="relative mt-0.5 block h-2.5 w-40 rounded-sm shadow-[inset_0_0_0_1px_rgb(0_0_0/0.15)] max-desktop:w-18"
                 style={{css "background: " this.windGradient}}
               ></span>
               <span
-                class="wt-legend-scale wt-legend-wind-scale relative block h-4 tabular-nums"
+                class="relative block h-4 w-40 tabular-nums max-desktop:w-18"
               >
                 {{#each this.windTicks as |tick|}}
                   <span
-                    class="wt-tick {{if tick.isMinor 'wt-tick-minor'}}"
+                    class="absolute top-0.5 -translate-x-1/2 whitespace-nowrap text-wt-muted
+                      {{if tick.isMinor 'max-desktop:hidden'}}"
                     style={{css "left: " tick.left "%"}}
-                  >{{tick.k}}<span class="wt-tick-unit"> km/h</span></span>
+                  >{{tick.k}}<span class={{unless tick.isLast "hidden"}}>
+                      km/h</span></span>
                 {{/each}}
               </span>
             </span>
@@ -220,7 +248,10 @@ export default class Legend extends Component<{ Element: HTMLButtonElement }> {
           {{#if this.isEmoji}}
             <span aria-hidden="true">🌧️</span>
           {{else}}
-            <span class="wt-dot" style={{css "width: 8px; height: 8px"}}></span>
+            <span
+              class="inline-block rounded-full border border-white/60 bg-wt-rain/78"
+              style={{css "width: 8px; height: 8px"}}
+            ></span>
           {{/if}}
         {{/if}}
       </button>

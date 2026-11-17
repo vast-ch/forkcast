@@ -46,7 +46,7 @@ module('Acceptance | help', function (hooks) {
 
     // Straight to the help: the demo loads the climate itself.
     await visit('/help/trip');
-    assert.dom('.wt-help-demo .wt-temp-day.has-temp').exists();
+    assert.dom('article .wt-temp-day.has-temp').exists();
     await click(button('Nordkapp'));
     const north = picked();
     await click(button('Málaga'));
@@ -88,7 +88,7 @@ module('Acceptance | help', function (hooks) {
   for (const s of sections) {
     test(`/help/${s.id} has a nerd version, every measurement found`, async function (assert) {
       await visit(`/help/${s.id}?nerd=true`);
-      const text = find('.wt-help')?.textContent ?? '';
+      const text = find('article')?.textContent ?? '';
       assert.true(text.length > 500, 'it has content');
       // A measurement the page asks for but the data doesn't have says so.
       assert.false(text.includes(MISSING), 'every measurement is found');

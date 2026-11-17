@@ -5,6 +5,7 @@ import { DatePicker, Input } from 'frontile/forms';
 import { SegmentedControl } from 'frontile/buttons';
 import { daylightHours } from 'forkcast/utils/sun';
 import { fmtDaylight, fmtHours } from 'forkcast/utils/format';
+import { helpDemo, inlineStats } from 'forkcast/utils/classes';
 
 const PLACES = {
   nordkapp: { name: 'Nordkapp', lat: 71.17, lon: 25.78 },
@@ -62,7 +63,7 @@ export default class DaylightDemo extends Component {
   };
 
   <template>
-    <div class="wt-help-demo flex flex-col gap-3">
+    <div class="{{helpDemo}} flex flex-col gap-3">
       <SegmentedControl
         @value={{this.place}}
         @onChange={{this.setPlace}}
@@ -99,7 +100,7 @@ export default class DaylightDemo extends Component {
           min="5"
         />
       </div>
-      <dl class="wt-inline-stats">
+      <dl class={{inlineStats}}>
         <div><dt>Daylight</dt><dd>{{fmtDaylight this.daylight}}</dd></div>
         <div><dt>Riding</dt><dd>{{fmtHours this.riding}}</dd></div>
         <div><dt>In the chart</dt><dd>{{if
