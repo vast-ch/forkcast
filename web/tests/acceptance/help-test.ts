@@ -53,7 +53,7 @@ module('Acceptance | help', function (hooks) {
 
   test('an unknown address opens the planner', async function (assert) {
     await visit('/europe');
-    assert.dom('#route-picker').exists();
+    assert.dom('#route-1').exists();
   });
 
   test('the start date demo colours its days for each town', async function (assert) {

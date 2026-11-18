@@ -47,8 +47,12 @@ export const DEFAULTS = {
   rainMetric: 'days' as RainMetric,
   /** mm of rain from which a day counts as rainy */
   rainThreshold: 5 as RainThreshold,
-  /** Selected route: a preset's id, or one of your routes' UUID; '' means the default (the first preset) */
-  routeId: '',
+  /**
+   * The selected routes, up to 3 to compare, separated by `~`: each a preset's
+   * id or one of your routes' UUID, with a `!` before it when ridden the other
+   * way (`ev15~!ev6`); '' means the default (the first preset). See `rideList`.
+   */
+  routeIds: '',
   /** First day of the trip; today by default */
   start: isoDate(),
   kmPerDay: 80,
@@ -56,7 +60,6 @@ export const DEFAULTS = {
   speed: 21,
   rideDays: 5,
   restDays: 1,
-  isReversed: false,
   /** Highlighted trip day, 0 for none */
   highlightedDay: 0,
 };
@@ -96,7 +99,9 @@ const oneOf =
     values.find((x) => x === v);
 const isBoolean: Parse<boolean> = (v) =>
   typeof v === 'boolean' ? v : undefined;
-const isText: Parse<string> = (v) => (typeof v === 'string' ? v : undefined);
+/** Route ids, each with an optional `!`, separated by `~` (see `routeIds`). */
+const isRouteList: Parse<string> = (v) =>
+  typeof v === 'string' && /^(!?[\w-]+(~!?[\w-]+)*)?$/.test(v) ? v : undefined;
 const isWholeIn =
   (min: number, max: number): Parse<number> =>
   (v) =>
@@ -123,12 +128,11 @@ export const PARSE: { [K in SettingKey]: Parse<(typeof DEFAULTS)[K]> } = {
   dates: oneOf(['months', 'weeks', 'off'] as const),
   rainMetric: oneOf(['days', 'mm'] as const),
   rainThreshold: oneOf(RAIN_THRESHOLDS),
-  routeId: isText,
+  routeIds: isRouteList,
   start: (v) => (typeof v === 'string' && isIsoDate(v) ? v : undefined),
   kmPerDay: inRange('kmPerDay'),
   speed: inRange('speed'),
   rideDays: inRange('rideDays'),
   restDays: inRange('restDays'),
-  isReversed: isBoolean,
   highlightedDay: isWholeIn(0, Infinity),
 };

@@ -61,9 +61,9 @@ immutable` and `index.html` with `no-cache`.
 
 ## Settings live in the URL
 
-Every setting (climate, month, layers, rainy-day threshold, route, start date, km per day, average speed, ride/rest pattern, direction, highlighted day) is a query parameter of the app's single planner route (`/`), with one name everywhere: the URL parameter, the controller field and the planner property are the same (`kmPerDay`, `cities`, `highlightedDay`…), and so are their values. `web/app/controllers/index.ts` declares them with
+Every setting (climate, month, layers, rainy-day threshold, routes and their directions, start date, km per day, average speed, ride/rest pattern, highlighted day) is a query parameter of the app's single planner route (`/`), with one name everywhere: the URL parameter, the controller field and the planner property are the same (`kmPerDay`, `cities`, `highlightedDay`…), and so are their values. `web/app/controllers/index.ts` declares them with
 their defaults (`web/app/utils/settings.ts`); Ember writes a parameter to the
-URL only while it differs from its default. Your own drawn or imported routes are not in the URL: they're kept whole in the browser's localStorage (`web/app/services/my-routes.ts`; everything stored is a `@stored` property, `web/app/utils/stored.ts`, polyline-encoded with elevation, plus a drawn route's clicks so it can be drawn further), and `routeId` holds one's random UUID. A link to a UUID this browser doesn't have shows a warning instead (`PlannerService.isMissingRoute`). Where you left off is kept in localStorage too (`web/app/services/last-visit.ts`): the whole query string after every settings change (so a new setting needs nothing extra), and the map's centre and zoom after every move. Opening the planner with no query parameters at all restores the saved query string (`IndexRoute.redirect`) and the map takes the saved view instead of fitting the route (`isResuming`); a link with any setting in it is taken as it is, fits its route, and becomes the new last visit. The view stays out of the URL: it would rewrite the address on every drag, and a view chosen on one screen doesn't suit another. The map's time of year is a quarter-month (`week`, 0–47, see `web/app/utils/weeks.ts`), defaulting to the current one, and the trip starts today unless the link says otherwise (a link without a start date plans from the day it is opened); the start date's calendar colours each day by the temperature at the route's first point on that date (`PlannerService.startTempOn`, the map's high or low), through `TempCalendar`, Frontile's `Calendar` with a `<:day>` block, which the help's demo shares; quarter-months keep the familiar month grid and line up with the monthly data. In the sidebar it is a range slider with 48 steps (Frontile's `Input` with `@type="range"`, so it gets the same label and accessibility wiring as the other fields; its text-field classes are overridden and the track and thumb are styled through their pseudo-elements, `web/app/components/range-input.gts`). The chosen week is named above the thumb, a tick marks the start of each month and the months are labelled under the track; the arrow keys step a week. Moving it also moves the day chart: the selected day stays if it is in that week, otherwise the trip's first day in it is picked (`PlannerService.selectWeek`). A week the trip does not reach parks in a Before or After column at the ends of the day chart, by whichever end of the trip is nearer in the year (`PlannerService.offTrip`). The other way round, picking a day shows its week.
+URL only while it differs from its default. Your own drawn or imported routes are not in the URL: they're kept whole in the browser's localStorage (`web/app/services/my-routes.ts`; everything stored is a `@stored` property, `web/app/utils/stored.ts`, polyline-encoded with elevation, plus a drawn route's clicks so it can be drawn further), and `routeIds` holds one's random UUID. A link to a UUID this browser doesn't have shows a warning instead (`Ride.isMissing`). Where you left off is kept in localStorage too (`web/app/services/last-visit.ts`): the whole query string after every settings change (so a new setting needs nothing extra), and the map's centre and zoom after every move. Opening the planner with no query parameters at all restores the saved query string (`IndexRoute.redirect`) and the map takes the saved view instead of fitting the route (`isResuming`); a link with any setting in it is taken as it is, fits its route, and becomes the new last visit. The view stays out of the URL: it would rewrite the address on every drag, and a view chosen on one screen doesn't suit another. The map's time of year is a quarter-month (`week`, 0–47, see `web/app/utils/weeks.ts`), defaulting to the current one, and the trip starts today unless the link says otherwise (a link without a start date plans from the day it is opened); the start date's calendar colours each day by the temperature at the route's first point on that date (`PlannerService.startTempOn`, the map's high or low), through `TempCalendar`, Frontile's `Calendar` with a `<:day>` block, which the help's demo shares; quarter-months keep the familiar month grid and line up with the monthly data. In the sidebar it is a range slider with 48 steps (Frontile's `Input` with `@type="range"`, so it gets the same label and accessibility wiring as the other fields; its text-field classes are overridden and the track and thumb are styled through their pseudo-elements, `web/app/components/range-input.gts`). The chosen week is named above the thumb, a tick marks the start of each month and the months are labelled under the track; the arrow keys step a week. Moving it also moves the day chart: the selected day stays if it is in that week, otherwise the trip's first day in it is picked (`PlannerService.selectWeek`). A week the trip does not reach parks in a Before or After column at the ends of the day chart, by whichever end of the trip is nearer in the year (`PlannerService.offTrip`). The other way round, picking a day shows its week.
 
 **Why:** a bookmark or a shared link reopens exactly the same plan, reloads
 lose nothing, and there is no account or storage to manage. Defaults are left
@@ -92,8 +92,8 @@ which the help's tests catch. The plan is in issue #20.
 
 Below 900 px wide (`web/app/services/media.ts`) the planner switches layout
 instead of squeezing the sidebar: a slim bar (logo, help, Settings),
-the map, then the trip (day chart, then summary). All settings (route,
-trip, map) live in a Frontile Drawer opened from the bar; it is the same `SidePanel` component rendering only its settings part. Tapping the route
+the map, then the day chart. Everything else (routes, trip, stats, map
+settings) lives in a Frontile Drawer opened from the bar; it is the same `SidePanel` component rendering only its settings part. Tapping the route
 selects a day: touch screens have no hover, so the map works out what is under
 the tap before handling it. Drawing a route closes the drawer and shows a
 floating toolbar on the map (points, Undo, Save, Cancel).
@@ -110,9 +110,25 @@ top.
 
 ## The day chart
 
-Under the map, one column per day: the day number on top, a 🔦 under it when the riding outlasts the daylight, then the map's rain emoji for the day (its chance of a rainy day × 7 as rainy days a week, through the same `rainEmojiTier` as the map and its legend, so an emoji means the same in both places), a bar from the low to the high, coloured by the high, the chance of a rainy day under it. Rest days are shaded columns, with the weather at the rest stop, and a line, labelled with the month's name along it, marks the start of each month; the selected day's date is above the chart. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with its distance and weather; the drawing itself is hidden from them.
+Under the map, one column per day, the day numbers on top, then a band for each picked route (`ItineraryChart`, given `planner.planned`), the same for one route as for three, so nothing in the chart depends on how many there are: a 🔦 row when the riding outlasts the daylight, then the map's rain emoji for the day (its chance of a rainy day × 7 as rainy days a week, through the same `rainEmojiTier` as the map and its legend, so an emoji means the same in both places), a bar from the low to the high, coloured by the high. The chance of a rainy day is only in the selected day's figures above the chart: drawn as bars under the temperatures it was too small to read. Rest days are shaded columns, with the weather at the rest stop, and a line, labelled with the month's name along it, marks the start of each month; each band has its route's colour down the left edge, and all share one scroller and one temperature scale (lines every 10°, every 5° once the bars are tall enough); a shorter trip's band just ends. Above the chart, the selected day's title and a table with a row per route: climbing (or a rest day, or 🏁 once that trip is over), low and high with their usual ranges under them, rainy day chance, rain when it rains, wind and daylight. Distance and riding time are left out: they're the trip settings, the same on every route. It is the one place to pick a day (there is no separate day list): click a column, or focus the chart and step through the days with the arrow keys (Home and End jump to the ends). For screen readers the chart is a slider whose value is the selected day with each route's figures; the drawing itself is hidden from them.
 
 **Why:** a list of days repeated what the chart shows, and on a phone it was a long scroll. The selected day's figures sit above the chart.
+
+The chart sets its own height and the panel follows it (the map takes what's left), rather than the panel being given a height the chart squeezes into: the bars stay one size whatever the window. Two buttons at the end of the day's title line pick small or big (`planner.chartSize`, `BIG` times taller bars); it's a choice for this screen, not the plan, so it's kept in localStorage (`@stored('chart-size')`) instead of the URL.
+
+## Comparing routes
+
+Up to three routes (`MAX_ROUTES`) can be picked at once. They are one setting, `routeIds`: the ids in order joined by `~`, each with a `!` in front when ridden the other way (`interlaken-malaga~ev15~!ev6`; '' is the first preset alone). Direction is per route, so there is no separate direction setting; the same route can be selected both ways. `PlannerService.rides` reads the list (unknown ids and repeats dropped, a link to an unsaved own route kept so it can say so) into `Ride`s, each with its own cached route and trip; `planner.route` and `planner.trip` are the first one's, which the start calendar and editing follow. `planner.trips` asks for the climate tiles along all of them.
+
+The comparison works because every trip is planned with the same settings: `planTrip` gives day `n` the date `start + n − 1` and decides rest days by the ride/rest pattern alone, so day `n` is the same date, and the same kind of day, on every route. One `highlightedDay` lines them all up; only their lengths differ (`planner.days` is the longest trip's). Changing, turning or dropping the first route clears the selected day, since its day numbers change; doing any of that to another route keeps it.
+
+In the sidebar every picked route is a row: a native select in its colour to swap it (`planner.changeRoute`, in its place), its ⇅ (`toggleReversed(index)`) and a × (`removeRide`), disabled on the last route, since there's always one; under them an empty "Add a route…" select adds one as soon as it's picked and goes back to empty (`compareRoute`; a route already there comes the other way, and the select is gone at three). Clicking a route on the map replaces the first (`selectRoute`). Wherever a route is named for reading (the stats' column heads, the chart's table, the hover card) a route ridden the other way gets the ⇅ icon after its name rather than words, with "(other way)" for screen readers; aria labels use `Ride.label`, which spells it out.
+
+On the map each picked route is drawn in its place's colour (`ROUTE_COLORS`: the first picked is always the first colour, alone or not, so a colour means the same place in the list everywhere), each with its own start, night stops, date tags and the selected day's stretch. The view fits all of them. Hovering finds the nearest point on any of them. The day chart has a band per route (see "The day chart"), and the sidebar's Stats table (Frontile's `SimpleTable`) a column per route, headed by the route's colour bar and name. The hover card names the route it's over.
+
+A single route is simply a list of one: there's no separate one-route layout anywhere, so nothing changes look or behaviour as routes are added or dropped.
+
+**Why:** separate charts would scroll on their own and lose the alignment, and separate scales would make the same bar mean different temperatures. Colouring by place keeps any two routes apart (two of your own would otherwise share a colour), and always starting with the same colour means the first route looks the same whether it's alone or not. The colours are blue, orange and green from the Okabe–Ito set, which stay apart for colour-blind eyes too.
 
 ## The map
 
@@ -166,6 +182,14 @@ Under the map, one column per day: the day number on top, a 🔦 under it when t
     the climate grid (`reliefRaster` in `web/app/utils/layers.ts`), lit from the
     north-west, slopes exaggerated ×10 since the cells are 25 km, drawn in
     greys that the pane multiplies onto the colours below, so it only darkens.
+- **Night stops** (the `stops` layer in `wheel-map.gts`, on every picked
+  route): a circle where each riding day ends, filled with the day's high
+  (`tempSwatch`, the map's scale; grey without climate), or a triangle (an SVG
+  `divIcon`) where a rest day follows; a black dot for the start. All one size
+  (`STOP_RADIUS`) with the same ink edge and white halo, so nothing but shape
+  and fill carries meaning. The selected day is drawn like the rest, only
+  purple (`ROUTE_ACCENT`): its stop's edge, and its stretch of each route at
+  the route's own width (`ROUTE_WEIGHT`). Clicking a stop picks its day.
 - **Dates on the route** (URL setting `dates`: `months`, the default,
   `weeks` or `off`): a tag over the night stop of the 1st of each month
   ("Nov") or of the first day of each week of the trip ("Week 2");
@@ -263,12 +287,13 @@ Under the map, one column per day: the day number on top, a 🔦 under it when t
   headwind (`headwindBetween`) is that vector against the straight line from
   the day's start to its night stop, divided by the distance ridden: with one
   wind for the whole day this is exact, however the road winds. `windPush`
-  turns it into words: against or behind when over 40% of the speed pushes
-  along the ride, else from the side, or from all sides when the vector is
-  under 40% of the speed (`windSteadiness`, `STEADY`: the wind turns from day
-  to day). The trip's speed and headwind are the riding days' averages by
-  distance; mostly against or behind by the same 40%, else neither way on
-  average. The map's Wind switch draws arrows (`WindLayer` in `wheel-map.gts`), one
+  turns it into words (`fmtRideWind`): a headwind or tailwind when over 40%
+  of the speed pushes along the ride, else a crosswind, or just the speed
+  when the mean vector is under 40% of the speed (`windSteadiness`, `STEADY`:
+  the wind turns from day to day, so there's no side to name). The trip's
+  speed and headwind are the riding days' averages by distance: a headwind or
+  tailwind by the same 40%, else just the speed (`fmtTripWind`). The map's
+  Wind switch draws arrows (`WindLayer` in `wheel-map.gts`), one
   per ~44 px, all the same length, coloured by speed (`windColor`,
   `WIND_STOPS` in `layers.ts`: white at 10 km/h to purple from 25, since
   the windiest hour averaged over a month's days rarely tops it), and none

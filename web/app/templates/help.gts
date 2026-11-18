@@ -242,6 +242,17 @@ export default class Help extends Component<{
                 <Legend />
               </div>
 
+              <h3>Night stops</h3>
+              <p>
+                A circle on your route marks where you sleep, filled with that
+                day's usual high in the map's colours; a triangle marks a stop
+                where you stay two nights, with a rest day next. The black dot
+                is the start. The selected day's stretch of route and its stop
+                are drawn in purple. Point at a stop for its night and date, or
+                click it to pick that day. When you compare routes, every route
+                has its own stops, start and date tags.
+              </p>
+
               <h3>Dates on the route</h3>
               <p>
                 Small tags over your route's night stops show where you'll be as
@@ -274,7 +285,7 @@ export default class Help extends Component<{
                     a river.</dd></div>
                 <div><dt>Routes</dt><dd>The dashed routes you haven't picked.
                     Your own routes show here too. Click one to pick it; the
-                    picked route always shows.</dd></div>
+                    picked routes always show.</dd></div>
               </dl>
               <p>
                 City names and water are downloaded only once you switch them
@@ -298,7 +309,7 @@ export default class Help extends Component<{
                 such as “15 km/h SW”: its speed and the side it blows from, left
                 out where that changes from day to day. Point at your route
                 instead to see which day of your trip you'd be there, and the
-                weather expected on that date.
+                weather expected on that date, and which route it is.
               </p>
             </section>
           {{/if}}
@@ -336,23 +347,23 @@ export default class Help extends Component<{
 
               <h3>The day chart</h3>
               <p>
-                Under the map, one column per day, numbered along the top:
+                Under the map, one column per day, numbered along the top, and a
+                row of them for each of your routes, marked in its colour on the
+                left. Each route's row has:
               </p>
               <ul>
                 <li>a
                   <strong>bar</strong>
                   from the low to the high, coloured by the high;</li>
-                <li>underneath, the
-                  <strong>chance of a rainy day</strong>;</li>
                 <li>a
                   <strong>🔦</strong>
-                  under the day number when the day's riding takes longer than
-                  its daylight;</li>
+                  when the day's riding takes longer than its daylight;</li>
                 <li>the map's
                   <strong>rain emoji</strong>
                   (🌦️ 🌧️ ☔) under that, for a day as rainy as that emoji's
                   place on the map: the day's chance of a rainy day, as rainy
-                  days a week. A dry day gets none;</li>
+                  days a week. A dry day gets none, and the selected day's
+                  chance of a rainy day is above the chart;</li>
                 <li><strong>shaded columns</strong>
                   for rest days, with the weather where you stay;</li>
                 <li>a
@@ -370,35 +381,52 @@ export default class Help extends Component<{
                 column at the end of the chart is highlighted instead, depending
                 on which end of the trip is nearer.
               </p>
+              <p>
+                All the routes share one temperature scale, so their bars
+                compare. Picking a day picks it on every route, and the table
+                above the chart has that day's numbers, a row for each route, or
+                a 🏁 for a trip that's already over. A ⇅ after a route's name
+                means it's ridden the other way.
+              </p>
+              <p>
+                The two buttons at the top right of the chart (at the end of the
+                day's title, on a phone) make it small or big: big draws the
+                bars two and a half times as tall, with a line every 5 °C
+                instead of 10, and gives the map less room. This browser
+                remembers which you chose.
+              </p>
 
               <h3>A day's numbers</h3>
+              <p>
+                In the table above the chart, for the day you picked. The
+                distance and the riding time are left out: they're your km per
+                day and average speed, the same on every route.
+              </p>
               <dl class={{helpDefs}}>
+                <div><dt>Climbing</dt><dd>Every ascent along the day's stretch
+                    added up; on a rest day, “Rest day”.</dd></div>
                 <div><dt>Low</dt><dd>The low where you sleep, at the end of the
                     day's ride.</dd></div>
                 <div><dt>High</dt><dd>The day's high in the middle of the day's
                     ride, where you spend most of the riding hours.</dd></div>
-                <div><dt>(9 to 20 °C)</dt><dd>In brackets next to the low and
-                    the high: the usual range, where 8 days in 10 fall at that
-                    time of year. The thin line through each day's bar in the
-                    chart shows it, from the usual highest high to the usual
-                    lowest low. How wide it is depends on the place: a few
-                    degrees by the sea or in the tropics, 15 °C and more in a
-                    continental winter.</dd></div>
+                <div><dt>(9 to 20 °C)</dt><dd>Under the low and the high: the
+                    usual range, where 8 days in 10 fall at that time of year.
+                    The thin line through each day's bar in the chart shows it,
+                    from the usual highest high to the usual lowest low. How
+                    wide it is depends on the place: a few degrees by the sea or
+                    in the tropics, 15 °C and more in a continental winter.</dd></div>
                 <div><dt>Wind</dt><dd>How strong the wind usually is at the
                     windiest hour of the riding day, and how it meets you over
-                    the day's stretch: against you, behind you, from the side,
-                    or from all sides (a different one from day to day). A
-                    winding road counts as the line from where you start to
-                    where you sleep.</dd></div>
-                <div><dt>Rain</dt><dd>The chance that the day is rainy, and how
-                    much rain a day brings when it rains (at least 1 mm), also
-                    in the middle of the ride. That says more than an average
-                    spread over the dry days too: 1 mm a day on average can be a
-                    drizzle every day or a downpour once a fortnight.</dd></div>
-                <div><dt>Distance</dt><dd>With the stretch of the route (km from
-                    the start) and the climbing: every ascent along it added up.</dd></div>
-                <div><dt>Riding</dt><dd>The distance at your average speed: time
-                    in the saddle, without breaks.</dd></div>
+                    the day's stretch: a headwind, a tailwind or a crosswind, or
+                    just the speed when it comes from a different side from day
+                    to day. A winding road counts as the line from where you
+                    start to where you sleep.</dd></div>
+                <div><dt>Rainy day chance, when it rains</dt><dd>The chance that
+                    the day is rainy, and how much rain a day brings when it
+                    rains (at least 1 mm), also in the middle of the ride. That
+                    says more than an average spread over the dry days too: 1 mm
+                    a day on average can be a drizzle every day or a downpour
+                    once a fortnight.</dd></div>
                 <div><dt>Daylight</dt><dd>From sunrise where the day starts to
                     sunset where it ends.</dd></div>
               </dl>
@@ -415,19 +443,24 @@ export default class Help extends Component<{
               </p>
               <DaylightDemo />
 
-              <h3>The summary</h3>
+              <h3>Stats</h3>
+              <p>
+                The trip at a glance, under “Stats”, with a column for each
+                route when you compare them.
+              </p>
               <dl class={{helpDefs}}>
-                <div><dt>Days</dt><dd>The whole trip, riding and rest days, and
-                    the arrival date.</dd></div>
+                <div><dt>Days</dt><dd>The whole trip, riding and rest days, then
+                    the arrival date and how many of each.</dd></div>
                 <div><dt>High</dt><dd>The average high over the riding days.</dd></div>
                 <div><dt>Rainy riding days</dt><dd>The day-by-day chances added
                     up: how many to expect, not a promise. In brackets, the
                     range 8 trips out of 10 fall in. Rain comes in spells, so
                     some trips catch a lot more and some a lot less.</dd></div>
                 <div><dt>Wind</dt><dd>The riding days' wind, averaged by
-                    distance, and whether it's against you or behind you over
-                    the whole trip, or neither way. Against you one way is
-                    behind you the other way round: try the ⇅ button.</dd></div>
+                    distance, and whether it's mostly a headwind or a tailwind
+                    over the whole trip (just the speed when it's neither). A
+                    headwind one way is a tailwind the other way round: try the
+                    ⇅ button.</dd></div>
                 <div><dt>Highest high</dt><dd>The highest single high your trip
                     is as likely to beat as not, in a usual year. Heat comes in
                     spells, which Forkcast takes into account.</dd></div>
@@ -441,8 +474,9 @@ export default class Help extends Component<{
 
               <h3>On a phone</h3>
               <p>
-                The map comes first, then the day chart and the summary. All the
-                settings are in the “Settings” drawer at the top.
+                The map comes first, then the day chart. Everything else, your
+                routes, the trip, its stats and the map's settings, is in the
+                “Settings” drawer at the top.
               </p>
             </section>
           {{/if}}
@@ -474,8 +508,27 @@ export default class Help extends Component<{
                 roads.
               </p>
               <p>
-                Pick a route in the list or click a dashed one on the map. The ⇅
-                button next to the list rides it the other way.
+                Pick a route in the list under “Route”, or click a dashed one on
+                the map: either way it becomes your first route. The ⇅ button
+                next to a route rides it the other way.
+              </p>
+
+              <h3>Comparing routes</h3>
+              <p>
+                “Add a route…” under your routes adds another, up to three in
+                all; each route's own list swaps it for a different one. Each
+                route has its own ⇅ to turn it round and a × to drop it (the
+                last one stays: there's always a route). Add the same route
+                again to see it both ways.
+              </p>
+              <p>
+                The routes take their colour from their place in the list: blue,
+                orange, then green, the same on the map, in the day chart and in
+                the stats, so the first route is blue even on its own. All of
+                them start on the same day with the same km per day and rest
+                days, so day 7 is the same date on every route: pick a day and
+                you see that day on each, one under the other. The start
+                calendar and “Edit route” follow the first route.
               </p>
 
               <h3>Drawing your own</h3>

@@ -24,13 +24,12 @@ export default class IndexController extends Controller {
   @tracked dates = DEFAULTS.dates;
   @tracked rainMetric = DEFAULTS.rainMetric;
   @tracked rainThreshold = DEFAULTS.rainThreshold;
-  @tracked routeId = DEFAULTS.routeId;
+  @tracked routeIds = DEFAULTS.routeIds;
   @tracked start = DEFAULTS.start;
   @tracked kmPerDay = DEFAULTS.kmPerDay;
   @tracked speed = DEFAULTS.speed;
   @tracked rideDays = DEFAULTS.rideDays;
   @tracked restDays = DEFAULTS.restDays;
-  @tracked isReversed = DEFAULTS.isReversed;
   @tracked highlightedDay = DEFAULTS.highlightedDay;
 }
 

@@ -1,5 +1,6 @@
 /* stylelint-disable */
 @import "tailwindcss" source("../../");
+@plugin "@tailwindcss/typography";
 /* In the components layer, so utilities on the map override it. */
 @import "leaflet/dist/leaflet.css" layer(components);
 

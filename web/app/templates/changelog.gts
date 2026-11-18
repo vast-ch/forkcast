@@ -16,7 +16,7 @@ const Changelog: TOC<{ Args: { model: string } }> = <template>
       <p class="mt-3 text-[1.1rem] text-balance text-wt-muted">What's new in
         Forkcast, release by release.</p>
     </header>
-    <article class="wt-changelog {{prose}}">
+    <article class="wt-changelog mt-10 {{prose}}">
       {{htmlSafe @model}}
     </article>
   </div>
