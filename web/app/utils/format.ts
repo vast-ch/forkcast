@@ -13,27 +13,30 @@ export const fmtUsual = (mean: number, spread: number): string => {
   return `(${Math.round(lo)} to ${Math.round(hi)}°C)`;
 };
 
-const PUSH_WORDS: Record<WindPush, string> = {
-  against: 'against you',
-  behind: 'behind you',
-  side: 'from the side',
-  varied: 'from all sides',
+/** How the wind meets the ride; nothing when it has no direction to speak
+ * of (from all sides in turn). */
+const PUSH_WORDS: Partial<Record<WindPush, string>> = {
+  against: 'headwind',
+  behind: 'tailwind',
+  side: 'crosswind',
 };
 
-/** A day's wind: "15 km/h, against you". */
+/** A day's wind: "15 km/h, headwind", or just the speed. */
 export const fmtRideWind = (mps: number, push?: WindPush): string => {
   if (isMissing(mps)) return '–';
   const kmh = `${Math.round(mps * 3.6)} km/h`;
-  return push ? `${kmh}, ${PUSH_WORDS[push]}` : kmh;
+  const words = push && PUSH_WORDS[push];
+  return words ? `${kmh}, ${words}` : kmh;
 };
 
-/** The trip's wind: "14 km/h, against you", or "neither way". */
+/** The trip's wind: "14 km/h, headwind", or just the speed when it's
+ * neither against nor behind. */
 export const fmtTripWind = (mps: number, push?: WindPush): string => {
   if (isMissing(mps)) return '–';
   const kmh = `${Math.round(mps * 3.6)} km/h`;
-  if (push === 'against' || push === 'behind')
-    return `${kmh}, ${PUSH_WORDS[push]}`;
-  return push ? `${kmh}, neither way` : kmh;
+  return push === 'against' || push === 'behind'
+    ? `${kmh}, ${PUSH_WORDS[push]}`
+    : kmh;
 };
 
 /** The wind at a spot: "15 km/h SW", or "15 km/h" when it blows from any side. */

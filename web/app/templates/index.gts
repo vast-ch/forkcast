@@ -121,7 +121,7 @@ export default class IndexTemplate extends Component {
     {{else}}
       {{! Panel on the left, the map and the day chart on the right. }}
       <main
-        class="grid h-full grid-cols-[380px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] overflow-hidden"
+        class="grid h-full grid-cols-[500px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] overflow-hidden"
       >
         <SidePanel class="row-span-2 overflow-hidden border-r border-wt-line" />
         <section class="relative isolate min-h-0" aria-label="Map">

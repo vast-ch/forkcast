@@ -52,13 +52,16 @@ import {
 
 /** The selected day, as everywhere in the app: its night stop's ring and its
  * stretch of route, a vivid purple that stands out on every temperature
- * colour (it glows a little, PICK_GLOW). The other stops are ringed in plain
- * ink, with a white halo that keeps them apart from the colours below. */
+ * colour, drawn just like the other stops and the route otherwise. The other
+ * stops are ringed in plain ink; every stop has a white halo that keeps it
+ * apart from the colours below. */
 const ROUTE_ACCENT = '#a020f0';
 const STOP_RING = '#17212b';
-const PICK_GLOW =
-  'drop-shadow-[0_0_2px_color-mix(in_srgb,var(--color-wt-pick)_90%,transparent)]';
 const STOP_HALO = 'drop-shadow-[0_0_2px_rgb(255_255_255/0.9)]';
+/** Every stop's circle, the start's too: one size, whatever the day. */
+const STOP_RADIUS = 4.5;
+/** A picked route's line, and the selected day's stretch over it. */
+const ROUTE_WEIGHT = 4;
 
 /** A map label's text: a white halo keeps it readable over any colour. */
 const LABEL_TEXT =
@@ -673,7 +676,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         }).addTo(group);
         L.polyline(latlngs, {
           color: r.color,
-          weight: 4,
+          weight: ROUTE_WEIGHT,
           interactive: false,
         }).addTo(group);
       }
@@ -691,34 +694,36 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         this.fitTo(L.latLngBounds(loaded.flatMap((r) => r.points.map(latLng))));
     }
 
-    // The first route's start and night stops; on every route, the selected
-    // day's stretch and the night after it.
+    // Every route's start and night stops, and its selected day's stretch.
     const trips = s.rides.map((r) => r.trip);
     this.layer('stops', [...trips, s.highlightedDay], (group) => {
-      const [first] = s.rides;
-      const { trip, route } = first ?? {};
-      if (!trip || !route) return;
-      const start = route.points[0]!;
-      L.circleMarker(latLng(start), {
-        pane: 'stops',
-        radius: 6,
-        color: '#fff',
-        weight: 2,
-        fillColor: '#111',
-        fillOpacity: 1,
-      })
-        .bindTooltip('Start', { direction: 'top' })
-        .addTo(group);
+      // A circle for a night, a triangle where a rest day follows (two
+      // nights there); the same size either way.
       const stop = (d: TripDay, isHi: boolean, hasRestNext: boolean) => {
-        const m = L.circleMarker(latLng(d.sleep), {
-          pane: 'stops',
-          radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
-          color: isHi ? ROUTE_ACCENT : STOP_RING,
-          weight: isHi ? 3 : 2,
-          className: isHi ? PICK_GLOW : STOP_HALO,
-          fillColor: tempSwatch(d.weather.high, '#888'),
-          fillOpacity: 1,
-        });
+        const ring = isHi ? ROUTE_ACCENT : STOP_RING;
+        const weight = 2;
+        const glow = STOP_HALO;
+        const fill = tempSwatch(d.weather.high, '#888');
+        const m = hasRestNext
+          ? L.marker(latLng(d.sleep), {
+              pane: 'stops',
+              keyboard: false,
+              icon: L.divIcon({
+                className: '',
+                iconSize: [14, 13],
+                iconAnchor: [7, 8],
+                html: `<svg width="14" height="13" viewBox="0 0 14 13" class="${glow} overflow-visible"><polygon points="7,1.5 13,11.5 1,11.5" style="fill:${fill};stroke:${ring};stroke-width:${weight};stroke-linejoin:round" /></svg>`,
+              }),
+            })
+          : L.circleMarker(latLng(d.sleep), {
+              pane: 'stops',
+              radius: STOP_RADIUS,
+              color: ring,
+              weight,
+              className: glow,
+              fillColor: fill,
+              fillOpacity: 1,
+            });
         m.bindTooltip(
           `Night ${d.n} · ${fmtShortDate(d.date)}${hasRestNext ? ' · rest day next' : ''}`,
           { direction: 'top', offset: [0, -4] },
@@ -726,13 +731,26 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         m.on('click', () => this.owner?.planner.highlightDay(d));
         m.addTo(group);
       };
-      for (const d of trip.days) {
-        if (d.isRest) continue;
-        const hasRestNext = trip.days[d.n]?.isRest === true;
-        stop(d, d.n === s.highlightedDay, hasRestNext);
+      for (const { trip, route } of s.rides) {
+        if (!trip || !route) continue;
+        L.circleMarker(latLng(route.points[0]!), {
+          pane: 'stops',
+          radius: STOP_RADIUS,
+          color: '#fff',
+          weight: 2,
+          fillColor: '#111',
+          fillOpacity: 1,
+        })
+          .bindTooltip('Start', { direction: 'top' })
+          .addTo(group);
+        for (const d of trip.days) {
+          if (d.isRest) continue;
+          const hasRestNext = trip.days[d.n]?.isRest === true;
+          stop(d, d.n === s.highlightedDay, hasRestNext);
+        }
       }
       if (!s.highlightedDay) return;
-      for (const [i, r] of s.rides.entries()) {
+      for (const r of s.rides) {
         const d = r.trip?.days.find((x) => x.n === s.highlightedDay);
         if (!r.route || !d || d.isRest) continue;
         const seg = r.route.points.filter(
@@ -742,21 +760,20 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         const b = pointAt(r.route.points, d.toKm);
         L.polyline([latLng(a), ...seg.map(latLng), latLng(b)], {
           color: ROUTE_ACCENT,
-          weight: 6,
-          opacity: 0.95,
+          weight: ROUTE_WEIGHT,
           interactive: false,
-          className: PICK_GLOW,
         }).addTo(group);
-        if (i > 0) stop(d, true, r.trip?.days[d.n]?.isRest === true);
       }
     });
 
-    // Where the rider is as each month (or week) begins, over that night's stop.
-    this.layer('dates', [trips[0], s.dates], (group) => {
-      const trip = trips[0];
-      if (!trip) return;
-      for (const { day, label: text } of milestones(trip, s.dates)) {
-        label(text, day.sleep.lat, day.sleep.lon, STOP_DATE).addTo(group);
+    // Where the rider is as each month (or week) begins, over that night's
+    // stop, on every route.
+    this.layer('dates', [...trips, s.dates], (group) => {
+      for (const trip of trips) {
+        if (!trip) continue;
+        for (const { day, label: text } of milestones(trip, s.dates)) {
+          label(text, day.sleep.lat, day.sleep.lon, STOP_DATE).addTo(group);
+        }
       }
     });
 
@@ -1016,7 +1033,8 @@ export default class WheelMap extends Component<WheelMapSignature> {
           km,
           point,
           day,
-          name: this.planner.isComparing ? ride.label : undefined,
+          name: ride.name,
+          isReversed: ride.isReversed,
           weather: day
             ? climateOn(grid, day.date, point, this.planner.rainThreshold)
             : undefined,

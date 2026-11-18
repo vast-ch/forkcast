@@ -13,10 +13,9 @@ import { isoDate } from 'forkcast/utils/settings';
 
 /** The summary's value for a label, e.g. "Days". */
 const summary = (label: string) =>
-  findAll('.wt-summary div')
-    .find((d) => d.querySelector('dt')?.textContent?.trim() === label)
-    ?.querySelector('dd')
-    ?.textContent?.trim();
+  (findAll('.wt-summary tbody tr') as HTMLTableRowElement[])
+    .find((tr) => tr.cells[0]?.textContent?.trim() === label)
+    ?.cells[1]?.textContent?.trim();
 
 module('Acceptance | planner', function (hooks) {
   setupApplicationTest(hooks);
@@ -24,9 +23,7 @@ module('Acceptance | planner', function (hooks) {
   test('it opens on the default route with a trip summary', async function (assert) {
     await visit('/');
     assert.strictEqual(currentURL(), '/');
-    assert
-      .dom('#route-picker option:checked')
-      .includesText('Interlaken – Málaga');
+    assert.dom('#route-1 option:checked').includesText('Interlaken – Málaga');
     assert.ok(Number(summary('Days')) > 0, 'the trip has days');
     assert.dom('[aria-label="Weather by day"]').exists('the day chart shows');
   });
@@ -273,9 +270,7 @@ module('Acceptance | planner', function (hooks) {
     await click(button('Draw a route'));
     await click(button('Cancel'));
     assert.dom('[aria-label="Drawing a route"]').doesNotExist();
-    assert
-      .dom('#route-picker option:checked')
-      .includesText('Interlaken – Málaga');
+    assert.dom('#route-1 option:checked').includesText('Interlaken – Málaga');
   });
 
   test('the start picker colours each day by the weather at the start', async function (assert) {
@@ -321,5 +316,16 @@ module('Acceptance | planner', function (hooks) {
     await click(button('Today'));
     assert.false(currentURL().includes('start='), 'today is the default start');
     assert.dom('[data-key]').doesNotExist('the calendar closes');
+  });
+
+  test('the chart can be made big and small again', async function (assert) {
+    await visit('/');
+    const height = () =>
+      Number(find('[role="slider"] svg')!.getAttribute('height'));
+    const small = height();
+    await click(button('Big'));
+    assert.ok(height() > small * 1.5, `${height()} over ${small}`);
+    await click(button('Small'));
+    assert.strictEqual(height(), small);
   });
 });

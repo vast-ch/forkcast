@@ -36,6 +36,12 @@ import {
   type SettingKey,
 } from 'forkcast/utils/settings';
 import { WEEKS, weekOfDate, type WeekSlot } from 'forkcast/utils/weeks';
+import { stored } from 'forkcast/utils/stored';
+
+/** The day chart's height: as it was, or its bars taller. */
+export type ChartSize = 'small' | 'big';
+const isChartSize = (v: unknown): ChartSize | undefined =>
+  v === 'small' || v === 'big' ? v : undefined;
 
 export type TempMetric = 'high' | 'low';
 /** The map's optional layers, toggled in the Map section. */
@@ -122,11 +128,13 @@ export const OWN_COLOR = '#b5179e';
 export const MAX_ROUTES = 3;
 
 /**
- * Each route's colour while comparing, by its place in the list, on the map and
- * in the day chart alike (a route alone keeps its own): apart from each other,
- * from the selected day's purple and from your own routes' magenta.
+ * Each picked route's colour, by its place in the list (the first is always
+ * the first colour, alone or not), on the map, in the day chart and the
+ * sidebar alike: apart from each other, from the selected day's purple and
+ * from the magenta line you draw with. Blue, orange and green from the
+ * Okabe–Ito set, which stay apart for colour-blind eyes too.
  */
-export const COMPARE_COLORS = ['#17212b', '#0f7b8a', '#d9662b'];
+export const ROUTE_COLORS = ['#0072b2', '#e69f00', '#009e73'];
 
 /**
  * One of the selected routes, ridden one way, and the trip along it. Every
@@ -147,11 +155,9 @@ export class Ride {
     return (this.isReversed ? '!' : '') + this.id;
   }
 
-  /** Its colour on the map and in the chart. */
+  /** Its colour on the map and in the chart: its place's. */
   get color(): string {
-    return this.planner.isComparing
-      ? COMPARE_COLORS[this.index]!
-      : (this.choice?.color ?? OWN_COLOR);
+    return ROUTE_COLORS[this.index]!;
   }
 
   /** As the route picker lists it; undefined for a link to an unsaved route. */
@@ -217,8 +223,9 @@ export interface Hover {
   square?: 'unloaded' | 'loading';
   /** Set when the pointer is near a selected route */
   onRoute?: {
-    /** Which route, while comparing */
+    /** Which route, and whether it's ridden the other way */
     name?: string;
+    isReversed?: boolean;
     km: number;
     day?: TripDay;
     weather?: DayClimate;
@@ -257,6 +264,10 @@ export default class PlannerService extends Service {
   @tracked editingId?: string;
   /** The name in the editor while drawing or editing; applied on save. */
   @tracked draftName = '';
+
+  /** How tall the day chart's bars are drawn: this screen's choice, so kept
+   * in this browser rather than the plan's link. */
+  @stored('chart-size', isChartSize) chartSize: ChartSize = 'small';
 
   // Settings (in the URL; see `setting`)
   /** Which climate's grids are loaded */
@@ -472,11 +483,6 @@ export default class PlannerService extends Service {
     this.routeIds = keys.join('~') === this.#defaultId ? '' : keys.join('~');
   }
 
-  /** More than one route selected: the map and the chart show them side by side. */
-  get isComparing(): boolean {
-    return this.rides.length > 1;
-  }
-
   /** Room for another route to compare. */
   get canCompare(): boolean {
     return this.rides.length < MAX_ROUTES;
@@ -605,6 +611,26 @@ export default class PlannerService extends Service {
     const isReversed = taken.has(id);
     if (isReversed && taken.has(`!${id}`)) return;
     this.#setRides([...this.rides, { id, isReversed }]);
+    await this.loadSelected();
+  }
+
+  /**
+   * Swap one of the picked routes for another, in its place and its own
+   * direction (the other way if it's already picked so). The selected day
+   * goes only if the first route changes.
+   */
+  async changeRoute(index: number, id: string): Promise<void> {
+    const ride = this.rides[index];
+    if (!ride || ride.id === id) return;
+    const taken = new Set(
+      this.rides.filter((r) => r !== ride).map((r) => r.key),
+    );
+    const isReversed = taken.has(id);
+    if (isReversed && taken.has(`!${id}`)) return;
+    this.#setRides(
+      this.rides.map((r) => (r === ride ? { id, isReversed } : r)),
+    );
+    if (index === 0) this.highlightedDay = 0;
     await this.loadSelected();
   }
 

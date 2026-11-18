@@ -7,12 +7,12 @@ import { fn } from '@ember/helper';
 import { LinkTo } from '@ember/routing';
 import { Button, ButtonGroup, SegmentedControl } from 'frontile/buttons';
 import { DatePicker, Input, Switch } from 'frontile/forms';
+import { SimpleTable } from 'frontile/collections';
 import type PlannerService from 'forkcast/services/planner';
 import {
   CITY_CHOICES,
   CLIMATE_CHOICES,
   MAP_DETAILS,
-  MAX_ROUTES,
   DATE_CHOICES,
 } from 'forkcast/services/planner';
 import type { Trip } from 'forkcast/utils/itinerary';
@@ -38,7 +38,7 @@ import RouteEditor from 'forkcast/components/route-editor';
 import TempCalendar from 'forkcast/components/temp-calendar';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 import X from 'ember-phosphor-icons/components/ph-x';
-import { btn, eyebrow, focusRing } from 'forkcast/utils/classes';
+import { btn, focusRing } from 'forkcast/utils/classes';
 
 /** A trip at a glance, as label and value pairs. */
 function tripSummary(t: Trip): { label: string; value: string }[] {
@@ -161,25 +161,16 @@ export default class SidePanel extends Component<SidePanelSignature> {
       .map(([group, routes]) => ({ label: label(group), routes }));
   }
 
-  get isLoadingRoute() {
-    return this.atlas.loadingRouteId === this.planner.selectedRouteId;
-  }
-
-  /** The trip at a glance, while there's one route. */
+  /** The trips at a glance, a column per route. */
   get summary() {
-    const t = this.trip;
-    return t && !this.planner.isComparing ? tripSummary(t) : [];
-  }
-
-  /** While comparing: the trips at a glance, a column per route. */
-  get comparedSummary() {
     const planned = this.planner.planned;
-    if (!this.planner.isComparing || !planned.length) return undefined;
+    if (!planned.length) return undefined;
     const each = planned.map(({ trip }) => tripSummary(trip));
     return {
       routes: planned.map(({ ride }) => ({
         key: ride.key,
-        label: ride.label,
+        name: ride.name,
+        isReversed: ride.isReversed,
         swatch: css('background: ', ride.color),
       })),
       rows: each[0]!.map(({ label }, i) => ({
@@ -189,27 +180,41 @@ export default class SidePanel extends Component<SidePanelSignature> {
     };
   }
 
-  /** The routes compared with the first, each with its own controls. */
-  get compared() {
-    return this.planner.rides.slice(1).map((r) => ({
+  /** Every route picked, in order (the first leads), each with its own
+   * controls. */
+  get rides() {
+    return this.planner.rides.map((r) => ({
       key: r.key,
       label: r.label,
-      km: r.choice ? fmtKm(r.choice.km) : '',
+      name: `Route ${r.index + 1}`,
+      selectId: `route-${r.index + 1}`,
       isReversed: r.isReversed,
       isMissing: r.isMissing,
       isLoading: this.atlas.loadingRouteId === r.id,
       swatch: css('background: ', r.color),
       toggleReversed: () => this.planner.toggleReversed(r.index),
       remove: () => this.planner.removeRide(r.index),
+      isOnly: this.planner.rides.length === 1,
+      isPicked: (id: string) => id === r.id,
+      change: (e: Event) =>
+        void this.planner.changeRoute(
+          r.index,
+          (e.target as HTMLSelectElement).value,
+        ),
     }));
   }
 
-  maxRoutes = MAX_ROUTES;
+  /** The summary table's look over Frontile's: no fill, no rounding. */
+  summaryClasses = {
+    wrapper: 'rounded-none bg-transparent',
+    thead: 'bg-transparent',
+  };
 
-  /** The first route's colour beside the picker. */
-  get selectedSwatch() {
-    return css('background: ', this.planner.ride.color);
-  }
+  /** Its cells, rows close together (Frontile's columns don't take
+   * `@classes`, and a row's label keeps its own look). */
+  summaryColumn = 'h-auto px-2 py-1 align-bottom';
+  summaryLabel = 'px-2 py-1 text-[0.8rem] text-wt-muted';
+  summaryValue = 'px-2 py-1 text-right text-[0.85rem] font-medium text-wt-ink';
 
   /** The map's optional layers, as toggle buttons. */
   get mapDetails() {
@@ -242,14 +247,8 @@ export default class SidePanel extends Component<SidePanelSignature> {
   // Each control passes its own setting's type of value; `fn` can't carry that.
   setMap = (key: MapSetting, value: unknown) =>
     this.planner.set(key, value as never);
-  toggleReversed = () => this.planner.toggleReversed();
-
-  selectRoute = (e: Event) => {
-    void this.planner.selectRoute((e.target as HTMLSelectElement).value);
-  };
-
-  /** From the Compare with… picker, which goes back to its prompt. */
-  compareRoute = (e: Event) => {
+  /** From the Add a route picker, which goes back to its prompt. */
+  addRoute = (e: Event) => {
     const select = e.target as HTMLSelectElement;
     const id = select.value;
     select.value = '';
@@ -329,65 +328,102 @@ export default class SidePanel extends Component<SidePanelSignature> {
         <section aria-labelledby="h-route" class="flex flex-col gap-3">
           <h2 id="h-route" class={{this.heading}}>Route</h2>
           <div class="flex flex-col gap-1.5">
-            <label for="route-picker" class="sr-only">Route</label>
             {{#if this.groups.length}}
-              <div class="flex items-stretch gap-2">
-                <div
-                  class="flex min-w-0 flex-1 items-stretch gap-2.5 rounded-md border border-wt-ink bg-white px-2 py-[0.35rem] focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-wt-accent"
-                >
-                  <span
-                    class="w-[0.35rem] self-stretch rounded-xs"
-                    style={{this.selectedSwatch}}
-                  ></span>
-                  <select
-                    id="route-picker"
-                    class="min-w-0 flex-1 cursor-pointer border-0 bg-transparent py-[0.2rem] font-medium text-wt-ink focus-visible:outline-none"
-                    {{on "change" this.selectRoute}}
+              {{! Every route picked, the first leading (the trip settings and
+                  the start calendar follow it): each on the map in its
+                  colour, with its own band in the day chart. }}
+              {{#each this.rides key="key" as |c|}}
+                <div class="wt-ride flex items-stretch gap-2">
+                  <div
+                    class="flex min-w-0 flex-1 items-stretch gap-2.5 rounded-md border border-wt-line bg-white px-2 py-[0.35rem] text-[0.9rem] focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-wt-accent hover:border-wt-ink"
                   >
-                    {{#if this.planner.isMissingRoute}}
-                      <option selected disabled>Route not saved here</option>
+                    <span
+                      class="w-[0.35rem] self-stretch rounded-xs"
+                      style={{c.swatch}}
+                    ></span>
+                    <label for={{c.selectId}} class="sr-only">{{c.name}}</label>
+                    <select
+                      class="min-w-0 flex-1 cursor-pointer border-0 bg-transparent py-[0.2rem] text-wt-ink focus-visible:outline-none"
+                      id={{c.selectId}}
+                      {{on "change" c.change}}
+                    >
+                      {{#if c.isMissing}}
+                        <option selected disabled>Route not saved here</option>
+                      {{/if}}
+                      {{#each this.groups as |g|}}
+                        <optgroup label={{g.label}}>
+                          {{#each g.routes as |r|}}
+                            <option
+                              value={{r.id}}
+                              selected={{c.isPicked r.id}}
+                            >{{r.label}}</option>
+                          {{/each}}
+                        </optgroup>
+                      {{/each}}
+                    </select>
+                    {{#if c.isLoading}}
+                      <span
+                        class="self-center text-xs text-wt-muted"
+                      >Loading…</span>
                     {{/if}}
-                    {{#each this.groups as |g|}}
-                      <optgroup label={{g.label}}>
-                        {{#each g.routes as |r|}}
-                          <option
-                            value={{r.id}}
-                            selected={{r.isSelected}}
-                          >{{r.label}}</option>
-                        {{/each}}
-                      </optgroup>
-                    {{/each}}
-                  </select>
+                  </div>
+                  <button
+                    type="button"
+                    class="inline-grid w-[2.6rem] flex-none cursor-pointer place-items-center rounded-md border
+                      {{focusRing}}
+                      {{if
+                        c.isReversed
+                        'border-wt-ink bg-wt-ink text-white'
+                        'border-wt-line bg-white text-wt-ink hover:border-wt-ink'
+                      }}"
+                    aria-pressed={{if c.isReversed "true" "false"}}
+                    aria-label="Ride {{c.label}} the other way"
+                    title="Ride it the other way"
+                    {{on "click" c.toggleReversed}}
+                  ><ArrowsDownUp class="size-5" aria-hidden="true" /></button>
+                  {{! The last route can't go: there's always one. }}
+                  <button
+                    type="button"
+                    class="inline-grid w-[2.6rem] flex-none place-items-center rounded-md border border-wt-line bg-white text-wt-ink enabled:cursor-pointer enabled:hover:border-wt-ink disabled:opacity-40
+                      {{focusRing}}"
+                    aria-label="Remove {{c.label}}"
+                    title={{if c.isOnly "Your only route" "Remove"}}
+                    disabled={{c.isOnly}}
+                    {{on "click" c.remove}}
+                  ><X class="size-4" aria-hidden="true" /></button>
                 </div>
-                <button
-                  type="button"
-                  class="inline-grid w-[2.6rem] flex-none cursor-pointer place-items-center rounded-md border
-                    {{focusRing}}
-                    {{if
-                      this.planner.isReversed
-                      'border-wt-ink bg-wt-ink text-white'
-                      'border-wt-line bg-white text-wt-ink hover:border-wt-ink'
-                    }}"
-                  aria-pressed={{if this.planner.isReversed "true" "false"}}
-                  aria-label="Ride it the other way"
-                  title="Ride it the other way"
-                  {{on "click" this.toggleReversed}}
-                ><ArrowsDownUp class="size-5" aria-hidden="true" /></button>
-              </div>
+                {{#if c.isMissing}}
+                  <p class="text-sm text-wt-danger" role="alert">This link
+                    points to a route someone drew or imported. Those are saved
+                    only in the browser where they were made, so it can't be
+                    shown here: ask for its GPX file (Export GPX) and import it.</p>
+                {{/if}}
+              {{/each}}
+              {{#if this.planner.canCompare}}
+                <label for="add-route" class="sr-only">Add a route</label>
+                <select
+                  id="add-route"
+                  class="cursor-pointer rounded-md border border-dashed border-wt-line bg-white px-2 py-[0.4rem] text-[0.9rem] text-wt-muted hover:border-wt-ink
+                    {{focusRing}}"
+                  {{on "change" this.addRoute}}
+                >
+                  <option value="" selected>Add a route…</option>
+                  {{#each this.groups as |g|}}
+                    <optgroup label={{g.label}}>
+                      {{#each g.routes as |r|}}
+                        <option value={{r.id}}>{{r.label}}</option>
+                      {{/each}}
+                    </optgroup>
+                  {{/each}}
+                </select>
+              {{/if}}
             {{else}}
               <p
                 class="rounded-md border border-dashed border-wt-line px-3 py-2.5 text-[0.85rem] text-wt-muted"
               >No preset routes here yet. Draw a route on the map or import a
                 GPX file.</p>
             {{/if}}
-            {{#if this.planner.isMissingRoute}}
-              <p class="text-sm text-wt-danger" role="alert">This link points to
-                a route someone drew or imported. Those are saved only in the
-                browser where they were made, so it can't be shown here: ask for
-                its GPX file (Export GPX) and import it.</p>
-            {{else if this.isLoadingRoute}}
-              <p class="text-xs text-wt-muted">Loading the track…</p>
-            {{else if this.route.url}}
+            {{#if this.route.url}}{{else if this.route.url}}
               <p class="text-xs text-wt-muted"><a
                   href={{this.route.url}}
                   target="_blank"
@@ -416,81 +452,6 @@ export default class SidePanel extends Component<SidePanelSignature> {
               {{/unless}}
             {{/if}}
           </div>
-
-          {{#if this.groups.length}}
-            {{! Routes to compare with the first: each on the map in its
-                colour, with its own band in the day chart. }}
-            <div class="flex flex-col gap-1.5">
-              {{#each this.compared key="key" as |c|}}
-                <div class="wt-compared flex items-stretch gap-2">
-                  <div
-                    class="flex min-w-0 flex-1 items-center gap-2.5 rounded-md border border-wt-line bg-white px-2 py-[0.35rem] text-[0.9rem]"
-                  >
-                    <span
-                      class="w-[0.35rem] self-stretch rounded-xs"
-                      style={{c.swatch}}
-                    ></span>
-                    <span class="min-w-0 flex-1 truncate">{{c.label}}</span>
-                    {{#if c.isLoading}}
-                      <span class="text-xs text-wt-muted">Loading…</span>
-                    {{else if c.km}}
-                      <span
-                        class="font-data text-xs text-wt-muted"
-                      >{{c.km}}</span>
-                    {{/if}}
-                  </div>
-                  <button
-                    type="button"
-                    class="inline-grid w-[2.6rem] flex-none cursor-pointer place-items-center rounded-md border
-                      {{focusRing}}
-                      {{if
-                        c.isReversed
-                        'border-wt-ink bg-wt-ink text-white'
-                        'border-wt-line bg-white text-wt-ink hover:border-wt-ink'
-                      }}"
-                    aria-pressed={{if c.isReversed "true" "false"}}
-                    aria-label="Ride {{c.label}} the other way"
-                    title="Ride it the other way"
-                    {{on "click" c.toggleReversed}}
-                  ><ArrowsDownUp class="size-5" aria-hidden="true" /></button>
-                  <button
-                    type="button"
-                    class="inline-grid w-[2.6rem] flex-none cursor-pointer place-items-center rounded-md border border-wt-line bg-white text-wt-ink hover:border-wt-ink
-                      {{focusRing}}"
-                    aria-label="Stop comparing {{c.label}}"
-                    title="Stop comparing"
-                    {{on "click" c.remove}}
-                  ><X class="size-4" aria-hidden="true" /></button>
-                </div>
-                {{#if c.isMissing}}
-                  <p class="text-xs text-wt-danger">This one was drawn or
-                    imported in another browser, so it can't be shown here.</p>
-                {{/if}}
-              {{/each}}
-              {{#if this.planner.canCompare}}
-                <label for="compare-picker" class="sr-only">Compare with</label>
-                <select
-                  id="compare-picker"
-                  class="cursor-pointer rounded-md border border-dashed border-wt-line bg-white px-2 py-[0.4rem] text-[0.9rem] text-wt-muted hover:border-wt-ink
-                    {{focusRing}}"
-                  {{on "change" this.compareRoute}}
-                >
-                  <option value="" selected>Compare with…</option>
-                  {{#each this.groups as |g|}}
-                    <optgroup label={{g.label}}>
-                      {{#each g.routes as |r|}}
-                        <option value={{r.id}}>{{r.label}}</option>
-                      {{/each}}
-                    </optgroup>
-                  {{/each}}
-                </select>
-              {{else}}
-                <p class="text-xs text-wt-muted">Up to
-                  {{this.maxRoutes}}
-                  routes side by side.</p>
-              {{/if}}
-            </div>
-          {{/if}}
 
           {{#if this.planner.isEditing}}
             <RouteEditor class="bg-wt-draw-soft p-3" />
@@ -577,55 +538,58 @@ export default class SidePanel extends Component<SidePanelSignature> {
               </div>
             {{/each}}
           </div>
-
-          {{#if this.comparedSummary}}
-            {{! A column per route, in the routes' order. }}
-            <div
-              class="overflow-x-auto rounded-md border border-wt-line bg-white p-3"
-            >
-              <table
-                class="wt-summary-compare w-full text-[0.85rem] tabular-nums [&_td]:py-1 [&_td]:pl-2 [&_td]:font-medium [&_th]:py-1 [&_th]:text-left [&_th]:align-bottom"
-              >
-                <thead>
-                  <tr>
-                    <td></td>
-                    {{#each this.comparedSummary.routes key="key" as |r|}}
-                      <th scope="col" class="pl-2 text-xs font-medium">
-                        <span
-                          class="mb-1 block h-[0.3rem] w-6 rounded-xs"
-                          style={{r.swatch}}
-                        ></span>{{r.label}}</th>
-                    {{/each}}
-                  </tr>
-                </thead>
-                <tbody>
-                  {{#each this.comparedSummary.rows as |row|}}
-                    <tr class="border-t border-wt-line">
-                      <th scope="row" class={{eyebrow}}>{{row.label}}</th>
-                      {{#each row.values as |v|}}
-                        <td>{{v}}</td>
-                      {{/each}}
-                    </tr>
-                  {{/each}}
-                </tbody>
-              </table>
-            </div>
-          {{/if}}
-          {{#if this.summary.length}}
-            <dl
-              class="wt-summary grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border border-wt-line bg-white p-3"
-            >
-              {{#each this.summary as |item|}}
-                {{! Values in the body font with tabular figures: monospace
-                    made dates like "Thu 4 Feb" look like a different typeface
-                    from the numbers. }}
-                <div><dt class={{eyebrow}}>{{item.label}}</dt><dd
-                    class="text-base font-medium tabular-nums"
-                  >{{item.value}}</dd></div>
-              {{/each}}
-            </dl>
-          {{/if}}
         </section>
+
+        {{#if this.summary}}
+          <section aria-labelledby="h-stats" class="flex flex-col gap-3">
+            <h2 id="h-stats" class={{this.heading}}>Stats</h2>
+            {{! A column per route, in the routes' order. Values in the body
+                font with tabular figures: monospace made dates like "Thu 4
+                Feb" look like a different typeface from the numbers. }}
+            <SimpleTable
+              class="wt-summary text-[0.85rem] tabular-nums"
+              @size="sm"
+              @classes={{this.summaryClasses}}
+              as |t|
+            >
+              <t.Header>
+                <t.Column @class={{this.summaryColumn}} />
+                {{#each this.summary.routes key="key" as |r|}}
+                  <t.Column
+                    scope="col"
+                    @class="{{this.summaryColumn}}
+                      text-xs font-semibold text-wt-ink"
+                  ><span class="flex justify-end gap-1.5 text-right"><span
+                        class="w-[0.35rem] flex-none self-stretch rounded-xs"
+                        style={{r.swatch}}
+                      ></span><span>{{r.name}}{{#if r.isReversed}}
+                          <ArrowsDownUp
+                            class="inline size-3.5 align-[-0.15em]"
+                            aria-hidden="true"
+                          /><span class="sr-only">
+                            (other way)</span>{{/if}}</span></span></t.Column>
+                {{/each}}
+              </t.Header>
+              <t.Body>
+                {{#each this.summary.rows as |row|}}
+                  <t.Row @class="border-t border-wt-line">
+                    {{! A row header: the Row is its <tr>, which the linter
+                          can't see through the component. }}
+                    {{! template-lint-disable require-context-role }}
+                    <t.Cell
+                      role="rowheader"
+                      @class={{this.summaryLabel}}
+                    >{{row.label}}</t.Cell>
+                    {{! template-lint-enable require-context-role }}
+                    {{#each row.values as |v|}}
+                      <t.Cell @class={{this.summaryValue}}>{{v}}</t.Cell>
+                    {{/each}}
+                  </t.Row>
+                {{/each}}
+              </t.Body>
+            </SimpleTable>
+          </section>
+        {{/if}}
 
         <section aria-labelledby="h-map" class="flex flex-col gap-3">
           <h2 id="h-map" class={{this.heading}}>Map</h2>

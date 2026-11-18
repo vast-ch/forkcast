@@ -4,77 +4,72 @@ import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
 import { modifier } from 'ember-modifier';
 import type PlannerService from 'forkcast/services/planner';
-import type { Ride } from 'forkcast/services/planner';
+import type { ChartSize, Ride } from 'forkcast/services/planner';
 import type { Trip, TripDay } from 'forkcast/utils/itinerary';
 import { tempSwatch, usualRange } from 'forkcast/utils/climate';
 import { rainEmojiTier } from 'forkcast/utils/layers';
 import TempPill from 'forkcast/components/temp-pill';
+import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
+import ArrowsInSimple from 'ember-phosphor-icons/components/ph-arrows-in-simple';
+import ArrowsOutSimple from 'ember-phosphor-icons/components/ph-arrows-out-simple';
+import { SegmentedControl } from 'frontile/buttons';
 import {
   css,
   fmtDate,
   fmtDaylight,
   fmtDayTitle,
   fmtRideWind,
-  fmtHours,
-  fmtKm,
   fmtMm,
   fmtMonth,
   fmtPct,
   fmtTemp,
   fmtUsual,
 } from 'forkcast/utils/format';
-import { focusRing, inlineStats, title } from 'forkcast/utils/classes';
+import { focusRing, title } from 'forkcast/utils/classes';
 
 const COL = 18; // px per day
 const NUM_Y = 10; // baseline of the day numbers
-const LIGHTS_Y = 22; // baseline of the 🔦 marks under them
-const RAIN_EMOJI_Y = 35; // baseline of the rain emoji under those
+const HEAD = 16; // the row of day numbers, over every route's band
 const LEFT = 42; // room for the axis labels (-10°C)
 
 /**
- * Where one route's rows lie, top to bottom: its temperature band, then its
- * rain band. A route alone gets the full chart, with the 🔦 and rain emoji
- * rows over it; compared routes get a compact band each, under one row of day
- * numbers, on one temperature scale.
+ * Where one route's rows lie, the same for every route, one under the other:
+ * its 🔦 row, its rain emoji row, then its temperature band. All of them on
+ * one temperature scale, so their bars compare. The day's rain shows as the
+ * map's emoji: its chance is in the table above the chart.
  */
 interface Band {
   top: number;
+  /** Baseline of the 🔦 row */
+  lightsY: number;
+  /** Baseline of the rain emoji row */
+  emojiY: number;
   tempTop: number;
   tempH: number;
-  rainTop: number;
-  rainH: number;
   bottom: number;
   /** Degrees between the temperature lines */
   step: number;
 }
 
-/** A route alone: the bands under the three rows of day numbers and marks. */
-const FULL: Band = {
-  top: 0,
-  tempTop: 42,
-  tempH: 110,
-  // Room for the rain band's caption above it.
-  rainTop: 42 + 110 + 22,
-  rainH: 34,
-  bottom: 42 + 110 + 22 + 34 + 4,
-  step: 5,
-};
-
-/** Compared routes: the day numbers' row, then a band per route. */
-const HEAD = 16;
-const COMPACT_H = 88;
-const compactBand = (i: number): Band => {
-  const top = HEAD + i * COMPACT_H;
+/** Route `i`'s band, the bars `scale` times their usual height. */
+const band = (i: number, scale: number): Band => {
+  const tempH = 80 * scale;
+  const height = 34 + tempH + 6;
+  const top = HEAD + i * height;
   return {
     top,
-    tempTop: top + 6,
-    tempH: 56,
-    rainTop: top + 66,
-    rainH: 14,
-    bottom: top + COMPACT_H,
-    step: 10,
+    lightsY: top + 11,
+    emojiY: top + 25,
+    tempTop: top + 34,
+    tempH,
+    bottom: top + height,
+    // Lines every 5° once there's room for them.
+    step: tempH >= 150 ? 5 : 10,
   };
 };
+
+/** How much taller the bars are drawn when the chart is big. */
+const BIG = 2.5;
 
 // Columns: 0 is the "before the trip" parking column, 1 … N are the days
 // (day n in column n), N + 1 is "after the trip".
@@ -127,9 +122,7 @@ interface Bar {
   /** The thin line through the bar: from the usual highest high to the usual lowest low (8 in 10), if known */
   usualY?: number;
   usualEnd?: number;
-  rainY: number;
   color: string;
-  rainH: number;
   /** The map's rain emoji for the day's rainy days a week, if any */
   rainEmoji?: string;
   isHighlighted: boolean;
@@ -143,8 +136,6 @@ interface Row {
   band: Band;
   bars: Bar[];
   gridLines: { label: string; y: number; isZero: boolean }[];
-  /** The 🏁 after its last day, when another route goes on longer */
-  end?: { x: number; y: number };
 }
 
 /** A day's usual extremes, 8 days in 10: the warmest high and coldest low (NaN if unknown). */
@@ -155,12 +146,13 @@ function usual(day: TripDay): [number, number] {
   ];
 }
 
-/** What a compared route does on a day: its stretch, a rest day, or arrived. */
+/** What a route does on a day, beyond what's the same on every route (the
+ * km per day, and so the riding time): its climbing, a rest day, or 🏁 once
+ * it has arrived. */
 function riding(d: TripDay | undefined): string {
-  if (!d) return 'Arrived';
+  if (!d) return '🏁';
   if (d.isRest) return 'Rest day';
-  const climb = d.climb !== null ? ` · ${Math.round(d.climb)}m up` : '';
-  return `${fmtKm(d.distance)}${climb}`;
+  return d.climb !== null ? `${Math.round(d.climb)}m up` : '–';
 }
 
 export default class ItineraryChart extends Component<{
@@ -168,10 +160,6 @@ export default class ItineraryChart extends Component<{
   Element: HTMLDivElement;
 }> {
   @service declare planner: PlannerService;
-
-  get isComparing() {
-    return this.args.rows.length > 1;
-  }
 
   /** The days of the longest trip: any route's day n is in column n. */
   get days(): TripDay[] {
@@ -205,9 +193,8 @@ export default class ItineraryChart extends Component<{
   };
 
   get bands(): Band[] {
-    return this.isComparing
-      ? this.args.rows.map((_, i) => compactBand(i))
-      : [FULL];
+    const scale = this.planner.chartSize === 'big' ? BIG : 1;
+    return this.args.rows.map((_, i) => band(i, scale));
   }
 
   get width() {
@@ -245,13 +232,9 @@ export default class ItineraryChart extends Component<{
     if (!off) return '';
     const first = fmtDate(this.days[0]!.date);
     const last = fmtDate(this.days[this.days.length - 1]!.date);
-    if (this.isComparing)
-      return off === 'before'
-        ? `Before your trips, which start on ${first}`
-        : `After your trips: the longest ends on ${last}`;
     return off === 'before'
-      ? `Before your trip, which starts on ${first}`
-      : `After your trip, which ends on ${last}`;
+      ? `Before the trip, which starts on ${first}`
+      : `After the trip, which ends on ${last}`;
   }
 
   get height() {
@@ -287,8 +270,7 @@ export default class ItineraryChart extends Component<{
     });
   }
 
-  /** Horizontal lines with their axis labels: every 5° (10° when compact)
-   * and the rain band's 0–100%. */
+  /** Horizontal lines with their axis labels, every `band.step` degrees. */
   gridLines(band: Band) {
     const [lo, hi] = this.range;
     const out = [];
@@ -299,23 +281,12 @@ export default class ItineraryChart extends Component<{
     ) {
       out.push({ label: `${t}°C`, y: this.y(band, t), isZero: t === 0 });
     }
-    const rain = this.isComparing ? [1, 0] : [1, 0.5, 0];
-    for (const f of rain) {
-      const y = band.rainTop + band.rainH * (1 - f);
-      out.push({
-        label: this.isComparing ? (f ? '' : 'rain') : `${f * 100}%`,
-        y,
-        isZero: false,
-      });
-    }
     return out;
   }
 
   get rows(): Row[] {
-    const last = this.days.length;
     return this.args.rows.map(({ ride, trip }, i) => {
       const band = this.bands[i]!;
-      const ends = trip.days.length;
       return {
         key: ride.key,
         label: ride.label,
@@ -323,10 +294,6 @@ export default class ItineraryChart extends Component<{
         band,
         gridLines: this.gridLines(band),
         bars: trip.days.map((day) => this.bar(band, day)),
-        end:
-          ends < last
-            ? { x: colX(ends + 1) + COL / 2, y: band.tempTop + band.tempH / 2 }
-            : undefined,
       };
     });
   }
@@ -335,7 +302,6 @@ export default class ItineraryChart extends Component<{
     const noData = Number.isNaN(day.weather.high);
     const high = noData ? 0 : day.weather.high;
     const low = noData ? 0 : Math.min(day.weather.low, day.nightLow);
-    const rainH = noData ? 0 : day.weather.rainChance * band.rainH;
     const [warm, cold] = usual(day);
     const range =
       noData || Number.isNaN(warm) || Number.isNaN(cold)
@@ -353,9 +319,7 @@ export default class ItineraryChart extends Component<{
       midX: colX(day.n) + 3 + this.barW / 2,
       yHigh: this.y(band, high),
       barH: Math.max(2, this.y(band, low) - this.y(band, high)),
-      rainY: band.rainTop + band.rainH - rainH,
       color: tempSwatch(day.weather.high, 'var(--color-wt-muted)'),
-      rainH,
       rainEmoji: tier?.emoji,
       isHighlighted: this.planner.highlightedDay === day.n,
     };
@@ -367,34 +331,21 @@ export default class ItineraryChart extends Component<{
     return this.days.find((d) => d.n === n);
   }
 
-  /** The selected day of the one route shown. */
-  get detail() {
-    if (this.isComparing) return undefined;
-    return this.selectedDay;
-  }
-
   get detailTitle() {
     return this.selectedDay ? fmtDayTitle(this.selectedDay) : '';
   }
 
-  get detailRoute() {
-    const d = this.detail;
-    if (!d) return '';
-    if (d.isRest) return 'Rest day';
-    return `${fmtKm(d.distance)} · km ${Math.round(d.fromKm)}–${Math.round(d.toKm)}${
-      d.climb !== null ? ` · ${Math.round(d.climb)}m climbing` : ''
-    } · ${fmtHours(d.ridingHours)} riding${d.needsLights ? ' · 🔦 needs lights' : ''}`;
-  }
-
-  /** While comparing: the selected day on each route, side by side. */
+  /** The selected day on each route, a row each, in the chart's order. */
   get comparison() {
     const n = this.planner.highlightedDay;
-    if (!this.isComparing || !this.selectedDay) return [];
+    if (!this.selectedDay) return [];
     return this.args.rows.map(({ ride, trip }) => {
       const day = trip.days.find((d) => d.n === n);
       return {
         key: ride.key,
         label: ride.label,
+        name: ride.name,
+        isReversed: ride.isReversed,
         swatch: css('background: ', ride.color),
         riding: riding(day),
         day,
@@ -415,20 +366,15 @@ export default class ItineraryChart extends Component<{
 
   /** What a screen reader says for the selected day. */
   get valueText() {
-    const d = this.detail;
     if (this.offTripNote)
       return `${this.planner.weekSlot.label}: ${this.offTripNote}`;
-    if (this.comparison.length) {
-      const each = this.comparison.map(({ label, riding, day }) =>
-        day
-          ? `${label}: ${riding}, low ${fmtTemp(day.nightLow)}, high ${fmtTemp(day.weather.high)}, rain chance ${fmtPct(day.weather.rainChance)}`
-          : `${label}: ${riding}`,
-      );
-      return `${this.detailTitle}; ${each.join('; ')}`;
-    }
-    if (!d) return 'No day selected';
-    const w = d.weather;
-    return `${this.detailTitle}, ${this.detailRoute}, low ${fmtTemp(d.nightLow)} ${fmtUsual(d.nightLow, d.nightLowSpread)}, high ${fmtTemp(w.high)} ${fmtUsual(w.high, w.highSpread)}, rain chance ${fmtPct(w.rainChance)}, wind ${fmtRideWind(w.windSpeed, d.windPush)}, daylight ${fmtDaylight(d.daylight)}`;
+    if (!this.comparison.length) return 'No day selected';
+    const each = this.comparison.map(({ label, riding, day }) => {
+      if (!day) return `${label}: arrived`;
+      const w = day.weather;
+      return `${label}: ${riding}, low ${fmtTemp(day.nightLow)} ${fmtUsual(day.nightLow, day.nightLowSpread)}, high ${fmtTemp(w.high)} ${fmtUsual(w.high, w.highSpread)}, rainy day chance ${fmtPct(w.rainChance)}, ${fmtMm(w.wetDayMm)} when it rains${day.isRest ? '' : `, wind ${fmtRideWind(w.windSpeed, day.windPush)}`}, daylight ${fmtDaylight(day.daylight)}`;
+    });
+    return `${this.detailTitle}; ${each.join('; ')}`;
   }
 
   /** Arrow keys step through the days (Home and End jump to the ends). */
@@ -448,107 +394,126 @@ export default class ItineraryChart extends Component<{
   colW = COL;
   left = LEFT;
   numY = NUM_Y;
-  lightsY = LIGHTS_Y;
-  rainEmojiY = RAIN_EMOJI_Y;
   /** Right edge of the axis labels. */
   axisX = LEFT - 6;
-  firstDayX = colX(1);
-  rainCaptionY = FULL.rainTop;
-  bandHeight = (b: Band) => b.rainTop + b.rainH - b.tempTop;
+  setChartSize = (size: ChartSize) => {
+    this.planner.chartSize = size;
+  };
+
+  /** A route's colour stripe down its band. */
+  stripeY = (b: Band) => b.top + 4;
+  stripeHeight = (b: Band) => b.tempTop + b.tempH - b.top - 4;
 
   <template>
     <div class="flex min-h-0 flex-col gap-2" ...attributes>
-      <div
-        class="flex min-h-[2.75rem] flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-        aria-hidden="true"
-      >
-        {{#if this.detail}}
-          <div class="min-w-0">
-            <p class={{title}}>{{this.detailTitle}}</p>
-            <p class="text-xs text-wt-muted">{{this.detailRoute}}</p>
-          </div>
-          <dl class={{inlineStats}}>
-            <div><dt>Low</dt><dd><TempPill @t={{this.detail.nightLow}} />
-                <span class="text-xs text-wt-muted">{{fmtUsual
-                    this.detail.nightLow
-                    this.detail.nightLowSpread
-                  }}</span></dd></div>
-            <div><dt>High</dt><dd><TempPill @t={{this.detail.weather.high}} />
-                <span class="text-xs text-wt-muted">{{fmtUsual
-                    this.detail.weather.high
-                    this.detail.weather.highSpread
-                  }}</span></dd></div>
-            <div><dt>Rain chance</dt><dd>{{fmtPct
-                  this.detail.weather.rainChance
-                }}</dd></div>
-            <div><dt>When it rains</dt><dd>{{fmtMm
-                  this.detail.weather.wetDayMm
-                }}</dd></div>
-            {{#unless this.detail.isRest}}
-              <div><dt>Wind</dt><dd>{{fmtRideWind
-                    this.detail.weather.windSpeed
-                    this.detail.windPush
-                  }}</dd></div>
-            {{/unless}}
-            <div><dt>Daylight</dt><dd>{{fmtDaylight
-                  this.detail.daylight
-                }}</dd></div>
-          </dl>
-        {{else if this.comparison.length}}
-          {{! The selected day on each route, a row each, in the chart's order. }}
-          <div class="min-w-0 flex-1">
-            <p class={{title}}>{{this.detailTitle}}</p>
-            <div class="overflow-x-auto">
-              <table
-                class="wt-compare mt-1 w-full text-[0.8rem] [&_td]:py-0.5 [&_td]:pr-3 [&_td]:align-middle [&_th]:pr-3 [&_th]:text-left [&_th]:font-normal [&_th]:text-wt-muted"
-              >
-                <thead>
-                  <tr><th>Route</th><th>Riding</th><th>Low</th><th>High</th><th
-                    >Rain chance</th><th>Wind</th></tr>
-                </thead>
-                <tbody>
-                  {{#each this.comparison key="key" as |c|}}
-                    <tr>
-                      <td class="max-w-[16rem] max-desktop:max-w-[7rem]">
-                        <span class="flex items-center gap-1.5"><span
-                            class="h-3 w-[0.35rem] flex-none rounded-xs"
-                            style={{c.swatch}}
-                          ></span><span
-                            class="truncate"
-                          >{{c.label}}</span></span>
-                      </td>
-                      <td class="font-data whitespace-nowrap">{{c.riding}}</td>
-                      {{#if c.day}}
-                        <td><TempPill @t={{c.day.nightLow}} /></td>
-                        <td><TempPill @t={{c.day.weather.high}} /></td>
-                        <td class="font-data">{{fmtPct
-                            c.day.weather.rainChance
-                          }}</td>
-                        <td class="font-data whitespace-nowrap">{{#if
-                            c.day.isRest
-                          }}–{{else}}{{fmtRideWind
-                              c.day.weather.windSpeed
-                              c.day.windPush
-                            }}{{/if}}</td>
-                      {{else}}
-                        <td></td><td></td><td></td><td></td>
-                      {{/if}}
-                    </tr>
-                  {{/each}}
-                </tbody>
-              </table>
+      {{! The size buttons sit at the end of the title's line, over room left
+          for them, so the day's table gets the panel's whole width. }}
+      <div class="relative flex items-start gap-3">
+        <div
+          class="flex min-h-[2.75rem] min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+          aria-hidden="true"
+        >
+          {{#if this.comparison.length}}
+            {{! The selected day on each route, a row each, in the chart's order. }}
+            <div class="min-w-0 flex-1">
+              <p class="{{title}} pr-24">{{this.detailTitle}}</p>
+              <div class="overflow-x-auto">
+                <table
+                  class="wt-compare mt-1 w-full text-[0.8rem] tabular-nums [&_td]:py-0.5 [&_td]:pr-3 [&_td]:align-middle [&_th]:pr-3 [&_th]:text-left [&_th]:align-bottom [&_th]:leading-tight [&_th]:font-normal [&_th]:text-wt-muted"
+                >
+                  <thead>
+                    <tr><th>Route</th><th>Climbing</th><th>Low</th><th
+                      >High</th><th>Rainy day chance</th><th>When it rains</th><th
+                      >Wind</th><th>Daylight</th></tr>
+                  </thead>
+                  <tbody>
+                    {{#each this.comparison key="key" as |c|}}
+                      <tr>
+                        <td class="max-w-[13rem] max-desktop:max-w-[7rem]">
+                          <span class="flex items-center gap-1.5"><span
+                              class="h-3 w-[0.35rem] flex-none rounded-xs"
+                              style={{c.swatch}}
+                            ></span><span class="truncate">{{c.name}}{{#if
+                                c.isReversed
+                              }}
+                                <ArrowsDownUp
+                                  class="inline size-3.5 align-[-0.15em]"
+                                  aria-hidden="true"
+                                /><span class="sr-only">
+                                  (other way)</span>{{/if}}</span></span>
+                        </td>
+                        <td class="whitespace-nowrap">{{c.riding}}</td>
+                        {{#if c.day}}
+                          <td class="whitespace-nowrap"><TempPill
+                              @t={{c.day.nightLow}}
+                            />
+                            <span
+                              class="text-xs whitespace-nowrap text-wt-muted"
+                            >{{fmtUsual
+                                c.day.nightLow
+                                c.day.nightLowSpread
+                              }}</span></td>
+                          <td class="whitespace-nowrap"><TempPill
+                              @t={{c.day.weather.high}}
+                            />
+                            <span
+                              class="text-xs whitespace-nowrap text-wt-muted"
+                            >{{fmtUsual
+                                c.day.weather.high
+                                c.day.weather.highSpread
+                              }}</span></td>
+                          <td>{{fmtPct c.day.weather.rainChance}}</td>
+                          <td class="whitespace-nowrap">{{fmtMm
+                              c.day.weather.wetDayMm
+                            }}</td>
+                          <td class="whitespace-nowrap">{{#if
+                              c.day.isRest
+                            }}–{{else}}{{fmtRideWind
+                                c.day.weather.windSpeed
+                                c.day.windPush
+                              }}{{/if}}</td>
+                          <td class="whitespace-nowrap">{{fmtDaylight
+                              c.day.daylight
+                            }}</td>
+                        {{else}}
+                          <td></td><td></td><td></td><td></td><td></td><td></td>
+                        {{/if}}
+                      </tr>
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        {{else if this.offTripNote}}
-          <div class="min-w-0">
-            <p class={{title}}>{{this.planner.weekSlot.label}}</p>
-            <p class="text-xs text-wt-muted">{{this.offTripNote}}</p>
-          </div>
-        {{/if}}
+          {{else if this.offTripNote}}
+            <div class="min-w-0">
+              <p class="{{title}} pr-24">{{this.planner.weekSlot.label}}</p>
+              <p class="text-xs text-wt-muted">{{this.offTripNote}}</p>
+            </div>
+          {{/if}}
+        </div>
+        {{! The chart's height: the bars as they are, or `BIG` times as tall (the
+          panel grows, the map gives way). }}
+        <SegmentedControl
+          @value={{this.planner.chartSize}}
+          @onChange={{this.setChartSize}}
+          @size="sm"
+          class="wt-chart-size flex-none absolute -top-1.5 right-0"
+          aria-label="Chart size"
+          as |Ctl|
+        >
+          <Ctl.Item @value="small" title="Small chart"><ArrowsInSimple
+              class="size-4"
+              aria-hidden="true"
+            /><span class="sr-only">Small</span></Ctl.Item>
+          <Ctl.Item @value="big" title="Big chart"><ArrowsOutSimple
+              class="size-4"
+              aria-hidden="true"
+            /><span class="sr-only">Big</span></Ctl.Item>
+        </SegmentedControl>
       </div>
       {{! The chart is the way to pick a day: click a column, or focus it and
-          step through the days with the arrow keys. While comparing, a band
-          per route under one row of day numbers, scrolling together. }}
+          step through the days with the arrow keys. A band per route under one
+          row of day numbers, scrolling together. }}
       {{! A slider's content is presentational by definition; the drawing is
           aria-hidden and the selected day is read out as the value. }}
       {{! template-lint-disable require-presentational-children }}
@@ -597,28 +562,17 @@ export default class ItineraryChart extends Component<{
                 class="text-[10px]"
               >{{g.label}}</text>
             {{/each}}
-            {{#if this.isComparing}}
-              {{! The route's colour down the left edge, as on the map. }}
-              <rect
-                class="wt-band"
-                x="0"
-                y={{r.band.tempTop}}
-                width="4"
-                height={{this.bandHeight r.band}}
-                rx="2"
-                style={{css "fill: " r.color}}
-              />
-            {{/if}}
+            {{! The route's colour down the left edge, as on the map. }}
+            <rect
+              class="wt-band"
+              x="0"
+              y={{this.stripeY r.band}}
+              width="4"
+              height={{this.stripeHeight r.band}}
+              rx="2"
+              style={{css "fill: " r.color}}
+            />
           {{/each}}
-          {{#unless this.isComparing}}
-            <text
-              x={{this.firstDayX}}
-              y={{this.rainCaptionY}}
-              dy="-5"
-              class="font-body text-[11px]"
-            >Chance of a rainy day (over
-              {{this.planner.rainThreshold}}mm)</text>
-          {{/unless}}
           {{! The parking columns at both ends: where the map's week is when it
               lies before or after the trip. }}
           {{#each this.parking as |p|}}
@@ -683,28 +637,26 @@ export default class ItineraryChart extends Component<{
           {{#each this.rows key="key" as |r|}}
             <g class="pointer-events-none">
               {{#each r.bars as |b|}}
-                {{#unless this.isComparing}}
-                  {{#if b.day.needsLights}}
-                    <text
-                      x={{b.x}}
-                      dx={{this.half}}
-                      y={{this.lightsY}}
-                      text-anchor="middle"
-                      class="text-[10px]"
-                    >🔦</text>
-                  {{/if}}
-                  {{! In the body font: the data font's fallback draws ☔ as a
-                      plain glyph. }}
-                  {{#if b.rainEmoji}}
-                    <text
-                      x={{b.x}}
-                      dx={{this.half}}
-                      y={{this.rainEmojiY}}
-                      text-anchor="middle"
-                      class="wt-rain-emoji font-body text-[11px]"
-                    >{{b.rainEmoji}}</text>
-                  {{/if}}
-                {{/unless}}
+                {{#if b.day.needsLights}}
+                  <text
+                    x={{b.x}}
+                    dx={{this.half}}
+                    y={{r.band.lightsY}}
+                    text-anchor="middle"
+                    class="text-[10px]"
+                  >🔦</text>
+                {{/if}}
+                {{! In the body font: the data font's fallback draws ☔ as a
+                    plain glyph. }}
+                {{#if b.rainEmoji}}
+                  <text
+                    x={{b.x}}
+                    dx={{this.half}}
+                    y={{r.band.emojiY}}
+                    text-anchor="middle"
+                    class="wt-rain-emoji font-body text-[11px]"
+                  >{{b.rainEmoji}}</text>
+                {{/if}}
                 {{#if b.usualEnd}}
                   <line
                     x1={{b.midX}}
@@ -727,24 +679,7 @@ export default class ItineraryChart extends Component<{
                   style={{css "fill: " b.color}}
                   rx="2"
                 />
-                <rect
-                  x={{b.barX}}
-                  y={{b.rainY}}
-                  width={{this.barW}}
-                  height={{b.rainH}}
-                  class="fill-wt-rain opacity-75"
-                  rx="1"
-                />
               {{/each}}
-              {{#if r.end}}
-                <text
-                  class="wt-arrived font-body text-[11px]"
-                  x={{r.end.x}}
-                  y={{r.end.y}}
-                  text-anchor="middle"
-                  dominant-baseline="central"
-                >🏁</text>
-              {{/if}}
             </g>
           {{/each}}
           {{! On top of every column, so the next day's bar can't cover them;

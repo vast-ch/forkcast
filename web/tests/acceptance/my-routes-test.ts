@@ -1,5 +1,6 @@
 import { module, test } from 'qunit';
 import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
+import { ROUTE_COLORS } from 'forkcast/services/planner';
 import { setupApplicationTest } from 'forkcast/tests/helpers';
 import { button, field } from 'forkcast/tests/helpers/find';
 
@@ -31,7 +32,7 @@ module('Acceptance | my routes', function (hooks) {
     await visit('/');
     await draw(this.owner, [BERN, LUCERNE]);
 
-    assert.dom('#route-picker option:checked').includesText('Route 1');
+    assert.dom('#route-1 option:checked').includesText('Route 1');
     assert.ok(UUID.test(currentURL()), currentURL());
     assert.dom('.wt-summary').exists('the trip is planned');
   });
@@ -44,29 +45,27 @@ module('Acceptance | my routes', function (hooks) {
     const mine = () =>
       [
         ...document.querySelectorAll(
-          '#route-picker optgroup[label="Your routes"] option',
+          '#route-1 optgroup[label="Your routes"] option',
         ),
       ].map((o) => o.textContent.split(' · ')[0]);
     assert.deepEqual(mine(), ['To Lucerne', 'To Zürich']);
 
     const first = document.querySelector<HTMLOptionElement>(
-      '#route-picker optgroup[label="Your routes"] option',
+      '#route-1 optgroup[label="Your routes"] option',
     )!;
-    await fillIn('#route-picker', first.value);
-    assert.dom('#route-picker option:checked').includesText('To Lucerne');
+    await fillIn('#route-1', first.value);
+    assert.dom('#route-1 option:checked').includesText('To Lucerne');
 
     await click(button('Delete this route'));
     assert.deepEqual(mine(), ['To Zürich']);
-    assert
-      .dom('#route-picker option:checked')
-      .includesText('Interlaken – Málaga');
+    assert.dom('#route-1 option:checked').includesText('Interlaken – Málaga');
   });
 
   test('a drawn route can be drawn further', async function (assert) {
     await visit('/');
     await draw(this.owner, [BERN, LUCERNE]);
     const km = () =>
-      document.querySelector('#route-picker option:checked')!.textContent;
+      document.querySelector('#route-1 option:checked')!.textContent;
     const before = km();
 
     await click(button('Edit route'));
@@ -81,18 +80,19 @@ module('Acceptance | my routes', function (hooks) {
     await click(button('Save route'));
 
     assert
-      .dom('#route-picker optgroup[label="Your routes"] option')
+      .dom('#route-1 optgroup[label="Your routes"] option')
       .exists({ count: 1 });
     assert.notStrictEqual(km(), before, 'longer now');
-    assert.dom('#route-picker option:checked').includesText('Route 1');
+    assert.dom('#route-1 option:checked').includesText('Route 1');
   });
 
   test('while drawing a route further, the route, map and trip follow the drawing', async function (assert) {
     await visit('/');
     await draw(this.owner, [BERN, LUCERNE, ZURICH]);
+    // The first route's line, in its place's colour, drawing or not.
     const ownLines = () =>
       [...document.querySelectorAll('.leaflet-overlay-pane path')].filter(
-        (p) => p.getAttribute('stroke') === '#b5179e',
+        (p) => p.getAttribute('stroke') === ROUTE_COLORS[0],
       ).length;
     assert.strictEqual(ownLines(), 1, 'the saved route');
 
@@ -100,11 +100,11 @@ module('Acceptance | my routes', function (hooks) {
     assert.strictEqual(ownLines(), 1, 'only the line being drawn');
     const d = () =>
       [...document.querySelectorAll('.leaflet-overlay-pane path')]
-        .find((p) => p.getAttribute('stroke') === '#b5179e')!
+        .find((p) => p.getAttribute('stroke') === ROUTE_COLORS[0])!
         .getAttribute('d');
     const before = d();
     const km = () =>
-      document.querySelector('#route-picker option:checked')!.textContent;
+      document.querySelector('#route-1 option:checked')!.textContent;
     const kmBefore = km();
     await click(button('Undo'));
     assert.notStrictEqual(d(), before, 'Undo shortens the line on the map');
@@ -125,7 +125,7 @@ module('Acceptance | my routes', function (hooks) {
     assert.dom('[aria-label="Editing a route"]').exists();
     await fillIn(field('Name'), 'Renamed');
     await click(button('Save route'));
-    assert.dom('#route-picker option:checked').includesText('Renamed');
+    assert.dom('#route-1 option:checked').includesText('Renamed');
     assert.dom('[aria-label="Editing a route"]').doesNotExist();
   });
 
@@ -134,7 +134,7 @@ module('Acceptance | my routes', function (hooks) {
     assert
       .dom('[role="alert"]')
       .includesText('saved only in the browser where they were made');
-    assert.dom('#route-picker option:checked').hasText('Route not saved here');
+    assert.dom('#route-1 option:checked').hasText('Route not saved here');
     assert.dom('.wt-summary').doesNotExist();
   });
 });

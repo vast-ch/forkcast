@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import type PlannerService from 'forkcast/services/planner';
 import TempPill from 'forkcast/components/temp-pill';
+import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
 import { windSteadiness } from 'forkcast/utils/climate';
 import { isMissing } from 'forkcast/utils/helpers';
 import {
@@ -87,7 +88,14 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
       {{#if this.hover}}
         {{#if this.route}}
           <p class={{eyebrow}}>On
-            {{if this.route.name this.route.name "your route"}}
+            {{#if this.route.name}}{{this.route.name}}{{#if
+                this.route.isReversed
+              }}
+                <ArrowsDownUp
+                  class="inline size-3.5 align-[-0.15em]"
+                  aria-hidden="true"
+                /><span class="sr-only"> (other way)</span>{{/if}}{{else}}your
+              route{{/if}}
             ·
             {{fmtKm this.route.km}}
             from the start</p>
