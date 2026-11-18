@@ -18,21 +18,24 @@ import HelpLink from 'forkcast/components/help-link';
 import RouteEditor from 'forkcast/components/route-editor';
 import type { TOC } from '@ember/component/template-only';
 import type { Trip } from 'forkcast/utils/itinerary';
+import type { Ride } from 'forkcast/services/planner';
 import { btnPrimary } from 'forkcast/utils/classes';
 
 /** The day-by-day chart under the map, once there is a trip. */
-const ChartPanel: TOC<{ Args: { trip?: Trip }; Element: HTMLElement }> =
-  <template>
-    {{#if @trip}}
-      <section
-        class="min-w-0 border-t border-wt-line bg-wt-paper px-4 pt-3 pb-2"
-        aria-label="Weather by day"
-        ...attributes
-      >
-        <ItineraryChart @trip={{@trip}} />
-      </section>
-    {{/if}}
-  </template>;
+const ChartPanel: TOC<{
+  Args: { rows: { ride: Ride; trip: Trip }[] };
+  Element: HTMLElement;
+}> = <template>
+  {{#if @rows.length}}
+    <section
+      class="min-w-0 border-t border-wt-line bg-wt-paper px-4 pt-3 pb-2"
+      aria-label="Weather by day"
+      ...attributes
+    >
+      <ItineraryChart @rows={{@rows}} />
+    </section>
+  {{/if}}
+</template>;
 
 export default class IndexTemplate extends Component {
   @service declare planner: PlannerService;
@@ -97,7 +100,7 @@ export default class IndexTemplate extends Component {
             />
           {{/if}}
         </section>
-        <ChartPanel @trip={{this.planner.trip}} />
+        <ChartPanel @rows={{this.planner.planned}} />
       </main>
       {{#if this.showSettings}}
         <Drawer
@@ -126,7 +129,7 @@ export default class IndexTemplate extends Component {
           <HoverCard class="absolute top-3 right-3 z-[1000]" />
           <Legend class="absolute bottom-6 left-3 z-[1000]" />
         </section>
-        <ChartPanel @trip={{this.planner.trip}} class="col-start-2" />
+        <ChartPanel @rows={{this.planner.planned}} class="col-start-2" />
       </main>
     {{/if}}
   </template>

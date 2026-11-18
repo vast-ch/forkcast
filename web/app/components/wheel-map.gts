@@ -12,6 +12,7 @@ import {
   milestones,
   type Milestones,
   type Trip,
+  type TripDay,
 } from 'forkcast/utils/itinerary';
 import {
   temperatureRaster,
@@ -45,6 +46,7 @@ import {
   type CityLimit,
   type MapDetail,
   type RainMetric,
+  type Ride,
   type TempMetric,
 } from 'forkcast/services/planner';
 
@@ -140,10 +142,10 @@ interface MapState {
   tempMetric: TempMetric;
   rainMetric: RainMetric;
   rainThreshold: number;
-  route?: Route;
-  /** Your own routes (the selected one among them too) */
+  /** The selected routes, the first one leading; more than one to compare */
+  rides: MapRide[];
+  /** Your own routes (the selected ones among them too) */
   ownRoutes: Route[];
-  trip?: Trip;
   isDrawing: boolean;
   /** Drawing the selected route further: the route shown is the drawing */
   isRedrawing: boolean;
@@ -165,6 +167,13 @@ interface MapState {
   loading: number;
   /** Drawing with snapping on: show the cycle network to snap to */
   showCycleNet: boolean;
+}
+
+/** A selected route on the map. */
+interface MapRide {
+  route?: Route;
+  trip?: Trip;
+  color: string;
 }
 
 interface LeafletSignature {
@@ -605,10 +614,10 @@ class LeafletModifier extends Modifier<LeafletSignature> {
 
     // Every other route, dashed: the presets and your own routes. Click one to pick it. The Routes toggle hides them (the
     // selected route always shows).
-    const selectedId = s.route?.id;
+    const selected = s.rides.map((r) => r.route?.id).join(' ');
     this.layer(
       'overview',
-      [selectedId, atlas.overview.length, s.ownRoutes, s.details.routes],
+      [selected, atlas.overview.length, s.ownRoutes, s.details.routes],
       (group) => {
         if (!s.details.routes) return;
         const names = new Map(atlas.presets.map((r) => [r.id, r.name]));
@@ -627,7 +636,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
           })),
         ];
         for (const r of others) {
-          if (r.id === selectedId) continue;
+          if (s.rides.some((x) => x.route?.id === r.id)) continue;
           L.polyline(r.line, {
             pane: 'overview',
             color: r.color,
@@ -648,31 +657,46 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       },
     );
 
-    // The selected route; while it's being drawn further, that's the new line
-    // (the planner's route follows the drawing).
-    this.layer('routes', [s.route], (group) => {
-      const r = s.route;
-      if (!r) return;
-      const latlngs = r.points.map(latLng);
-      L.polyline(latlngs, {
-        color: '#fff',
-        weight: 7,
-        opacity: 0.9,
-        interactive: false,
-      }).addTo(group);
-      L.polyline(latlngs, {
-        color: r.color,
-        weight: 4,
-        interactive: false,
-      }).addTo(group);
+    // The selected routes, the first one on top; while one is being drawn
+    // further, that's the new line (its trip follows the drawing).
+    const routes = s.rides.map((r) => r.route);
+    const colors = s.rides.map((r) => r.color);
+    this.layer('routes', [...routes, ...colors], (group) => {
+      for (const r of [...s.rides].reverse()) {
+        if (!r.route) continue;
+        const latlngs = r.route.points.map(latLng);
+        L.polyline(latlngs, {
+          color: '#fff',
+          weight: 7,
+          opacity: 0.9,
+          interactive: false,
+        }).addTo(group);
+        L.polyline(latlngs, {
+          color: r.color,
+          weight: 4,
+          interactive: false,
+        }).addTo(group);
+      }
     });
-    if (s.route && this.changed('fitted', s.route.id)) {
+    const loaded = routes.filter((r) => r !== undefined);
+    if (
+      loaded.length &&
+      this.changed(
+        'fitted',
+        loaded.map((r) => r.id),
+      )
+    ) {
       if (this.isResumed) this.isResumed = false;
-      else this.fitTo(L.latLngBounds(s.route.points.map(latLng)));
+      else
+        this.fitTo(L.latLngBounds(loaded.flatMap((r) => r.points.map(latLng))));
     }
 
-    this.layer('stops', [s.trip, s.highlightedDay], (group) => {
-      const { trip, route } = s;
+    // The first route's start and night stops; on every route, the selected
+    // day's stretch and the night after it.
+    const trips = s.rides.map((r) => r.trip);
+    this.layer('stops', [...trips, s.highlightedDay], (group) => {
+      const [first] = s.rides;
+      const { trip, route } = first ?? {};
       if (!trip || !route) return;
       const start = route.points[0]!;
       L.circleMarker(latLng(start), {
@@ -685,10 +709,7 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       })
         .bindTooltip('Start', { direction: 'top' })
         .addTo(group);
-      for (const d of trip.days) {
-        if (d.isRest) continue;
-        const isHi = d.n === s.highlightedDay;
-        const hasRestNext = trip.days[d.n]?.isRest === true;
+      const stop = (d: TripDay, isHi: boolean, hasRestNext: boolean) => {
         const m = L.circleMarker(latLng(d.sleep), {
           pane: 'stops',
           radius: isHi ? 9 : hasRestNext ? 6.5 : 4.5,
@@ -704,29 +725,35 @@ class LeafletModifier extends Modifier<LeafletSignature> {
         );
         m.on('click', () => this.owner?.planner.highlightDay(d));
         m.addTo(group);
+      };
+      for (const d of trip.days) {
+        if (d.isRest) continue;
+        const hasRestNext = trip.days[d.n]?.isRest === true;
+        stop(d, d.n === s.highlightedDay, hasRestNext);
       }
-      if (s.highlightedDay) {
-        const d = trip.days.find((x) => x.n === s.highlightedDay);
-        if (d && !d.isRest) {
-          const seg = route.points.filter(
-            (p) => p.km >= d.fromKm && p.km <= d.toKm,
-          );
-          const a = pointAt(route.points, d.fromKm);
-          const b = pointAt(route.points, d.toKm);
-          L.polyline([latLng(a), ...seg.map(latLng), latLng(b)], {
-            color: ROUTE_ACCENT,
-            weight: 6,
-            opacity: 0.95,
-            interactive: false,
-            className: PICK_GLOW,
-          }).addTo(group);
-        }
+      if (!s.highlightedDay) return;
+      for (const [i, r] of s.rides.entries()) {
+        const d = r.trip?.days.find((x) => x.n === s.highlightedDay);
+        if (!r.route || !d || d.isRest) continue;
+        const seg = r.route.points.filter(
+          (p) => p.km >= d.fromKm && p.km <= d.toKm,
+        );
+        const a = pointAt(r.route.points, d.fromKm);
+        const b = pointAt(r.route.points, d.toKm);
+        L.polyline([latLng(a), ...seg.map(latLng), latLng(b)], {
+          color: ROUTE_ACCENT,
+          weight: 6,
+          opacity: 0.95,
+          interactive: false,
+          className: PICK_GLOW,
+        }).addTo(group);
+        if (i > 0) stop(d, true, r.trip?.days[d.n]?.isRest === true);
       }
     });
 
     // Where the rider is as each month (or week) begins, over that night's stop.
-    this.layer('dates', [s.trip, s.dates], (group) => {
-      const { trip } = s;
+    this.layer('dates', [trips[0], s.dates], (group) => {
+      const trip = trips[0];
       if (!trip) return;
       for (const { day, label: text } of milestones(trip, s.dates)) {
         label(text, day.sleep.lat, day.sleep.lon, STOP_DATE).addTo(group);
@@ -926,9 +953,12 @@ export default class WheelMap extends Component<WheelMapSignature> {
       tempMetric: p.tempMetric,
       rainMetric: p.rainMetric,
       rainThreshold: p.rainThreshold,
-      route: p.route,
+      rides: p.rides.map((r, i) => ({
+        route: r.route,
+        trip: p.trips[i],
+        color: r.color,
+      })),
       ownRoutes: p.ownRoutes,
-      trip: p.trip,
       isDrawing: p.isDrawing,
       isRedrawing: p.isRedrawing,
       sketch: [...p.sketch],
@@ -960,30 +990,33 @@ export default class WheelMap extends Component<WheelMapSignature> {
         )
       : null;
     let onRoute: NonNullable<PlannerService['hover']>['onRoute'];
-    const route = this.planner.route;
-    const trip = this.planner.trip;
-    if (route && !this.planner.isDrawing) {
-      // Nearest route point within ~14 px of the pointer.
+    if (!this.planner.isDrawing) {
+      // Nearest point of a selected route within ~14 px of the pointer.
       const cursor = map.latLngToContainerPoint(latlng);
-      let best = Infinity;
-      let bestKm = -1;
       const bounds = map.getBounds().pad(0.1);
-      for (const p of route.points) {
-        if (!bounds.contains(latLng(p))) continue;
-        const pt = map.latLngToContainerPoint(latLng(p));
-        const d = (pt.x - cursor.x) ** 2 + (pt.y - cursor.y) ** 2;
-        if (d < best) {
-          best = d;
-          bestKm = p.km;
+      let best = 14 * 14;
+      let near: { ride: Ride; km: number } | undefined;
+      for (const ride of this.planner.rides) {
+        for (const p of ride.route?.points ?? []) {
+          if (!bounds.contains(latLng(p))) continue;
+          const pt = map.latLngToContainerPoint(latLng(p));
+          const d = (pt.x - cursor.x) ** 2 + (pt.y - cursor.y) ** 2;
+          if (d < best) {
+            best = d;
+            near = { ride, km: p.km };
+          }
         }
       }
-      if (bestKm >= 0 && best < 14 * 14) {
-        const point = pointAt(route.points, bestKm);
-        const day = trip ? dayAtKm(trip, bestKm) : undefined;
+      if (near) {
+        const { ride, km } = near;
+        const point = pointAt(ride.route!.points, km);
+        const trip = this.planner.trips[ride.index];
+        const day = trip ? dayAtKm(trip, km) : undefined;
         onRoute = {
-          km: bestKm,
+          km,
           point,
           day,
+          name: this.planner.isComparing ? ride.label : undefined,
           weather: day
             ? climateOn(grid, day.date, point, this.planner.rainThreshold)
             : undefined,

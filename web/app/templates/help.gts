@@ -274,7 +274,7 @@ export default class Help extends Component<{
                     a river.</dd></div>
                 <div><dt>Routes</dt><dd>The dashed routes you haven't picked.
                     Your own routes show here too. Click one to pick it; the
-                    picked route always shows.</dd></div>
+                    picked routes always show.</dd></div>
               </dl>
               <p>
                 City names and water are downloaded only once you switch them
@@ -369,6 +369,13 @@ export default class Help extends Component<{
                 <strong>After</strong>
                 column at the end of the chart is highlighted instead, depending
                 on which end of the trip is nearer.
+              </p>
+              <p>
+                When you compare routes, each has a band of its own, one under
+                the other, in the colour it has on the map, all on the same
+                temperature scale so their bars compare. Picking a day picks it
+                on every route, and a table above the chart lists that day on
+                each. A trip that's over sooner ends with a 🏁.
               </p>
 
               <h3>A day's numbers</h3>
@@ -476,6 +483,18 @@ export default class Help extends Component<{
               <p>
                 Pick a route in the list or click a dashed one on the map. The ⇅
                 button next to the list rides it the other way.
+              </p>
+
+              <h3>Comparing routes</h3>
+              <p>
+                “Compare with…” under the list adds another route, up to three
+                in all. Each gets its own colour on the map and its own row of
+                bars in the day chart, and has its own ⇅ and × to turn it round
+                or drop it. Add the same route again to see it both ways. All of
+                them start on the same day with the same km per day and rest
+                days, so day 7 is the same date on every route: pick a day and
+                you see that day on each, one under the other. The trip settings
+                and the start calendar follow the first route.
               </p>
 
               <h3>Drawing your own</h3>

@@ -12,7 +12,7 @@ const NerdSharing: TOC<object> = <template>
     <dl class={{helpDefs}}>
       <div><dt>The address</dt><dd>Every planner setting is a query parameter,
           left out at its default; values that don't parse read as the default.
-          Your own route appears only as a random UUID.</dd></div>
+          Your own routes appear only as random UUIDs.</dd></div>
       <div><dt>This browser</dt><dd>localStorage holds your routes (whole
           tracks, polyline-encoded with heights, plus a drawn route's clicks),
           your last plan's query string and the map's view. Nothing in it is

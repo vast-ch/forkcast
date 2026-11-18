@@ -118,6 +118,95 @@ const CLICK_SNAP_KM = 25;
 /** Colour of your own route, and of the line while drawing it. */
 export const OWN_COLOR = '#b5179e';
 
+/** How many routes can be compared at once. */
+export const MAX_ROUTES = 3;
+
+/**
+ * Each route's colour while comparing, by its place in the list, on the map and
+ * in the day chart alike (a route alone keeps its own): apart from each other,
+ * from the selected day's purple and from your own routes' magenta.
+ */
+export const COMPARE_COLORS = ['#17212b', '#0f7b8a', '#d9662b'];
+
+/**
+ * One of the selected routes, ridden one way, and the trip along it. Every
+ * ride's trip is planned with the same settings, so day `n` is the same date
+ * (and a rest day or not) on each: one selected day lines them all up.
+ */
+export class Ride {
+  constructor(
+    private planner: PlannerService,
+    readonly id: string,
+    readonly isReversed: boolean,
+    /** Its place in the list, 0 for the first */
+    readonly index: number,
+  ) {}
+
+  /** As the URL has it: the id, with `!` when ridden the other way. */
+  get key(): string {
+    return (this.isReversed ? '!' : '') + this.id;
+  }
+
+  /** Its colour on the map and in the chart. */
+  get color(): string {
+    return this.planner.isComparing
+      ? COMPARE_COLORS[this.index]!
+      : (this.choice?.color ?? OWN_COLOR);
+  }
+
+  /** As the route picker lists it; undefined for a link to an unsaved route. */
+  get choice(): RouteChoice | undefined {
+    return this.planner.choices.find((r) => r.id === this.id);
+  }
+
+  get name(): string {
+    return this.choice?.name ?? 'Route not saved here';
+  }
+
+  /** Its name, and the way it's ridden when that's the other way. */
+  get label(): string {
+    return this.isReversed ? `${this.name} (other way)` : this.name;
+  }
+
+  /** A link to someone's own route that isn't saved in this browser. */
+  get isMissing(): boolean {
+    return isOwnRouteId(this.id) && !this.planner.myRoutes.find(this.id);
+  }
+
+  /** The route in its original direction, once its track is loaded; while
+   * it's being drawn further, the drawing. */
+  @cached
+  get baseRoute(): Route | undefined {
+    const p = this.planner;
+    if (p.isDrawing && p.editingId === this.id) return p.redrawnRoute;
+    if (isOwnRouteId(this.id)) return p.ownRoutes.find((r) => r.id === this.id);
+    return p.atlas.tracks.get(this.id);
+  }
+
+  /** The route in riding direction. */
+  @cached
+  get route(): Route | undefined {
+    const r = this.baseRoute;
+    return r && this.isReversed ? reversed(r) : r;
+  }
+
+  @cached
+  get trip(): Trip | undefined {
+    const route = this.route;
+    const climate = this.planner.atlas.climate;
+    if (!route || !climate || route.points.length < 2) return undefined;
+    const p = this.planner;
+    return planTrip(route, climate, {
+      start: p.start,
+      kmPerDay: p.kmPerDay,
+      speed: p.speed,
+      rideDays: p.rideDays,
+      restDays: p.restDays,
+      rainThreshold: p.rainThreshold,
+    });
+  }
+}
+
 /** What is under the mouse pointer on the map. */
 export interface Hover {
   lat: number;
@@ -126,8 +215,10 @@ export interface Hover {
   climate: DayClimate | null;
   /** A square with climate data that isn't loaded yet (a click loads it), or is on its way */
   square?: 'unloaded' | 'loading';
-  /** Set when the pointer is near the selected route */
+  /** Set when the pointer is near a selected route */
   onRoute?: {
+    /** Which route, while comparing */
+    name?: string;
     km: number;
     day?: TripDay;
     weather?: DayClimate;
@@ -192,11 +283,10 @@ export default class PlannerService extends Service {
   @setting declare speed: number;
   @setting declare rideDays: number;
   @setting declare restDays: number;
-  @setting declare isReversed: boolean;
-  /** The highlighted trip day's number, 0 for none */
+  /** The highlighted trip day's number, 0 for none: the same day on every route */
   @setting declare highlightedDay: number;
-  /** The selected route as the link has it ('' for the default); see `selectedRouteId` */
-  @setting declare routeId: string;
+  /** The selected routes as the link has them ('' for the default); see `rides` */
+  @setting declare routeIds: string;
 
   /** The map's quarter-month, with its dates and position in the year. */
   get weekSlot(): WeekSlot {
@@ -252,7 +342,7 @@ export default class PlannerService extends Service {
    */
   selectWeek(w: number): void {
     this.week = w;
-    const days = this.trip?.days ?? [];
+    const days = this.days;
     const selected = days.find((d) => d.n === this.highlightedDay);
     if (selected && this.inMapWeek(selected)) return;
     this.highlightedDay = days.find(this.inMapWeek)?.n ?? 0;
@@ -265,10 +355,10 @@ export default class PlannerService extends Service {
    * another week), or when there is no trip.
    */
   get offTrip(): 'before' | 'after' | undefined {
-    const days = this.trip?.days;
-    const first = days?.[0];
-    const last = days?.[days.length - 1];
-    if (!days || !first || !last || this.highlightedDay) return undefined;
+    const days = this.days;
+    const first = days[0];
+    const last = days[days.length - 1];
+    if (!first || !last || this.highlightedDay) return undefined;
     if (days.some(this.inMapWeek)) return undefined;
     const w = this.week;
     const n = WEEKS.length;
@@ -289,10 +379,20 @@ export default class PlannerService extends Service {
     else this.highlightDay(day);
   }
 
-  /** Ride the route the other way; the day numbers change, so the highlight goes. */
-  toggleReversed(): void {
-    this.isReversed = !this.isReversed;
-    this.highlightedDay = 0;
+  /**
+   * Ride a route the other way (the first by default). The first route's day
+   * numbers change, so the highlight goes; turning a compared route keeps the
+   * day, to see that day both ways.
+   */
+  toggleReversed(index = 0): void {
+    const ride = this.rides[index];
+    if (!ride) return;
+    this.#setRides(
+      this.rides.map((r) =>
+        r === ride ? { id: r.id, isReversed: !r.isReversed } : r,
+      ),
+    );
+    if (index === 0) this.highlightedDay = 0;
   }
 
   // --- Routes ---------------------------------------------------------------
@@ -327,39 +427,89 @@ export default class PlannerService extends Service {
     return [...this.atlas.presets, ...own];
   }
 
-  /**
-   * The selected route id, falling back to the first preset. A link to one of your routes keeps its id even where the
-   * route isn't saved (see `isMissingRoute`).
-   */
-  get selectedRouteId(): string {
-    const id = this.routeId;
-    if (id && (isOwnRouteId(id) || this.choices.some((r) => r.id === id)))
-      return id;
+  /** The routes the link names, as they are written there (see `rides`). */
+  get #listed(): { id: string; isReversed: boolean }[] {
+    if (!this.routeIds) return [];
+    return this.routeIds.split('~').map((key) => ({
+      id: key.replace(/^!/, ''),
+      isReversed: key.startsWith('!'),
+    }));
+  }
+
+  /** The route selected when the link names none: the first preset. */
+  get #defaultId(): string {
     return this.atlas.presets[0]?.id ?? this.ownRoutes[0]?.id ?? '';
+  }
+
+  /**
+   * The selected routes, the first one leading: those the link names that are
+   * known here (a link to one of your routes keeps its id even where the route
+   * isn't saved, see `Ride.isMissing`), each way of each at most once, up to
+   * `MAX_ROUTES`; the first preset when there are none.
+   */
+  @cached
+  get rides(): Ride[] {
+    const known = new Set([
+      ...this.atlas.presets.map((r) => r.id),
+      ...this.ownRoutes.map((r) => r.id),
+    ]);
+    const seen = new Set<string>();
+    const listed = this.#listed.filter(({ id, isReversed }) => {
+      const key = `${isReversed ? '!' : ''}${id}`;
+      if (seen.has(key) || !(known.has(id) || isOwnRouteId(id))) return false;
+      seen.add(key);
+      return true;
+    });
+    const picked = listed.length
+      ? listed.slice(0, MAX_ROUTES)
+      : [{ id: this.#defaultId, isReversed: false }];
+    return picked.map((r, i) => new Ride(this, r.id, r.isReversed, i));
+  }
+
+  /** Write the selected routes to the URL: '' for the first preset alone. */
+  #setRides(rides: { id: string; isReversed: boolean }[]): void {
+    const keys = rides.map((r) => `${r.isReversed ? '!' : ''}${r.id}`);
+    this.routeIds = keys.join('~') === this.#defaultId ? '' : keys.join('~');
+  }
+
+  /** More than one route selected: the map and the chart show them side by side. */
+  get isComparing(): boolean {
+    return this.rides.length > 1;
+  }
+
+  /** Room for another route to compare. */
+  get canCompare(): boolean {
+    return this.rides.length < MAX_ROUTES;
+  }
+
+  /** The first selected route, which the trip settings and the start picker follow. */
+  get ride(): Ride {
+    return this.rides[0]!;
+  }
+
+  /** The first selected route's id. */
+  get selectedRouteId(): string {
+    return this.ride.id;
+  }
+
+  /** The first selected route is ridden the other way. */
+  get isReversed(): boolean {
+    return this.ride.isReversed;
   }
 
   /** The link points to someone's own route that isn't saved in this browser. */
   get isMissingRoute(): boolean {
-    return isOwnRouteId(this.routeId) && !this.myRoutes.find(this.routeId);
+    return this.ride.isMissing;
   }
 
-  /** The selected route, if it's one of yours: as saved. */
+  /** The first selected route, if it's one of yours: as saved. */
   get selectedOwn() {
     return this.myRoutes.find(this.selectedRouteId);
   }
 
-  /** The selected route in its original direction, once its track is loaded. */
-  @cached
-  get baseRoute(): Route | undefined {
-    const id = this.selectedRouteId;
-    if (this.isRedrawing) return this.redrawnRoute;
-    if (isOwnRouteId(id)) return this.ownRoutes.find((r) => r.id === id);
-    return this.atlas.tracks.get(id);
-  }
-
-  /** Drawing the selected route further: the trip follows the new line. */
+  /** Drawing a selected route further: its trip follows the new line. */
   get isRedrawing(): boolean {
-    return this.isDrawing && this.editingId === this.selectedRouteId;
+    return this.isDrawing && this.rides.some((r) => r.id === this.editingId);
   }
 
   /** The route as it's being redrawn (not saved yet). */
@@ -372,29 +522,51 @@ export default class PlannerService extends Service {
     return { ...saved, points, km: points[points.length - 1]!.km };
   }
 
-  /** The selected route in riding direction. */
-  @cached
+  /** The first selected route in riding direction. */
   get route(): Route | undefined {
-    const r = this.baseRoute;
-    return r && this.isReversed ? reversed(r) : r;
+    return this.ride.route;
   }
 
+  /**
+   * Each selected route's trip, in the routes' order (undefined until its
+   * track is in). Asks for the climate tiles along all of them; until they
+   * are in, the days have no weather, and the trips are planned again as each
+   * arrives.
+   */
   @cached
-  get trip(): Trip | undefined {
-    const route = this.route;
+  get trips(): (Trip | undefined)[] {
     const climate = this.atlas.climate;
-    if (!route || !climate || route.points.length < 2) return undefined;
-    // The tiles along the route; until they are in, its days have no
-    // weather, and the trip is planned again as each arrives.
-    void this.atlas.want('route', tilesAlong(route, climate.header.tile));
-    return planTrip(route, climate, {
-      start: this.start,
-      kmPerDay: this.kmPerDay,
-      speed: this.speed,
-      rideDays: this.rideDays,
-      restDays: this.restDays,
-      rainThreshold: this.rainThreshold,
+    if (climate) {
+      const tiles = this.rides.flatMap((r) =>
+        r.route ? tilesAlong(r.route, climate.header.tile) : [],
+      );
+      void this.atlas.want('route', [...new Set(tiles)]);
+    }
+    return this.rides.map((r) => r.trip);
+  }
+
+  /** The selected routes whose trips are planned, in order: the day chart's rows. */
+  get planned(): { ride: Ride; trip: Trip }[] {
+    return this.rides.flatMap((ride, i) => {
+      const trip = this.trips[i];
+      return trip ? [{ ride, trip }] : [];
     });
+  }
+
+  /** The first selected route's trip. */
+  get trip(): Trip | undefined {
+    return this.trips[0];
+  }
+
+  /**
+   * The days of the longest trip: day `n` is the same date on every route, so
+   * these are the days any of them has.
+   */
+  get days(): TripDay[] {
+    let days: TripDay[] = [];
+    for (const t of this.trips)
+      if (t && t.days.length > days.length) days = t.days;
+    return days;
   }
 
   /**
@@ -412,18 +584,45 @@ export default class PlannerService extends Service {
     return Number.isNaN(t) ? undefined : t;
   }
 
-  /** Select a route, loading its track if it is a preset. */
+  /**
+   * Select a route as the first one, in its own direction, loading its track
+   * if it is a preset; the routes compared with it stay.
+   */
   async selectRoute(id: string): Promise<void> {
-    const isDefault = id === (this.atlas.presets[0]?.id ?? '');
-    this.routeId = isDefault ? '' : id;
+    const others = this.rides.slice(1).filter((r) => r.key !== id);
+    this.#setRides([{ id, isReversed: false }, ...others]);
     this.highlightedDay = 0;
     await this.loadSelected();
   }
 
-  /** Make sure the selected preset's track is loaded. */
+  /**
+   * Add a route to compare, the way it isn't selected yet (as it is, else the
+   * other way). The selected day stays: it is the same date on every route.
+   */
+  async compareRoute(id: string): Promise<void> {
+    if (!this.canCompare) return;
+    const taken = new Set(this.rides.map((r) => r.key));
+    const isReversed = taken.has(id);
+    if (isReversed && taken.has(`!${id}`)) return;
+    this.#setRides([...this.rides, { id, isReversed }]);
+    await this.loadSelected();
+  }
+
+  /** Stop comparing a route; the next one leads if it was the first. */
+  removeRide(index: number): void {
+    const rest = this.rides.filter((r) => r.index !== index);
+    if (!rest.length) return;
+    this.#setRides(rest);
+    if (index === 0) this.highlightedDay = 0;
+  }
+
+  /** Make sure the selected presets' tracks are loaded. */
   async loadSelected(): Promise<void> {
-    const id = this.selectedRouteId;
-    if (id && !isOwnRouteId(id)) await this.atlas.loadRoute(id);
+    await Promise.all(
+      this.rides
+        .filter((r) => r.id && !isOwnRouteId(r.id))
+        .map((r) => this.atlas.loadRoute(r.id)),
+    );
   }
 
   /** Save an imported track as one of your routes and select it. */
@@ -435,19 +634,19 @@ export default class PlannerService extends Service {
   }
 
   #selectOwn(id: string): void {
-    this.routeId = id;
-    this.isReversed = false;
+    this.#setRides([{ id, isReversed: false }, ...this.rides.slice(1)]);
     this.highlightedDay = 0;
   }
 
-  /** Delete one of your routes; if it was selected, the default comes back. */
+  /** Delete one of your routes; it leaves the selection, and the default
+   * comes back if nothing else is left. */
   deleteRoute(id: string): void {
     this.myRoutes.remove(id);
-    if (this.routeId === id) {
-      this.routeId = '';
-      this.highlightedDay = 0;
-      void this.loadSelected();
-    }
+    const rest = this.rides.filter((r) => r.id !== id);
+    if (rest.length === this.rides.length) return;
+    if (this.rides[0]!.id === id) this.highlightedDay = 0;
+    this.#setRides(rest);
+    void this.loadSelected();
   }
 
   // --- Drawing and editing -----------------------------------------------------

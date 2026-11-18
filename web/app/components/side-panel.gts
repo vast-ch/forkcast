@@ -12,8 +12,10 @@ import {
   CITY_CHOICES,
   CLIMATE_CHOICES,
   MAP_DETAILS,
+  MAX_ROUTES,
   DATE_CHOICES,
 } from 'forkcast/services/planner';
+import type { Trip } from 'forkcast/utils/itinerary';
 import type AtlasService from 'forkcast/services/atlas';
 import { MONTHS, RAIN_THRESHOLDS } from 'forkcast/utils/climate';
 import {
@@ -35,7 +37,28 @@ import RangeInput from 'forkcast/components/range-input';
 import RouteEditor from 'forkcast/components/route-editor';
 import TempCalendar from 'forkcast/components/temp-calendar';
 import ArrowsDownUp from 'ember-phosphor-icons/components/ph-arrows-down-up';
+import X from 'ember-phosphor-icons/components/ph-x';
 import { btn, eyebrow, focusRing } from 'forkcast/utils/classes';
+
+/** A trip at a glance, as label and value pairs. */
+function tripSummary(t: Trip): { label: string; value: string }[] {
+  const cold = t.lowestLow;
+  return [
+    ['Days', String(t.days.length)],
+    ['Arrive', fmtDate(t.end)],
+    ['Riding days', String(t.ridingDays)],
+    ['Rest days', String(t.restDays)],
+    ['High', fmtTemp(t.avgHigh)],
+    ['Highest high', fmtTemp(t.likelyHighest)],
+    ['Rainy riding days', fmtRainyDays(t.rainyDays, t.rainyDaysRange)],
+    ['Wind', fmtTripWind(t.windSpeed, t.windPush)],
+    ['Lowest low', fmtTemp(t.likelyLowest)],
+    [
+      'Lowest day',
+      cold ? `${fmtShortDate(cold.date)}, ${fmtTemp(cold.nightLow)}` : '–',
+    ],
+  ].map(([label, value]) => ({ label: label!, value: value! }));
+}
 
 type MapSetting =
   | 'climate'
@@ -138,36 +161,54 @@ export default class SidePanel extends Component<SidePanelSignature> {
       .map(([group, routes]) => ({ label: label(group), routes }));
   }
 
-  get selected() {
-    return this.planner.choices.find(
-      (r) => r.id === this.planner.selectedRouteId,
-    );
-  }
-
   get isLoadingRoute() {
     return this.atlas.loadingRouteId === this.planner.selectedRouteId;
   }
 
-  /** The trip at a glance, as label and value pairs. */
+  /** The trip at a glance, while there's one route. */
   get summary() {
     const t = this.trip;
-    if (!t) return [];
-    const cold = t.lowestLow;
-    return [
-      ['Days', t.days.length],
-      ['Arrive', fmtDate(t.end)],
-      ['Riding days', t.ridingDays],
-      ['Rest days', t.restDays],
-      ['High', fmtTemp(t.avgHigh)],
-      ['Highest high', fmtTemp(t.likelyHighest)],
-      ['Rainy riding days', fmtRainyDays(t.rainyDays, t.rainyDaysRange)],
-      ['Wind', fmtTripWind(t.windSpeed, t.windPush)],
-      ['Lowest low', fmtTemp(t.likelyLowest)],
-      [
-        'Lowest day',
-        cold ? `${fmtShortDate(cold.date)}, ${fmtTemp(cold.nightLow)}` : '–',
-      ],
-    ].map(([label, value]) => ({ label, value }));
+    return t && !this.planner.isComparing ? tripSummary(t) : [];
+  }
+
+  /** While comparing: the trips at a glance, a column per route. */
+  get comparedSummary() {
+    const planned = this.planner.planned;
+    if (!this.planner.isComparing || !planned.length) return undefined;
+    const each = planned.map(({ trip }) => tripSummary(trip));
+    return {
+      routes: planned.map(({ ride }) => ({
+        key: ride.key,
+        label: ride.label,
+        swatch: css('background: ', ride.color),
+      })),
+      rows: each[0]!.map(({ label }, i) => ({
+        label,
+        values: each.map((s) => s[i]!.value),
+      })),
+    };
+  }
+
+  /** The routes compared with the first, each with its own controls. */
+  get compared() {
+    return this.planner.rides.slice(1).map((r) => ({
+      key: r.key,
+      label: r.label,
+      km: r.choice ? fmtKm(r.choice.km) : '',
+      isReversed: r.isReversed,
+      isMissing: r.isMissing,
+      isLoading: this.atlas.loadingRouteId === r.id,
+      swatch: css('background: ', r.color),
+      toggleReversed: () => this.planner.toggleReversed(r.index),
+      remove: () => this.planner.removeRide(r.index),
+    }));
+  }
+
+  maxRoutes = MAX_ROUTES;
+
+  /** The first route's colour beside the picker. */
+  get selectedSwatch() {
+    return css('background: ', this.planner.ride.color);
   }
 
   /** The map's optional layers, as toggle buttons. */
@@ -205,6 +246,14 @@ export default class SidePanel extends Component<SidePanelSignature> {
 
   selectRoute = (e: Event) => {
     void this.planner.selectRoute((e.target as HTMLSelectElement).value);
+  };
+
+  /** From the Compare with… picker, which goes back to its prompt. */
+  compareRoute = (e: Event) => {
+    const select = e.target as HTMLSelectElement;
+    const id = select.value;
+    select.value = '';
+    if (id) void this.planner.compareRoute(id);
   };
 
   deleteSelected = () => this.planner.deleteRoute(this.planner.selectedRouteId);
@@ -288,10 +337,7 @@ export default class SidePanel extends Component<SidePanelSignature> {
                 >
                   <span
                     class="w-[0.35rem] self-stretch rounded-xs"
-                    style={{css
-                      "background: "
-                      (if this.selected this.selected.color "transparent")
-                    }}
+                    style={{this.selectedSwatch}}
                   ></span>
                   <select
                     id="route-picker"
@@ -370,6 +416,81 @@ export default class SidePanel extends Component<SidePanelSignature> {
               {{/unless}}
             {{/if}}
           </div>
+
+          {{#if this.groups.length}}
+            {{! Routes to compare with the first: each on the map in its
+                colour, with its own band in the day chart. }}
+            <div class="flex flex-col gap-1.5">
+              {{#each this.compared key="key" as |c|}}
+                <div class="wt-compared flex items-stretch gap-2">
+                  <div
+                    class="flex min-w-0 flex-1 items-center gap-2.5 rounded-md border border-wt-line bg-white px-2 py-[0.35rem] text-[0.9rem]"
+                  >
+                    <span
+                      class="w-[0.35rem] self-stretch rounded-xs"
+                      style={{c.swatch}}
+                    ></span>
+                    <span class="min-w-0 flex-1 truncate">{{c.label}}</span>
+                    {{#if c.isLoading}}
+                      <span class="text-xs text-wt-muted">Loading…</span>
+                    {{else if c.km}}
+                      <span
+                        class="font-data text-xs text-wt-muted"
+                      >{{c.km}}</span>
+                    {{/if}}
+                  </div>
+                  <button
+                    type="button"
+                    class="inline-grid w-[2.6rem] flex-none cursor-pointer place-items-center rounded-md border
+                      {{focusRing}}
+                      {{if
+                        c.isReversed
+                        'border-wt-ink bg-wt-ink text-white'
+                        'border-wt-line bg-white text-wt-ink hover:border-wt-ink'
+                      }}"
+                    aria-pressed={{if c.isReversed "true" "false"}}
+                    aria-label="Ride {{c.label}} the other way"
+                    title="Ride it the other way"
+                    {{on "click" c.toggleReversed}}
+                  ><ArrowsDownUp class="size-5" aria-hidden="true" /></button>
+                  <button
+                    type="button"
+                    class="inline-grid w-[2.6rem] flex-none cursor-pointer place-items-center rounded-md border border-wt-line bg-white text-wt-ink hover:border-wt-ink
+                      {{focusRing}}"
+                    aria-label="Stop comparing {{c.label}}"
+                    title="Stop comparing"
+                    {{on "click" c.remove}}
+                  ><X class="size-4" aria-hidden="true" /></button>
+                </div>
+                {{#if c.isMissing}}
+                  <p class="text-xs text-wt-danger">This one was drawn or
+                    imported in another browser, so it can't be shown here.</p>
+                {{/if}}
+              {{/each}}
+              {{#if this.planner.canCompare}}
+                <label for="compare-picker" class="sr-only">Compare with</label>
+                <select
+                  id="compare-picker"
+                  class="cursor-pointer rounded-md border border-dashed border-wt-line bg-white px-2 py-[0.4rem] text-[0.9rem] text-wt-muted hover:border-wt-ink
+                    {{focusRing}}"
+                  {{on "change" this.compareRoute}}
+                >
+                  <option value="" selected>Compare with…</option>
+                  {{#each this.groups as |g|}}
+                    <optgroup label={{g.label}}>
+                      {{#each g.routes as |r|}}
+                        <option value={{r.id}}>{{r.label}}</option>
+                      {{/each}}
+                    </optgroup>
+                  {{/each}}
+                </select>
+              {{else}}
+                <p class="text-xs text-wt-muted">Up to
+                  {{this.maxRoutes}}
+                  routes side by side.</p>
+              {{/if}}
+            </div>
+          {{/if}}
 
           {{#if this.planner.isEditing}}
             <RouteEditor class="bg-wt-draw-soft p-3" />
@@ -457,6 +578,39 @@ export default class SidePanel extends Component<SidePanelSignature> {
             {{/each}}
           </div>
 
+          {{#if this.comparedSummary}}
+            {{! A column per route, in the routes' order. }}
+            <div
+              class="overflow-x-auto rounded-md border border-wt-line bg-white p-3"
+            >
+              <table
+                class="wt-summary-compare w-full text-[0.85rem] tabular-nums [&_td]:py-1 [&_td]:pl-2 [&_td]:font-medium [&_th]:py-1 [&_th]:text-left [&_th]:align-bottom"
+              >
+                <thead>
+                  <tr>
+                    <td></td>
+                    {{#each this.comparedSummary.routes key="key" as |r|}}
+                      <th scope="col" class="pl-2 text-xs font-medium">
+                        <span
+                          class="mb-1 block h-[0.3rem] w-6 rounded-xs"
+                          style={{r.swatch}}
+                        ></span>{{r.label}}</th>
+                    {{/each}}
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each this.comparedSummary.rows as |row|}}
+                    <tr class="border-t border-wt-line">
+                      <th scope="row" class={{eyebrow}}>{{row.label}}</th>
+                      {{#each row.values as |v|}}
+                        <td>{{v}}</td>
+                      {{/each}}
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          {{/if}}
           {{#if this.summary.length}}
             <dl
               class="wt-summary grid grid-cols-2 gap-x-4 gap-y-3 rounded-md border border-wt-line bg-white p-3"

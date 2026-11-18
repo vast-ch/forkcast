@@ -86,7 +86,9 @@ export default class HoverCard extends Component<{ Element: HTMLDivElement }> {
     <div class="{{card}} pointer-events-none w-64 p-3 text-sm" ...attributes>
       {{#if this.hover}}
         {{#if this.route}}
-          <p class={{eyebrow}}>On your route ·
+          <p class={{eyebrow}}>On
+            {{if this.route.name this.route.name "your route"}}
+            ·
             {{fmtKm this.route.km}}
             from the start</p>
           {{#if this.route.day}}

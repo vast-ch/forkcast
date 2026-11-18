@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Compare up to three routes side by side: pick “Compare with…” under the route list. Each route gets its own colour on the map and its own row in the day chart, all starting on the same day, so picking a day shows that same date on every route, one under the other, with a table of each route's day and the trips at a glance side by side. Each compared route can be turned round on its own, and you can compare a route with itself ridden the other way.
+
+### Changed
+
+- A plan's link now names every route you picked and which way you ride each. Links made before this keep their dates and settings but open on the default route, ridden the usual way.
+
 ## v0.17.0 - 2026-11-17
 
 ### Added
