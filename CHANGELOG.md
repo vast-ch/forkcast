@@ -1,20 +1,15 @@
 # Changelog
 
-## Unreleased
-
-### Changed
-
-- The chart's size buttons sit at the right end of the day's title line, and the selected day's table has shorter headings, “Rainy day” and “Rain”, so it fits on a phone with less scrolling.
-
-### Fixed
-
-- The selected day's table above the day chart uses the panel's whole width. Its last columns, such as daylight, were cut off beside the chart's size buttons, most of all on a phone.
-
 ## 2026-11-20
 
 ### Changed
 
 - The map's relief shading is much sharper, anywhere in the world: it now comes from NOAA's ETOPO terrain map, with heights about 5 km apart instead of 25 km, so mountain ridges and the valleys between them stand out, not just big mountain blobs. Each square of the map you load adds about 80 kB for it, and nothing while Relief is off.
+- The chart's size buttons sit at the right end of the day's title line, and the selected day's table has shorter headings, “Rainy day” and “Rain”, so it fits on a phone with less scrolling.
+
+### Fixed
+
+- The selected day's table above the day chart uses the panel's whole width. Its last columns, such as daylight, were cut off beside the chart's size buttons, most of all on a phone.
 
 ## 2026-11-18
 
