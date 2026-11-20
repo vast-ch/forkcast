@@ -44,10 +44,10 @@ const NerdMap: TOC<object> = <template>
               ></span></td>{{/each}}</tr></tbody>
     </table>
     <p>
-      The relief shading is lit from the north-west, 45° up, on ERA5-Land's
-      terrain at 0.1° (about 11 km), with heights exaggerated 6 times, and
-      darkens slopes facing away by up to three quarters. It loads with each
-      square's climate, about 20 kB more a square, and only while Relief is on.
+      The relief shading is lit from the north-west, 45° up, on NOAA's ETOPO
+      2022 terrain at 0.05° (about 5.5 km), with heights exaggerated 4 times,
+      and darkens slopes facing away by up to three quarters. It loads with each
+      square's climate, about 80 kB more a square, and only while Relief is on.
     </p>
 
     <h3>Rain</h3>

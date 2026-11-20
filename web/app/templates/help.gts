@@ -940,8 +940,15 @@ export default class Help extends Component<{
                     href="https://www.naturalearthdata.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                  >Natural Earth</a>, public domain. The relief shading is drawn
-                  from the ERA5-Land terrain height above.
+                  >Natural Earth</a>, public domain.
+                </li>
+                <li>
+                  <strong>Relief shading:</strong>
+                  <a
+                    href="https://www.ncei.noaa.gov/products/etopo-global-relief-model"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >ETOPO 2022</a>, NOAA, public domain.
                 </li>
               </ul>
             </section>

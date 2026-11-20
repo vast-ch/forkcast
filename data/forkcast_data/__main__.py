@@ -14,13 +14,14 @@ Downloads (into cache/):
     era5land-wind         ERA5-Land monthly 10 m wind by hour of day, 2011–2025 (CDS key needed)
     era5-wind-speed       ERA5 monthly 10 m wind speed by hour of day, 2011–2025 (CDS key needed)
     cpc                   NOAA CPC daily highs and lows from weather stations, 2011–2025
-    orography             ERA5-Land terrain height (for the altitude correction and the relief)
+    orography             ERA5-Land terrain height (for the altitude correction)
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
     details               Natural Earth places, rivers and lakes
     osm                   the OpenStreetMap planet (about 96 GB; every route comes from it)
     dem                   Copernicus GLO-90 terrain heights for the routes' area (about 5 GB)
     eurovelo-legs         BRouter legs where the EuroVelo routes' mapping has holes (builds bicycle first)
+    etopo                 NOAA's ETOPO 2022 terrain at 1 arc-minute, 478 MB (for the map's relief)
     oni                   NOAA's Oceanic Niño Index (which months were El Niño or La Niña)
     ghcnd                 NOAA GHCN-Daily: weather stations' own daily records, 2011–2025 (~2.6 GB; for verify)
 
@@ -38,7 +39,7 @@ Builds (into out/, except the CRU climatology which is an intermediate in cache/
     warming    the long-term warming rate each climate is brought forward by (intermediate)
     wind       each climate's prevailing wind in riding hours (intermediate)
     pack       every climate as the app's seasonal curves, in 10° tiles
-    relief     the map's relief shading: terrain heights at 0.1°, in 10° tiles
+    relief     the map's relief shading: terrain heights at 0.05°, in 10° tiles
     stations   the stations verify tests against, from GHCN-Daily (intermediate)
     verify     how well the data holds up: curve fit, backtest, ENSO checks (for the help's Nerd mode)
 
@@ -98,6 +99,7 @@ DOWNLOADS = {
     "osm": lambda a: osm.download(a.fresh),
     "dem": lambda a: dem.download(a.fresh),
     "eurovelo-legs": lambda a: routes.download_eurovelo(a.fresh),
+    "etopo": lambda a: relief.download(a.fresh),
     "oni": lambda a: variants.download(a.fresh),
     "ghcnd": lambda a: ghcnd.download(a.fresh),
 }
@@ -148,6 +150,7 @@ def status(a) -> None:
         "osm": [osm.PLANET],
         "dem": dem.files(),
         "eurovelo-legs": [routes.EUROVELO_LEGS],
+        "etopo": [relief.SOURCE],
         "oni": [variants.ONI_FILE],
         "ghcnd": ghcnd.files(),
     }
