@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The chart's size buttons sit at the right end of the day's title line, and the selected day's table has shorter headings, “Rainy day” and “Rain”, so it fits on a phone with less scrolling.
+
+### Fixed
+
+- The selected day's table above the day chart uses the panel's whole width. Its last columns, such as daylight, were cut off beside the chart's size buttons, most of all on a phone.
+
 ## 2026-11-20
 
 ### Changed

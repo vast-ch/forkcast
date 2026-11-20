@@ -406,98 +406,22 @@ export default class ItineraryChart extends Component<{
 
   <template>
     <div class="flex min-h-0 flex-col gap-2" ...attributes>
-      {{! The size buttons sit at the end of the title's line, over room left
-          for them, so the day's table gets the panel's whole width. }}
-      <div class="relative flex items-start gap-3">
-        <div
-          class="flex min-h-[2.75rem] min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-          aria-hidden="true"
-        >
-          {{#if this.comparison.length}}
-            {{! The selected day on each route, a row each, in the chart's order. }}
-            <div class="min-w-0 flex-1">
-              <p class="{{title}} pr-24">{{this.detailTitle}}</p>
-              <div class="overflow-x-auto">
-                <table
-                  class="wt-compare mt-1 w-full text-[0.8rem] tabular-nums [&_td]:py-0.5 [&_td]:pr-3 [&_td]:align-middle [&_th]:pr-3 [&_th]:text-left [&_th]:align-bottom [&_th]:leading-tight [&_th]:font-normal [&_th]:text-wt-muted"
-                >
-                  <thead>
-                    <tr><th>Route</th><th>Climbing</th><th>Low</th><th
-                      >High</th><th>Rainy day chance</th><th>When it rains</th><th
-                      >Wind</th><th>Daylight</th></tr>
-                  </thead>
-                  <tbody>
-                    {{#each this.comparison key="key" as |c|}}
-                      <tr>
-                        <td class="max-w-[13rem] max-desktop:max-w-[7rem]">
-                          <span class="flex items-center gap-1.5"><span
-                              class="h-3 w-[0.35rem] flex-none rounded-xs"
-                              style={{c.swatch}}
-                            ></span><span class="truncate">{{c.name}}{{#if
-                                c.isReversed
-                              }}
-                                <ArrowsDownUp
-                                  class="inline size-3.5 align-[-0.15em]"
-                                  aria-hidden="true"
-                                /><span class="sr-only">
-                                  (other way)</span>{{/if}}</span></span>
-                        </td>
-                        <td class="whitespace-nowrap">{{c.riding}}</td>
-                        {{#if c.day}}
-                          <td class="whitespace-nowrap"><TempPill
-                              @t={{c.day.nightLow}}
-                            />
-                            <span
-                              class="text-xs whitespace-nowrap text-wt-muted"
-                            >{{fmtUsual
-                                c.day.nightLow
-                                c.day.nightLowSpread
-                              }}</span></td>
-                          <td class="whitespace-nowrap"><TempPill
-                              @t={{c.day.weather.high}}
-                            />
-                            <span
-                              class="text-xs whitespace-nowrap text-wt-muted"
-                            >{{fmtUsual
-                                c.day.weather.high
-                                c.day.weather.highSpread
-                              }}</span></td>
-                          <td>{{fmtPct c.day.weather.rainChance}}</td>
-                          <td class="whitespace-nowrap">{{fmtMm
-                              c.day.weather.wetDayMm
-                            }}</td>
-                          <td class="whitespace-nowrap">{{#if
-                              c.day.isRest
-                            }}–{{else}}{{fmtRideWind
-                                c.day.weather.windSpeed
-                                c.day.windPush
-                              }}{{/if}}</td>
-                          <td class="whitespace-nowrap">{{fmtDaylight
-                              c.day.daylight
-                            }}</td>
-                        {{else}}
-                          <td></td><td></td><td></td><td></td><td></td><td></td>
-                        {{/if}}
-                      </tr>
-                    {{/each}}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          {{else if this.offTripNote}}
-            <div class="min-w-0">
-              <p class="{{title}} pr-24">{{this.planner.weekSlot.label}}</p>
-              <p class="text-xs text-wt-muted">{{this.offTripNote}}</p>
-            </div>
-          {{/if}}
-        </div>
+      {{! The day (or the week off the trip) on the left, the chart's size
+          buttons on the right of the same line; the day's table under them,
+          the panel's whole width. }}
+      <div class="flex min-h-8 items-center justify-between gap-3">
+        <p class="{{title}} min-w-0" aria-hidden="true">{{#if
+            this.comparison.length
+          }}{{this.detailTitle}}{{else if
+            this.offTripNote
+          }}{{this.planner.weekSlot.label}}{{/if}}</p>
         {{! The chart's height: the bars as they are, or `BIG` times as tall (the
           panel grows, the map gives way). }}
         <SegmentedControl
           @value={{this.planner.chartSize}}
           @onChange={{this.setChartSize}}
           @size="sm"
-          class="wt-chart-size flex-none absolute -top-1.5 right-0"
+          class="wt-chart-size flex-none"
           aria-label="Chart size"
           as |Ctl|
         >
@@ -511,6 +435,79 @@ export default class ItineraryChart extends Component<{
             /><span class="sr-only">Big</span></Ctl.Item>
         </SegmentedControl>
       </div>
+      {{#if this.comparison.length}}
+        {{! The selected day on each route, a row each, in the chart's order. }}
+        <div class="overflow-x-auto" aria-hidden="true">
+          <table
+            class="wt-compare w-full text-[0.8rem] tabular-nums [&_td]:py-0.5 [&_td]:pr-3 [&_td]:align-middle [&_th]:pr-3 [&_th]:text-left [&_th]:align-bottom [&_th]:leading-tight [&_th]:font-normal [&_th]:text-wt-muted"
+          >
+            <thead>
+              <tr><th>Route</th><th>Climbing</th><th>Low</th><th>High</th><th
+                >Rainy day</th><th>Rain</th><th>Wind</th><th>Daylight</th></tr>
+            </thead>
+            <tbody>
+              {{#each this.comparison key="key" as |c|}}
+                <tr>
+                  <td class="max-w-[13rem] max-desktop:max-w-[7rem]">
+                    <span class="flex items-center gap-1.5"><span
+                        class="h-3 w-[0.35rem] flex-none rounded-xs"
+                        style={{c.swatch}}
+                      ></span><span class="truncate">{{c.name}}{{#if
+                          c.isReversed
+                        }}
+                          <ArrowsDownUp
+                            class="inline size-3.5 align-[-0.15em]"
+                            aria-hidden="true"
+                          /><span class="sr-only">
+                            (other way)</span>{{/if}}</span></span>
+                  </td>
+                  <td class="whitespace-nowrap">{{c.riding}}</td>
+                  {{#if c.day}}
+                    <td class="whitespace-nowrap"><TempPill
+                        @t={{c.day.nightLow}}
+                      />
+                      <span
+                        class="text-xs whitespace-nowrap text-wt-muted"
+                      >{{fmtUsual
+                          c.day.nightLow
+                          c.day.nightLowSpread
+                        }}</span></td>
+                    <td class="whitespace-nowrap"><TempPill
+                        @t={{c.day.weather.high}}
+                      />
+                      <span
+                        class="text-xs whitespace-nowrap text-wt-muted"
+                      >{{fmtUsual
+                          c.day.weather.high
+                          c.day.weather.highSpread
+                        }}</span></td>
+                    <td>{{fmtPct c.day.weather.rainChance}}</td>
+                    <td class="whitespace-nowrap">{{fmtMm
+                        c.day.weather.wetDayMm
+                      }}</td>
+                    <td class="whitespace-nowrap">{{#if
+                        c.day.isRest
+                      }}–{{else}}{{fmtRideWind
+                          c.day.weather.windSpeed
+                          c.day.windPush
+                        }}{{/if}}</td>
+                    <td class="whitespace-nowrap">{{fmtDaylight
+                        c.day.daylight
+                      }}</td>
+                  {{else}}
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                  {{/if}}
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      {{else if this.offTripNote}}
+        <p
+          class="text-xs text-wt-muted"
+          aria-hidden="true"
+        >{{this.offTripNote}}</p>
+      {{/if}}
       {{! The chart is the way to pick a day: click a column, or focus it and
           step through the days with the arrow keys. A band per route under one
           row of day numbers, scrolling together. }}
