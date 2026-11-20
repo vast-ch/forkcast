@@ -178,10 +178,14 @@ A single route is simply a list of one: there's no separate one-route layout any
   - **Water** (rivers, lakes), like the city names, comes in a world file (`water.json`, `places.json`,
     190 and 76 kB gzipped) that `AtlasService.loadDetail` fetches the first
     time the layer is on, never while it's off.
-  - **Relief** needs no file: hillshading from the terrain height already in
-    the climate grid (`reliefRaster` in `web/app/utils/layers.ts`), lit from the
-    north-west, slopes exaggerated ×10 since the cells are 25 km, drawn in
-    greys that the pane multiplies onto the colours below, so it only darkens.
+  - **Relief** is hillshading from ERA5-Land's terrain at 0.1° (about 11 km),
+    finer than the climate cells' 25 km mean heights: a relief tile (20 kB)
+    per climate tile, `out/relief/<lat>_<lon>.bin`, that `AtlasService.loadRelief`
+    fetches only while the layer is on and only for squares whose climate tile
+    is loaded, so the host sees no square it didn't already
+    (`reliefRaster` in `web/app/utils/layers.ts`). Lit from the north-west,
+    slopes exaggerated ×6, drawn in greys that the pane multiplies onto the
+    colours below, so it only darkens; on land only, as the climate tile has it.
 - **Night stops** (the `stops` layer in `wheel-map.gts`, on every picked
   route): a circle where each riding day ends, filled with the day's high
   (`tempSwatch`, the map's scale; grey without climate), or a triangle (an SVG

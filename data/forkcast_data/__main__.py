@@ -14,7 +14,7 @@ Downloads (into cache/):
     era5land-wind         ERA5-Land monthly 10 m wind by hour of day, 2011–2025 (CDS key needed)
     era5-wind-speed       ERA5 monthly 10 m wind speed by hour of day, 2011–2025 (CDS key needed)
     cpc                   NOAA CPC daily highs and lows from weather stations, 2011–2025
-    orography             ERA5-Land terrain height (for the altitude correction)
+    orography             ERA5-Land terrain height (for the altitude correction and the relief)
     brouter               stops geocoded and legs routed for the hand-made routes
     borders               Natural Earth country outlines
     details               Natural Earth places, rivers and lakes
@@ -38,6 +38,7 @@ Builds (into out/, except the CRU climatology which is an intermediate in cache/
     warming    the long-term warming rate each climate is brought forward by (intermediate)
     wind       each climate's prevailing wind in riding hours (intermediate)
     pack       every climate as the app's seasonal curves, in 10° tiles
+    relief     the map's relief shading: terrain heights at 0.1°, in 10° tiles
     stations   the stations verify tests against, from GHCN-Daily (intermediate)
     verify     how well the data holds up: curve fit, backtest, ENSO checks (for the help's Nerd mode)
 
@@ -62,6 +63,7 @@ from . import (
     ghcnd,
     osm,
     pack,
+    relief,
     routes,
     variants,
     verify,
@@ -114,6 +116,7 @@ BUILDS = {
     "wind": lambda a: wind.build((a.y0, a.y1), a.fresh),
     "warming": lambda a: warming.build(a.fresh),
     "pack": lambda a: pack.build(a.fresh),
+    "relief": lambda a: relief.build(a.fresh),
     "stations": lambda a: ghcnd.build(a.fresh),
     "verify": lambda a: verify.build(a.fresh),
     "cyclenet": lambda a: cyclenet.build(a.fresh),

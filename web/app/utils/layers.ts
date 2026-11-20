@@ -3,6 +3,7 @@
 // re-projected rather than stretching the grid image.
 
 import type ClimateGrid from './climate';
+import type { ReliefTile } from './relief';
 import { DAYS_PER_MONTH, tempRgb, type RainThreshold } from './climate';
 import type {
   CityLimit,
@@ -21,9 +22,8 @@ export interface Raster {
   bounds: [[number, number], [number, number]];
 }
 
-/** The Web-Mercator canvas over a grid's own area, at about 3 pixels per cell (at most 12 per degree). */
-function frame(grid: ClimateGrid) {
-  const pxPerDeg = Math.min(12, 3 / grid.step);
+/** The Web-Mercator canvas over a grid's own area, at about 3 pixels per cell (at most 12 per degree, unless asked for more). */
+function frame(grid: ClimateGrid, pxPerDeg = Math.min(12, 3 / grid.step)) {
   const [[south, west], [north, east]] = grid.area;
   const width = Math.round((east - west) * pxPerDeg);
   const yN = toY(north);
@@ -45,8 +45,9 @@ function rasterize(
     fy: number,
     fx: number,
   ) => [number, number, number, number] | null,
+  pxPerDeg?: number,
 ): Raster {
-  const f = frame(grid);
+  const f = frame(grid, pxPerDeg);
   const canvas = document.createElement('canvas');
   canvas.width = f.width;
   canvas.height = f.height;
@@ -89,9 +90,10 @@ export function temperatureRaster(
   });
 }
 
-// Relief: hillshading from the grid's terrain height, lit from the north-west
-// at 45°. The cells are about 25 km, so slopes are exaggerated to show.
-const RELIEF_EXAGGERATION = 10;
+// Relief: hillshading from the terrain's height (a relief tile, about 11 km
+// between heights), lit from the north-west at 45°. Slopes that far apart are
+// gentle, so they are exaggerated to show.
+const RELIEF_EXAGGERATION = 6;
 const LIGHT = (() => {
   const alt = Math.PI / 4;
   const az = (315 * Math.PI) / 180; // from the north-west
@@ -101,21 +103,20 @@ const LIGHT = (() => {
     Math.sin(alt),
   ];
 })();
-const shades = new WeakMap<ClimateGrid, Float32Array>();
+const shades = new WeakMap<ReliefTile, Float32Array>();
 
-/** How lit each cell is: 1 on flat ground and slopes facing the light, less in shade. */
-function cellShades(grid: ClimateGrid): Float32Array {
-  let out = shades.get(grid);
+/** How lit each height is: 1 on flat ground and slopes facing the light, less in shade. */
+function cellShades(tile: ReliefTile): Float32Array {
+  let out = shades.get(tile);
   if (out) return out;
-  out = new Float32Array(grid.rows * grid.cols).fill(Number.NaN);
-  const e = (r: number, c: number) => grid.elevation(r, c);
-  for (let r = 0; r < grid.rows; r++) {
-    const lat = grid.lat0 - r * grid.step;
-    const dx = grid.step * 111320 * Math.cos((lat * Math.PI) / 180) * 2;
-    const dy = grid.step * 110540 * 2;
-    for (let c = 0; c < grid.cols; c++) {
+  out = new Float32Array(tile.rows * tile.cols);
+  const e = (r: number, c: number) => tile.height(r, c);
+  for (let r = 0; r < tile.rows; r++) {
+    const lat = tile.lat0 - r * tile.step;
+    const dx = tile.step * 111320 * Math.cos((lat * Math.PI) / 180) * 2;
+    const dy = tile.step * 110540 * 2;
+    for (let c = 0; c < tile.cols; c++) {
       const h = e(r, c);
-      if (Number.isNaN(h)) continue;
       const at = (v: number) => (Number.isNaN(v) ? h : v);
       const dzdx = (at(e(r, c + 1)) - at(e(r, c - 1))) / dx;
       const dzdy = (at(e(r - 1, c)) - at(e(r + 1, c))) / dy; // north is up
@@ -123,44 +124,51 @@ function cellShades(grid: ClimateGrid): Float32Array {
       const ny = -RELIEF_EXAGGERATION * dzdy;
       const lit =
         (nx * LIGHT[0]! + ny * LIGHT[1]! + LIGHT[2]!) / Math.hypot(nx, ny, 1);
-      out[r * grid.cols + c] = Math.min(1, Math.max(0, lit / LIGHT[2]!));
+      out[r * tile.cols + c] = Math.min(1, Math.max(0, lit / LIGHT[2]!));
     }
   }
-  shades.set(grid, out);
+  shades.set(tile, out);
   return out;
 }
 
 /**
- * Relief shading, drawn in greys that only darken (the map pane multiplies it
- * onto the colours below), bilinear between cells, transparent over the sea.
+ * Relief shading over a climate tile's land, from its square's relief tile:
+ * greys that only darken (the map pane multiplies them onto the colours
+ * below), bilinear between heights, at about 3 pixels per height.
  */
-export function reliefRaster(grid: ClimateGrid): Raster {
-  const shade = cellShades(grid);
+export function reliefRaster(grid: ClimateGrid, tile: ReliefTile): Raster {
+  const shade = cellShades(tile);
   const at = (r: number, c: number) =>
-    r < 0 || c < 0 || r >= grid.rows || c >= grid.cols
+    r < 0 || c < 0 || r >= tile.rows || c >= tile.cols
       ? Number.NaN
-      : shade[r * grid.cols + c]!;
-  return rasterize(grid, (_lat, _lon, fy, fx) => {
-    const r0 = Math.floor(fy);
-    const c0 = Math.floor(fx);
-    let sum = 0;
-    let weight = 0;
-    for (const [r, c, w] of [
-      [r0, c0, (1 - (fy - r0)) * (1 - (fx - c0))],
-      [r0, c0 + 1, (1 - (fy - r0)) * (fx - c0)],
-      [r0 + 1, c0, (fy - r0) * (1 - (fx - c0))],
-      [r0 + 1, c0 + 1, (fy - r0) * (fx - c0)],
-    ] as const) {
-      const v = at(r, c);
-      if (!Number.isNaN(v)) {
-        sum += v * w;
-        weight += w;
+      : shade[r * tile.cols + c]!;
+  return rasterize(
+    grid,
+    (lat, lon) => {
+      const fy = (tile.lat0 - lat) / tile.step;
+      const fx = (lon - tile.lon0) / tile.step;
+      const r0 = Math.floor(fy);
+      const c0 = Math.floor(fx);
+      let sum = 0;
+      let weight = 0;
+      for (const [r, c, w] of [
+        [r0, c0, (1 - (fy - r0)) * (1 - (fx - c0))],
+        [r0, c0 + 1, (1 - (fy - r0)) * (fx - c0)],
+        [r0 + 1, c0, (fy - r0) * (1 - (fx - c0))],
+        [r0 + 1, c0 + 1, (fy - r0) * (fx - c0)],
+      ] as const) {
+        const v = at(r, c);
+        if (!Number.isNaN(v)) {
+          sum += v * w;
+          weight += w;
+        }
       }
-    }
-    if (!weight) return null;
-    const g = 255 * (1 - (1 - sum / weight) * 0.75);
-    return [g, g, g, 255];
-  });
+      if (!weight) return null;
+      const g = 255 * (1 - (1 - sum / weight) * 0.75);
+      return [g, g, g, 255];
+    },
+    3 / tile.step,
+  );
 }
 
 /** A rain dot fills its cell at this much in an average month (mm, or rainy days). */

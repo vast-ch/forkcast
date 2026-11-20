@@ -10,6 +10,7 @@ import ClimateGrid, {
 import { fetchBuffer, fetchJson } from 'forkcast/utils/assets';
 import type { CycleNetJson } from 'forkcast/utils/cyclenet';
 import { errorMessage } from 'forkcast/utils/helpers';
+import { ReliefTile, type ReliefHeader } from 'forkcast/utils/relief';
 import { DEFAULTS } from 'forkcast/utils/settings';
 import { stored } from 'forkcast/utils/stored';
 import {
@@ -87,6 +88,8 @@ export default class AtlasService extends Service {
   tracks = new TrackedMap<string, Route>();
   /** Map details by kind, once fetched. */
   details = new TrackedMap<string, DetailFiles[DetailKind]>();
+  /** Relief tiles loaded so far, by id (the same for every climate) */
+  reliefTiles = new TrackedMap<string, ReliefTile>();
 
   #basics?: Promise<void>;
   #climateLoads = new Map<string, Promise<{ header: ClimateHeader }>>();
@@ -94,6 +97,8 @@ export default class AtlasService extends Service {
   #tileLoads = new Map<string, Promise<ClimateGrid>>();
   #routeLoads = new Map<string, Promise<Route>>();
   #detailLoads = new Map<string, Promise<void>>();
+  #reliefHeader?: Promise<ReliefHeader>;
+  #reliefLoads = new Map<string, Promise<void>>();
   /** The tiles each purpose wants (the route, the help's towns…), so a climate switch loads them again. */
   #wanted = new Map<string, string[]>();
 
@@ -228,6 +233,23 @@ export default class AtlasService extends Service {
         this.details.set(kind, data);
       }),
     ).catch((e: unknown) => {
+      this.error = errorMessage(e);
+    });
+  }
+
+  /**
+   * Fetch a square's relief, once. Called only while the Relief layer is on,
+   * for squares whose climate tile is loaded: the host sees no square it
+   * didn't already.
+   */
+  loadRelief(id: string): Promise<void> {
+    return this.#once(this.#reliefLoads, id, async () => {
+      this.#reliefHeader ??= fetchJson<ReliefHeader>('relief.json');
+      const header = await this.#reliefHeader;
+      if (!header.tiles.includes(id)) return;
+      const buffer = await fetchBuffer(`relief/${id}.bin`);
+      this.reliefTiles.set(id, new ReliefTile(header, id, buffer));
+    }).catch((e: unknown) => {
       this.error = errorMessage(e);
     });
   }
