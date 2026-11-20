@@ -421,12 +421,12 @@ export default class Help extends Component<{
                     just the speed when it comes from a different side from day
                     to day. A winding road counts as the line from where you
                     start to where you sleep.</dd></div>
-                <div><dt>Rainy day chance, when it rains</dt><dd>The chance that
-                    the day is rainy, and how much rain a day brings when it
-                    rains (at least 1 mm), also in the middle of the ride. That
-                    says more than an average spread over the dry days too: 1 mm
-                    a day on average can be a drizzle every day or a downpour
-                    once a fortnight.</dd></div>
+                <div><dt>Rainy day, rain</dt><dd>The chance that the day is
+                    rainy, and how much rain a day brings when it rains (at
+                    least 1 mm), also in the middle of the ride. That says more
+                    than an average spread over the dry days too: 1 mm a day on
+                    average can be a drizzle every day or a downpour once a
+                    fortnight.</dd></div>
                 <div><dt>Daylight</dt><dd>From sunrise where the day starts to
                     sunset where it ends.</dd></div>
               </dl>

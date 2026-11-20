@@ -1,5 +1,12 @@
 import { module, test } from 'qunit';
-import { click, currentURL, findAll, select, visit } from '@ember/test-helpers';
+import {
+  click,
+  currentURL,
+  find,
+  findAll,
+  select,
+  visit,
+} from '@ember/test-helpers';
 import { setupApplicationTest } from 'forkcast/tests/helpers';
 import { ROUTE_COLORS } from 'forkcast/services/planner';
 
@@ -40,6 +47,24 @@ module('Acceptance | compare routes', function (hooks) {
     assert
       .dom('[aria-label="Remove Interlaken – Málaga"]')
       .isDisabled('the last route stays');
+  });
+
+  test("the size buttons share the day's line: the day's table gets the whole width", async function (assert) {
+    await visit('/?highlightedDay=3');
+    const panel = find('.wt-chart-size')!.parentElement!.parentElement!;
+    const table = find('.wt-compare')!.parentElement!.getBoundingClientRect();
+    const buttons = find('.wt-chart-size')!.getBoundingClientRect();
+    const day = find('.wt-chart-size')!.previousElementSibling!;
+    assert.dom(day).hasText(/^Day 3/, 'the day on their left');
+    assert.strictEqual(
+      Math.round(table.right),
+      Math.round(panel.getBoundingClientRect().right),
+      'the table reaches the edge',
+    );
+    assert.ok(
+      buttons.bottom <= table.top,
+      'under the buttons, not beside them',
+    );
   });
 
   test('a route added goes into the URL, onto the map and into the chart', async function (assert) {
