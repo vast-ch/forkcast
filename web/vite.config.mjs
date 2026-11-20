@@ -1,8 +1,8 @@
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import { extensions, classicEmberSupport, ember } from '@embroider/vite';
 import { babel } from '@rollup/plugin-babel';
-import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DEFAULT_APP_URL = 'http://127.0.0.1:4200';
@@ -29,6 +29,12 @@ const PAGES = [
   ),
 ];
 
+// The changelog page imports `/CHANGELOG.md`: a copy in web/ when building
+// (netlify.toml, the Dockerfile), the repository's own in the dev container,
+// where the repository is mounted read-only at /repo (compose.yaml).
+const REPO_CHANGELOG = '/repo/CHANGELOG.md';
+const devChangelog = existsSync(REPO_CHANGELOG);
+
 function staticPages() {
   let outDir = 'dist';
   return {
@@ -54,6 +60,17 @@ export default defineConfig({
     port: 4200,
     allowedHosts: ['ui.forkcast.orb.local'],
     hmr: hmrClientConfig(),
+    fs: {
+      allow: [
+        searchForWorkspaceRoot(process.cwd()),
+        ...(devChangelog ? [REPO_CHANGELOG] : []),
+      ],
+    },
+  },
+  resolve: {
+    alias: devChangelog
+      ? [{ find: /^\/CHANGELOG\.md(?=\?|$)/, replacement: REPO_CHANGELOG }]
+      : [],
   },
   plugins: [
     classicEmberSupport(),
