@@ -835,9 +835,9 @@ export default class Help extends Component<{
               <p>
                 One thing does show: the climate data comes in 10° squares, and
                 your browser fetches the ones your route crosses and the ones
-                you click. The site's host could see which squares of the world
-                were looked at, though not your route, dates or anything else in
-                your plan.
+                you click (and the same squares' relief shading). The site's
+                host could see which squares of the world were looked at, though
+                not your route, dates or anything else in your plan.
               </p>
             </section>
           {{/if}}

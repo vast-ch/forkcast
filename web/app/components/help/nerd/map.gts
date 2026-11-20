@@ -45,8 +45,9 @@ const NerdMap: TOC<object> = <template>
     </table>
     <p>
       The relief shading is lit from the north-west, 45° up, on ERA5-Land's
-      terrain, with heights exaggerated 10 times, and darkens slopes facing away
-      by up to three quarters.
+      terrain at 0.1° (about 11 km), with heights exaggerated 6 times, and
+      darkens slopes facing away by up to three quarters. It loads with each
+      square's climate, about 20 kB more a square, and only while Relief is on.
     </p>
 
     <h3>Rain</h3>

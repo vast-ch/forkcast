@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The map's relief shading is sharper, anywhere in the world: it's now drawn from terrain heights about 11 km apart instead of 25 km, so valleys, ridges and smaller hill ranges show, not just big mountain blobs. It adds about 20 kB for each square of the map you load, and nothing while Relief is off.
+
 ## 2026-11-18
 
 ### Added

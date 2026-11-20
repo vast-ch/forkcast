@@ -168,6 +168,8 @@ interface MapState {
   tiles: number;
   /** How many are on their way */
   loading: number;
+  /** How many relief tiles are loaded */
+  reliefTiles: number;
   /** Drawing with snapping on: show the cycle network to snap to */
   showCycleNet: boolean;
 }
@@ -403,17 +405,28 @@ class LeafletModifier extends Modifier<LeafletSignature> {
       return data ? [data] : [];
     };
 
-    this.layer('relief', [...grids, s.details.relief], (group) => {
-      if (!s.details.relief) return;
-      grids.forEach((g) => {
-        // The terrain is the same in every climate: no week or metric in the key.
-        const r = cachedRaster(g, 'relief', () => reliefRaster(g));
-        L.imageOverlay(r.url, r.bounds, {
-          pane: 'relief',
-          interactive: false,
-        }).addTo(group);
-      });
-    });
+    this.layer(
+      'relief',
+      [...grids, s.details.relief, s.reliefTiles],
+      (group) => {
+        if (!s.details.relief) return;
+        grids.forEach((g) => {
+          const [[south, west]] = g.area;
+          const id = `${south}_${west}`;
+          const relief = atlas.reliefTiles.get(id);
+          if (!relief) {
+            void atlas.loadRelief(id);
+            return;
+          }
+          // The terrain is the same in every climate: no week or metric in the key.
+          const r = cachedRaster(g, 'relief', () => reliefRaster(g, relief));
+          L.imageOverlay(r.url, r.bounds, {
+            pane: 'relief',
+            interactive: false,
+          }).addTo(group);
+        });
+      },
+    );
 
     this.layer('water', [s.detailFiles, s.details.water], (group) => {
       if (!s.details.water) return;
@@ -989,6 +1002,7 @@ export default class WheelMap extends Component<WheelMapSignature> {
       detailFiles: this.atlas.details.size,
       tiles: this.atlas.tiles.size,
       loading: this.atlas.loading.size,
+      reliefTiles: this.atlas.reliefTiles.size,
       showCycleNet: p.isDrawing && p.snapToRoutes,
     };
   }
