@@ -90,10 +90,10 @@ export function temperatureRaster(
   });
 }
 
-// Relief: hillshading from the terrain's height (a relief tile, about 11 km
+// Relief: hillshading from the terrain's height (a relief tile, about 5.5 km
 // between heights), lit from the north-west at 45°. Slopes that far apart are
 // gentle, so they are exaggerated to show.
-const RELIEF_EXAGGERATION = 6;
+const RELIEF_EXAGGERATION = 4;
 const LIGHT = (() => {
   const alt = Math.PI / 4;
   const az = (315 * Math.PI) / 180; // from the north-west

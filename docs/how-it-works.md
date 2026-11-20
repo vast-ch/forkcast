@@ -178,8 +178,8 @@ A single route is simply a list of one: there's no separate one-route layout any
   - **Water** (rivers, lakes), like the city names, comes in a world file (`water.json`, `places.json`,
     190 and 76 kB gzipped) that `AtlasService.loadDetail` fetches the first
     time the layer is on, never while it's off.
-  - **Relief** is hillshading from ERA5-Land's terrain at 0.1° (about 11 km),
-    finer than the climate cells' 25 km mean heights: a relief tile (20 kB)
+  - **Relief** is hillshading from NOAA's ETOPO 2022 terrain at 0.05° (about
+    5.5 km), finer than the climate cells' 25 km mean heights: a relief tile (80 kB)
     per climate tile, `out/relief/<lat>_<lon>.bin`, that `AtlasService.loadRelief`
     fetches only while the layer is on and only for squares whose climate tile
     is loaded, so the host sees no square it didn't already

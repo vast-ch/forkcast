@@ -1,4 +1,4 @@
-// The map's relief: terrain heights at 0.1° (about 11 km) in the climate's
+// The map's relief: terrain heights at 0.05° (about 5.5 km) in the climate's
 // 10° squares (data/forkcast_data/relief.py), fetched only while the Relief
 // layer is on.
 

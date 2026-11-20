@@ -16,8 +16,8 @@ const NerdSources: TOC<{ Args: { years: string } }> = <template>
               rel="noopener noreferrer"
             >ERA5-Land</a>, C3S / ECMWF (Muñoz-Sabater et al. 2021, Earth Syst.
             Sci. Data 13: 4349–4383)</th>
-          <td>Rain, the shape of highs and lows, terrain height; the variants'
-            years</td>
+          <td>Rain, the shape of highs and lows, terrain height for the altitude
+            correction; the variants' years</td>
           <td>0.1°, regridded to 0.25° by the CDS; daily rain, monthly means by
             hour of day;
             {{@years}}, and 1981–2025 for the variants</td>
@@ -86,6 +86,14 @@ const NerdSources: TOC<{ Args: { years: string } }> = <template>
             >Natural Earth</a></th>
           <td>Borders, cities, rivers and lakes</td>
           <td>1:50m borders; towns of 50,000 and more</td>
+          <td>Public domain</td></tr>
+        <tr><th scope="row"><a
+              href="https://www.ncei.noaa.gov/products/etopo-global-relief-model"
+              target="_blank"
+              rel="noopener noreferrer"
+            >ETOPO 2022</a>, NOAA NCEI</th>
+          <td>The map's relief shading</td>
+          <td>1 arc-minute, averaged to 0.05°</td>
           <td>Public domain</td></tr>
       </tbody>
     </table>

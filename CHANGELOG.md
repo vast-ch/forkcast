@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The relief shading is sharper still: it now comes from NOAA's ETOPO terrain map, with heights about 5 km apart instead of 11 km, so mountain ridges and the valleys between them stand out. Each square of the map you load adds about 80 kB for it, and nothing while Relief is off.
+
 ## 2026-11-20
 
 ### Changed
