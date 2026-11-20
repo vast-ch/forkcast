@@ -20,5 +20,5 @@
 .pnpm-store/
 /public/data/
 /data-out/
-# A copy or mount of the repository's changelog (see compose.yaml)
+# A copy of the repository's changelog (see netlify.toml)
 /CHANGELOG.md
